@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU One Sided MPI_Get latency Test"
 /*
- * Copyright (C) 2003-2008 the Network-Based Computing Laboratory
+ * Copyright (C) 2003-2011 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -40,14 +40,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "osu.h"
 #include <string.h>
+#include <assert.h>
 
-#define MESSAGE_ALIGNMENT 64
+#define MAX_ALIGNMENT 65536
 #define MAX_SIZE (1<<22)
-#define MYBUFSIZE (MAX_SIZE + MESSAGE_ALIGNMENT)
+#define MYBUFSIZE (MAX_SIZE + MAX_ALIGNMENT)
 
-#define skip 100
-#define INER_LOOP 1
-#define LOOP 1000
+int skip = 1000;
+int loop = 10000;
+int skip_large = 10;
+int loop_large = 100;
+int large_message_size = 8192;
 
 char        A[MYBUFSIZE];
 char        B[MYBUFSIZE];
@@ -55,21 +58,18 @@ char        B[MYBUFSIZE];
 int main (int argc, char *argv[])
 {
     int         rank, destrank, nprocs, i;
-    int         align_size;
-
+    int         size, page_size;
     char       *s_buf, *r_buf;
     MPI_Group   comm_group, group;
     MPI_Win     win;
-    int         loop;
-    int         size;
     double      t_start, t_end;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if(nprocs != 2) {
-        if(rank == 0) {
+    if (nprocs != 2) {
+        if (rank == 0) {
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
@@ -78,36 +78,42 @@ int main (int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    align_size = MESSAGE_ALIGNMENT;
-    loop = LOOP;
+    page_size = getpagesize();
+    assert(page_size <= MAX_ALIGNMENT);
+
     s_buf =
-        (char *) (((unsigned long) A + (align_size - 1)) /
-                  align_size * align_size);
+        (char *) (((unsigned long) A + (page_size - 1)) /
+                  page_size * page_size);
     r_buf =
-        (char *) (((unsigned long) B + (align_size - 1)) /
-                  align_size * align_size);
+        (char *) (((unsigned long) B + (page_size - 1)) /
+                  page_size * page_size);
 
     memset(r_buf, 0, MAX_SIZE);
     memset(s_buf, 1, MAX_SIZE);
 
-    if(rank == 0) {
-        fprintf(stdout, "# %s %s\n", BENCHMARK, OMB_VERSION);
+    if (rank == 0) {
+        fprintf(stdout, "# %s v%s\n", BENCHMARK, PACKAGE_VERSION);
         fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)"); 
         fflush(stdout);
     }
 
     MPI_Comm_group(MPI_COMM_WORLD, &comm_group);
 
-    for(size = 0; size <= MAX_SIZE; size = (size ? size * 2 : size + 1)) {
-        if(rank == 0) {
-            MPI_Win_create(s_buf, size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &win);
+    for (size = 0; size <= MAX_SIZE; size = (size ? size * 2 : size + 1)) {
+        if (size > large_message_size) {
+            loop = loop_large;
+            skip = skip_large;
+        }
 
+        MPI_Win_create(s_buf, size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &win);
+
+        if (rank == 0) {
             destrank = 1;
 
             MPI_Group_incl(comm_group, 1, &destrank, &group);
             MPI_Barrier(MPI_COMM_WORLD);
 
-            for(i = 0; i < skip + loop; i++) {
+            for (i = 0; i < skip + loop; i++) {
                 MPI_Win_start(group, 0, win);
 
                 if (i == skip) {
@@ -121,18 +127,14 @@ int main (int argc, char *argv[])
             }
 
             t_end = MPI_Wtime ();
-        }
-
-        else {
+        } else {
             /* rank=1 */
-            MPI_Win_create(s_buf, size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &win);
-
             destrank = 0;
 
             MPI_Group_incl(comm_group, 1, &destrank, &group);
             MPI_Barrier(MPI_COMM_WORLD);
 
-            for(i = 0; i < skip + loop; i++) {
+            for (i = 0; i < skip + loop; i++) {
                 MPI_Win_post(group, 0, win);
                 MPI_Win_wait(win);
                 MPI_Win_start(group, 0, win);
@@ -141,13 +143,14 @@ int main (int argc, char *argv[])
             }
         }
 
-        if(rank == 0) {
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        if (rank == 0) {
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
                     FLOAT_PRECISION, (t_end - t_start) * 1.0e6 / loop / 2);
             fflush(stdout);
         }
 
-        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Group_free(&group);
         MPI_Win_free(&win);
     }

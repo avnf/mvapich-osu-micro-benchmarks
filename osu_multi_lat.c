@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI Multi Latency Test"
 /*
- * Copyright (C) 2002-2008 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2011 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
     pairs = nprocs/2;
 
     if(rank == 0) {
-        fprintf(stdout, "# %s %s\n", BENCHMARK, OMB_VERSION);
+        fprintf(stdout, "# %s v%s\n", BENCHMARK, PACKAGE_VERSION);
         fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
         fflush(stdout);
     }

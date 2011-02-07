@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU Broadcast Latency Test"
 /*
- * Copyright (C) 2002-2008 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2011 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University. 
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -39,7 +39,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "osu.h"
-#include <sys/time.h>
 #include <math.h>
 
 #define MAX_MSG_SIZE (1<<14)
@@ -55,7 +54,6 @@ int large_message_size = 8192;
 
 #define ROOT 0
 
-static inline double ret_us(void);
 void get_ack_time(int,int);
 int get_far_proc(int,int,int);
 
@@ -87,7 +85,7 @@ int main(int argc, char *argv[])
     }
 
     if(rank == ROOT) {
-        fprintf(stdout, "# %s %s\n", BENCHMARK, OMB_VERSION);
+        fprintf(stdout, "# %s v%s\n", BENCHMARK, PACKAGE_VERSION);
         fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
         fflush(stdout);
     }
@@ -116,7 +114,7 @@ int main(int argc, char *argv[])
 
         for(i=0; i < iterations + skip ; i++) {
             if(i == skip && rank == ROOT) {
-                tmp1 = ret_us();
+                tmp1 = MPI_Wtime();
             }
 
             MPI_Bcast(&x, size, MPI_CHAR, 0, MPI_COMM_WORLD);         
@@ -140,9 +138,9 @@ int main(int argc, char *argv[])
         }
 
         if(rank == ROOT) {
-            tmp2 = ret_us();
+            tmp2 = MPI_Wtime();
             total = tmp2 - tmp1;
-            latency = (double)total/iterations;
+            latency = (double)total*1e6/iterations;
 
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
                     FLOAT_PRECISION, latency - ack_time);
@@ -165,15 +163,15 @@ void get_ack_time(int far_proc, int myid) {
     if(myid == ROOT) {
         for(i = 0; i < ITERATIONS + SKIP; i++) {
             if(i == SKIP) {
-                t_start = ret_us();
+                t_start = MPI_Wtime();
             }
 
             MPI_Send(x, 0, MPI_CHAR, far_proc, 1, MPI_COMM_WORLD);
             MPI_Recv(y, 0, MPI_CHAR, far_proc, 1, MPI_COMM_WORLD, &reqstat);
         }
 
-        t_end = ret_us();
-        ack_time = (t_end - t_start) / (2.0 * ITERATIONS);
+        t_end = MPI_Wtime();
+        ack_time = (t_end - t_start) * 1e6 / (2.0 * ITERATIONS);
     }
 
     else if(myid == far_proc) {
@@ -182,15 +180,6 @@ void get_ack_time(int far_proc, int myid) {
             MPI_Send(x, 0, MPI_CHAR, 0, 1, MPI_COMM_WORLD);
         }
     }
-}
-
-static inline double ret_us(void)
-{
-    struct timeval t;
-
-    gettimeofday(&t, NULL);
-
-    return t.tv_sec * 1e6 + t.tv_usec;
 }
 
 int get_far_proc(int numprocs, int rank, int size)
@@ -216,7 +205,7 @@ int get_far_proc(int numprocs, int rank, int size)
         for(iter = 0; iter < skip + iterations; iter++) {
 
             if(iter >= skip && rank == ROOT) {
-                t[iter-skip] = ret_us();
+                t[iter-skip] = MPI_Wtime()*1e6;
             }
 
             MPI_Bcast(&x, size, MPI_CHAR, 0, MPI_COMM_WORLD);         
@@ -240,10 +229,10 @@ int get_far_proc(int numprocs, int rank, int size)
         }
 
         if(rank == ROOT) {
-            t[iter-skip] = ret_us();
+            t[iter-skip] = MPI_Wtime()*1e6;
 
             for(j = 1, mean = 0; j <= iterations; j++) {
-                mean += t[j]-t[j-1];
+                mean += (t[j]-t[j-1]);
             }
 
             mean /= iterations;

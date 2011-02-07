@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI Multiple Bandwidth / Message Rate Test"
 /*
- * Copyright (C) 2002-2008 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2011 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University. 
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
     }
 
     if(rank == 0) {
-        fprintf(stdout, "# %s %s\n", BENCHMARK, OMB_VERSION);
+        fprintf(stdout, "# %s v%s\n", BENCHMARK, PACKAGE_VERSION);
 
         if(window_varied) {
             fprintf(stdout, "# [ pairs: %d ] [ window size: varied ]\n", pairs);

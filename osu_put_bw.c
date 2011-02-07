@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU One Sided MPI_Put Bandwidth Test"
 /*
- * Copyright (C) 2003-2008 the Network-Based Computing Laboratory
+ * Copyright (C) 2003-2011 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -42,28 +42,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assert.h>
 
 #define MAX_ALIGNMENT 65536
-#define MYBUFSIZE (150000000)   /* ~= 100M Bytes */
-#define MAX_REQ_NUM 100
+#define MAX_MSG_SIZE (1<<22)
 
 /* Note we have a upper limit for buffer size, so be extremely careful
  * if you want to change the loop size or warm up size */
-#define WARMUP  (10)
-#define MAX_SIZE (1<<22)
-#define LOOP (30)
-#define WINDOW_SIZE     (32)
+int loop = 100;
+int window_size = 32;
+int skip = 20;
 
-char        s_buf1[MAX_SIZE + MAX_ALIGNMENT];
-char        r_buf1[MYBUFSIZE];
-MPI_Request request[MAX_REQ_NUM];
+int loop_large = 30;
+int window_size_large = 32;
+int skip_large = 10;
+
+int large_message_size = 8192;
 
 int main (int argc, char *argv[])
 {
     int         myid, numprocs, i, j;
-    int         size, loop, page_size;
-    char       *s_buf, *r_buf;
+    int         size, page_size;
+    char        *s_buf, *r_buf;
+    char        *s_buf1, *r_buf1;
     double      t_start = 0.0, t_end = 0.0, t = 0.0;
     int         destrank;
-
     MPI_Group   comm_group, group;
     MPI_Win     win;
 
@@ -72,8 +72,8 @@ int main (int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     MPI_Comm_group(MPI_COMM_WORLD, &comm_group);
 
-    if(numprocs != 2) {
-        if(myid == 0) {
+    if (numprocs != 2) {
+        if (myid == 0) {
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
@@ -82,9 +82,20 @@ int main (int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    loop = LOOP;
     page_size = getpagesize();
     assert(page_size <= MAX_ALIGNMENT);
+
+    s_buf1 = malloc(MAX_MSG_SIZE + MAX_ALIGNMENT);
+    if (NULL == s_buf1) {
+         fprintf(stderr, "[%d] Buffer Allocation Failed \n", myid);
+         exit(-1);
+    } 
+    r_buf1 = malloc(MAX_MSG_SIZE*window_size + MAX_ALIGNMENT);
+    if (NULL == r_buf1) {
+         fprintf(stderr, "[%d] Buffer Allocation Failed \n", myid);
+         fflush(stdout);
+         exit(-1);
+    }  
 
     s_buf =
         (char *) (((unsigned long) s_buf1 + (page_size - 1)) / page_size *
@@ -94,42 +105,44 @@ int main (int argc, char *argv[])
                   page_size);
 
     assert((s_buf != NULL) && (r_buf != NULL));
-    assert(MAX_SIZE * WINDOW_SIZE < MYBUFSIZE);
 
-    if(myid == 0) {
-        fprintf(stdout, "# %s %s\n", BENCHMARK, OMB_VERSION);
+    if (myid == 0) {
+        fprintf(stdout, "# %s v%s\n", BENCHMARK, PACKAGE_VERSION);
         fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH,
                 "Bandwidth (MB/s)");
         fflush(stdout);
     }
 
     /* Bandwidth test */
-    for(size = 1; size <= MAX_SIZE; size *= 2) {
-        /* Window creation and warming-up */
-        if(myid == 0) {
-            MPI_Win_create(r_buf, size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &win);
+    for (size = 1; size <= MAX_MSG_SIZE; size *= 2) {
+        if (size > large_message_size) {
+            loop = loop_large;
+            skip = skip_large;
+            window_size = window_size_large;
+        }
 
+        /* Window creation and warming-up */
+        MPI_Win_create(r_buf, size * window_size, 1, MPI_INFO_NULL,
+                MPI_COMM_WORLD, &win);
+
+        if (myid == 0) {
             destrank = 1;
 
             MPI_Group_incl (comm_group, 1, &destrank, &group);
 
-            for(i = 0; i < WARMUP; i++) {
+            for (i = 0; i < skip; i++) {
                 MPI_Win_start(group, 0, win);
                 MPI_Put(s_buf, size, MPI_CHAR, 1, i * size, size, MPI_CHAR,
                         win);
                 MPI_Win_complete(win);
             }
-        }
-
-        else {
-            MPI_Win_create(r_buf, size * WINDOW_SIZE, 1, MPI_INFO_NULL,
-                    MPI_COMM_WORLD, &win);
-
+        } else {
+            /*rank 1*/
             destrank = 0;
 
             MPI_Group_incl(comm_group, 1, &destrank, &group);
 
-            for(i = 0; i < WARMUP; i++) {
+            for (i = 0; i < skip; i++) {
                 MPI_Win_post(group, 0, win);
                 MPI_Win_wait(win);
             }
@@ -137,13 +150,13 @@ int main (int argc, char *argv[])
 
         MPI_Barrier(MPI_COMM_WORLD);
 
-        if(myid == 0) {
+        if (myid == 0) {
             t_start = MPI_Wtime();
 
-            for(i = 0; i < loop; i++) {
+            for (i = 0; i < loop; i++) {
                 MPI_Win_start(group, 0, win);
 
-                for(j = 0; j < WINDOW_SIZE; j++) {
+                for(j = 0; j < window_size; j++) {
                     MPI_Put(s_buf, size, MPI_CHAR, 1, j * size, size, MPI_CHAR,
                             win);
                 }
@@ -152,32 +165,30 @@ int main (int argc, char *argv[])
             }
 
             t_end = MPI_Wtime();
-            MPI_Barrier(MPI_COMM_WORLD);
-
             t = t_end - t_start;
-        }
-
-        else {
-            for(i = 0; i < loop; i++) {
+        } else {
+            for (i = 0; i < loop; i++) {
                 MPI_Win_post(group, 0, win);
                 MPI_Win_wait(win);
             }
-
-            MPI_Barrier (MPI_COMM_WORLD);
         }
 
-        if(myid == 0) {
-            double tmp = size / 1e6 * loop * WINDOW_SIZE;
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        if (myid == 0) {
+            double tmp = size / 1e6 * loop * window_size;
 
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
                     FLOAT_PRECISION, tmp / t);
             fflush(stdout);
         }
 
+        MPI_Group_free(&group);
         MPI_Win_free(&win);
     } 
     
     MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Group_free(&comm_group);
     MPI_Finalize();
 
     return EXIT_SUCCESS;

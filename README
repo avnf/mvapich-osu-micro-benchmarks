@@ -1,17 +1,29 @@
 OMB (OSU Micro-Benchmarks)
 --------------------------
-Compilation:
-In order to compile MPI1 programs simply type "make" or "make mpi1".  MPI2
-programs can be compiled using "make all" or "make mpi2".  If necessary, you can
-specify a specific mpicc to use by appending "CC=/path/to/mpicc" to your make
-command.
+The OSU Micro-Benchmarks now use the GNU build system.  Therefore you can
+simply use the following steps if mpicc is in your PATH.
 
-See http://mvapich.cse.ohio-state.edu/benchmarks/ to download the latest version
-of these benchmarks.
+Example:
+	./configure
+	make
+	make install
+
+If your mpicc is not in your path or you would like to use another particular
+version you can tell configure by setting CC.
+
+Example:
+	./configure CC=/path/to/special/mpicc
+	make
+	make install
+
+Configure will detect whether your library supports MPI-2 and compile the
+corresponding benchmarks.  See http://mvapich.cse.ohio-state.edu/benchmarks/ to
+download the latest version of this package.
 
 Note:
 All benchmarks are run using 2 processes with the exception of osu_bcast and
 osu_mbw_mr which can use more than 2.  
+
 
 The Multiple Bandwidth / Message Rate Test (osu_mbw_mr) is intended to be used
 with block assigned ranks.  This means that all processes on the same machine

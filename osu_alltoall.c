@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI All-to-All Personalized Exchange Latency Test"
 /*
- * Copyright (C) 2002-2008 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2011 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University. 
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -47,14 +47,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ITERATIONS_LARGE 100
 #define MAX_ALIGNMENT 16384
 
-double ret_us(void);
 int numprocs, large_message_size = 8192;
 
 int main(int argc, char *argv[])
 {
     int i = 0, j = 0, rank = 0, size, mpi_errno = MPI_SUCCESS;
     int  sendcnt, recvcnt, skip, iterations, align_size;
-    double tmp1 = 0, tmp2 = 0, latency = 0, total = 0;
+    double tmp1 = 0.0, tmp2 = 0.0;
     char *sendbuf, *recvbuf, *s_buf1, *r_buf1;
     MPI_Status status;
 
@@ -89,7 +88,7 @@ int main(int argc, char *argv[])
             * align_size);
 
     if(0 == rank) {
-        fprintf(stdout, "# %s %s\n", BENCHMARK, OMB_VERSION);
+        fprintf(stdout, "# %s v%s\n", BENCHMARK, PACKAGE_VERSION);
         fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
         fflush(stdout);
     }
@@ -110,7 +109,7 @@ int main(int argc, char *argv[])
 
         for(i = 0; i < iterations + skip; i++) {
             if(i == skip) {
-                tmp1 = ret_us();
+                tmp1 = MPI_Wtime();
             }
 
             MPI_Alltoall(sendbuf, size, MPI_CHAR, recvbuf, size, MPI_CHAR,
@@ -118,9 +117,9 @@ int main(int argc, char *argv[])
         }
 
         if(0 == rank) {
-            tmp2 = ret_us();
+            tmp2 = MPI_Wtime();
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
-                    FLOAT_PRECISION, (tmp2 - tmp1) / iterations);
+                    FLOAT_PRECISION, (tmp2 - tmp1) * 1e6 / iterations);
             fflush(stdout);
         }
     }
@@ -131,15 +130,6 @@ int main(int argc, char *argv[])
     MPI_Finalize();
 
     return EXIT_SUCCESS;
-}
-
-double ret_us(void)
-{
-    struct timeval t;
-
-    gettimeofday(&t, NULL);
-
-    return t.tv_sec * 1e6 + t.tv_usec;
 }
 
 /* vi: set sw=4 sts=4 tw=80: */
