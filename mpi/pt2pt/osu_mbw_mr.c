@@ -1,45 +1,18 @@
 #define BENCHMARK "OSU MPI Multiple Bandwidth / Message Rate Test"
 /*
- * Copyright (C) 2002-2011 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2014 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University. 
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
+ *
+ * For detailed copyright and licensing information, please refer to the
+ * copyright file COPYRIGHT in the top level OMB directory.
  */
 
-/*
-This program is available under BSD licensing.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-(1) Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-(2) Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-(3) Neither the name of The Ohio State University nor the names of
-their contributors may be used to endorse or promote products derived
-from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-*/
-
-
-#include "osu.h"
+#include <mpi.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
@@ -66,6 +39,20 @@ MPI_Status * reqstat;
 
 double calc_bw(int rank, int size, int num_pairs, int window_size, char *s_buf, char *r_buf);
 void usage();
+
+#ifdef PACKAGE_VERSION
+#   define HEADER "# " BENCHMARK " v" PACKAGE_VERSION "\n"
+#else
+#   define HEADER "# " BENCHMARK "\n"
+#endif
+
+#ifndef FIELD_WIDTH
+#   define FIELD_WIDTH 20
+#endif
+
+#ifndef FLOAT_PRECISION
+#   define FLOAT_PRECISION 2
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -153,7 +140,7 @@ int main(int argc, char *argv[])
     }
 
     if(rank == 0) {
-        fprintf(stdout, "# %s v%s\n", BENCHMARK, PACKAGE_VERSION);
+        fprintf(stdout, HEADER);
 
         if(window_varied) {
             fprintf(stdout, "# [ pairs: %d ] [ window size: varied ]\n", pairs);
@@ -315,7 +302,7 @@ void usage() {
 double calc_bw(int rank, int size, int num_pairs, int window_size, char *s_buf,
         char *r_buf)
 {
-    double t_start = 0, t_end = 0, t = 0, maxtime = 0, bw = 0;
+    double t_start = 0, t_end = 0, t = 0, sum_time = 0, bw = 0;
     int i, j, target;
     int loop, skip;
     int mult = (DEFAULT_WINDOW / window_size) > 0 ? (DEFAULT_WINDOW /
@@ -383,13 +370,14 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char *s_buf,
         MPI_Barrier(MPI_COMM_WORLD);
     }
 
-    MPI_Reduce(&t, &maxtime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&t, &sum_time, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
     if(rank == 0) {
-        double tmp = num_pairs * size / 1e6;
-
+        double tmp = size / 1e6 * num_pairs ;
+        
+        sum_time /= num_pairs;
         tmp = tmp * loop * window_size;
-        bw = tmp / maxtime;
+        bw = tmp / sum_time;
 
         return bw;
     }
