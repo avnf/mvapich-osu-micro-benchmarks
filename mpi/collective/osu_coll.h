@@ -107,7 +107,7 @@ static void print_version()
 
 static int process_args (int argc, char *argv[], int rank, int * size, int * full)
 {
-    char c;
+    int c;
 
     if (size) {
         print_size = 1;

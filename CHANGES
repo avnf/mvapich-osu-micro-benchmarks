@@ -1,3 +1,24 @@
+OSU Micro Benchmarks v4.4.1 (10/30/14)
+* Bug Fixes
+    - adding missing MPI3 guard for WIN_ALLOCATE
+    - capture getopt return value in an int instead of char
+
+OSU Micro Benchmarks v4.4 (8/23/14)
+* New Features & Enhancements
+    - Support for MPI-3 RMA (one-sided) and atomic operations using GPU buffers
+        * osu_acc_latency
+        * osu_cas_latency
+        * osu_fop_latency
+        * osu_get_bw
+        * osu_get_latency
+        * osu_put_bibw
+        * osu_put_bw
+        * osu_put_latency
+
+* Bug Fixes
+    - remove use of AC_FUNC_MALLOC to avoid undefined rpl_malloc reference
+    - add missing upc benchmarks for make dist rule
+
 OSU Micro Benchmarks v4.3.1 (6/20/14)
 * Bug Fixes
     - Fix typo in MPI collective benchmark help message

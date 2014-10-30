@@ -36,7 +36,7 @@ static int accel_enabled = 0;
 static struct {
     char const * message;
     char const * optarg;
-    char opt;
+    int opt;
 } bad_usage;
 
 static int
@@ -103,7 +103,7 @@ process_options (int argc, char *argv[])
     extern int optind, optopt;
 
     char const * optstring = (accel_enabled) ? "+:d:hvfm:i:M:" : "+:hvfm:i:M:";
-    char c;
+    int c;
 
     /*
      * SET DEFAULT OPTIONS
@@ -212,12 +212,13 @@ print_bad_usage_message (int rank)
     if (rank) return;
 
     if (bad_usage.optarg) {
-        fprintf(stderr, "%s [-%c %s]\n\n", bad_usage.message, bad_usage.opt,
-                bad_usage.optarg);
+        fprintf(stderr, "%s [-%c %s]\n\n", bad_usage.message,
+                (char)bad_usage.opt, bad_usage.optarg);
     }
 
     else {
-        fprintf(stderr, "%s [-%c]\n\n", bad_usage.message, bad_usage.opt);
+        fprintf(stderr, "%s [-%c]\n\n", bad_usage.message,
+                (char)bad_usage.opt);
     }
 
     print_help_message(rank);
