@@ -1,3 +1,28 @@
+OSU Micro Benchmarks v5.0 (08/17/15)
+* New Features & Enhancements
+    - Support for a set of non-blocking collectives. The benchmarks can display
+      both the amount of time spent in the collectives and the amount of
+      overlap achievable
+        * osu_iallgather
+        * osu_ialltoall
+        * osu_ibarrier
+        * osu_ibcast
+        * osu_igather
+        * osu_iscatter
+    - Add startup benchmarks to facilitate the ability to measure the amount of
+      time it takes for an MPI library to complete MPI_Init
+        * osu_init
+        * osu_hello
+    - Allocate and align data dynamically
+        - Thanks to Devendar Bureddy from Mellanox for the suggestion
+    - Add options for number of warmup iterations [-x] and number of iterations
+      used per message size [-i] to MPI benchmarks
+        - Thanks to Devendar Bureddy from Mellanox for the suggestion
+
+* Bug Fixes
+    - Do not truncate user specified max memory limits
+        - Thanks to Devendar Bureddy from Mellanox for the report and patch
+
 OSU Micro Benchmarks v4.4.1 (10/30/14)
 * Bug Fixes
     - adding missing MPI3 guard for WIN_ALLOCATE

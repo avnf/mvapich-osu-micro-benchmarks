@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2014 the Network-Based Computing Laboratory
+ * Copyright (C) 2003-2015 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -39,15 +39,15 @@ MPI_Aint disp_local;
 int mem_on_dev; 
 
 void 
-usage (int options_type) 
+usage (int options_type, char const * name) 
 {
     if (CUDA_ENABLED || OPENACC_ENABLED) {
-        printf("Usage: ./benchmark [options] [RANK0 RANK1] \n");
+        printf("Usage: %s [options] [RANK0 RANK1] \n", name);
         printf("RANK0 and RANK1 may be `D' or `H' which specifies whether\n"
                "the buffer is allocated on the accelerator device or host\n"
                "memory for each mpi rank\n\n");
     } else { 
-        printf("Usage: ./benchmark [options] \n");
+        printf("Usage: %s [options] \n", name);
     }
 
     printf("options:\n");
@@ -82,6 +82,9 @@ usage (int options_type)
 #endif
     }
     printf("\n");
+    printf("  -x ITER       number of warmup iterations to skip before timing"
+            "(default 100)\n");
+    printf("  -i ITER       number of iterations for timing (default 10000)\n");
 
     printf("  -h            print this help message\n");
 
@@ -189,6 +192,10 @@ process_options(int argc, char *argv[], WINDOW *win, SYNC *sync, int options_typ
      */
     options.rank0 = 'H';
     options.rank1 = 'H';
+    options.loop = 10000;
+    options.loop_large = 1000;
+    options.skip = 100;
+    options.skip_large = 10;
 
     if (CUDA_ENABLED) {
         options.accel = cuda;
@@ -201,13 +208,19 @@ process_options(int argc, char *argv[], WINDOW *win, SYNC *sync, int options_typ
     }
 
 #if MPI_VERSION >= 3
-    char const * optstring = (CUDA_ENABLED || OPENACC_ENABLED) ? "+d:w:s:h" : "+w:s:h";
+    char const * optstring = (CUDA_ENABLED || OPENACC_ENABLED) ? "+d:w:s:h:x:i:" : "+w:s:h:x:i:";
 #else
-    char const * optstring = (CUDA_ENABLED || OPENACC_ENABLED) ? "+d:s:h" : "+s:h";
+    char const * optstring = (CUDA_ENABLED || OPENACC_ENABLED) ? "+d:s:h:x:i:" : "+s:h:x:i:";
 #endif
 
     while((c = getopt(argc, argv, optstring)) != -1) {
         switch (c) {
+            case 'x':
+                options.skip = atoi(optarg);
+                break;
+            case 'i':                                
+                options.loop = atoi(optarg);
+                break;
             case 'd':
                 /* optarg should contain cuda or openacc */
                 if (0 == strncasecmp(optarg, "cuda", 10)) {
@@ -272,6 +285,7 @@ process_options(int argc, char *argv[], WINDOW *win, SYNC *sync, int options_typ
                     return po_bad_usage;
                 }
                 break;
+            
             case 'h':
                 return po_help_message;
             default:
@@ -395,7 +409,7 @@ set_device_memory (void * ptr, int data, size_t size)
 #endif
 #ifdef _ENABLE_OPENACC_
         case openacc:
-#pragma acc parallel loop deviceptr(p)
+#pragma acc parallel options.loop deviceptr(p)
             for(i = 0; i < size; i++) {
                 p[i] = data;
             }

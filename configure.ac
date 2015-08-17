@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [4.4.1], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [5.0], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([mpi/pt2pt/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -97,7 +97,7 @@ AM_CONDITIONAL([UPC], [test x$upc_compiler = xtrue])
 AC_DEFINE([FIELD_WIDTH], [18], [Width of field used to report numbers])
 AC_DEFINE([FLOAT_PRECISION], [2], [Precision of reported numbers])
 
-AC_CONFIG_FILES([Makefile mpi/Makefile mpi/pt2pt/Makefile
+AC_CONFIG_FILES([Makefile mpi/Makefile mpi/pt2pt/Makefile mpi/startup/Makefile
                  mpi/one-sided/Makefile mpi/collective/Makefile
                  openshmem/Makefile upc/Makefile])
 AC_OUTPUT
