@@ -16,8 +16,8 @@ Example:
 	make
 	make install
 
-Configure will detect whether your library supports MPI-1, MPI-2, and OpenSHMEM
-to compile the corresponding benchmarks.  See
+Configure will detect whether your library supports MPI-1, MPI-2, MPI-3, and
+OpenSHMEM to compile the corresponding benchmarks.  See
 http://mvapich.cse.ohio-state.edu/benchmarks/ to download the latest version of
 this package.
 
@@ -136,12 +136,6 @@ osu_reduce        - MPI_Reduce Latency Test
 osu_reduce_scater - MPI_Reduce_scatter Latency Test
 osu_scatter       - MPI_Scatter Latency Test(*)
 osu_scatterv      - MPI_Scatterv Latency Test
-osu_iallgather    - MPI_Iallgather Latency Test
-osu_ialltoall     - MPI_Ialltoall Latency Test
-osu_ibarrier      - MPI_Ibarrier Latency Test
-osu_ibcast        - MPI_Ibcast Latency Test
-osu_igather       - MPI_Igather Latency Test
-osu_iscatter      - MPI_Iscatter Latency Test
 
 Collective Latency Tests
     * The latest OMB version includes benchmarks for various MPI blocking 
@@ -166,11 +160,24 @@ Collective Latency Tests
     * "-M" can be used to set per process maximum memory consumption.  By
            default the benchmarks are limited to 512MB allocations.
 
+Non-Blocking Collective MPI Benchmarks
+--------------------------------------
+osu_iallgather    - MPI_Iallgather Latency Test
+osu_iallgatherv   - MPI_Iallgatherv Latency Test
+osu_ialltoall     - MPI_Ialltoall Latency Test
+osu_ialltoallv    - MPI_Ialltoallv Latency Test
+osu_ialltoallw    - MPI_Ialltoallw Latency Test
+osu_ibarrier      - MPI_Ibarrier Latency Test
+osu_ibcast        - MPI_Ibcast Latency Test
+osu_igather       - MPI_Igather Latency Test
+osu_igatherv      - MPI_Igatherv Latency Test
+osu_iscatter      - MPI_Iscatter Latency Test
+osu_iscatterv     - MPI_Iscatterv Latency Test
+
 Non-Blocking Collective Latency Tests
-    * In addition to the blocking collective latency tests mentioned above, we
-    * provide several non-blocking collectives: MPI_Iallgather, MPI_Ialltoall,
-    * MPI_Ibarrier, MPI_Ibcast, MPI_Igather, MPI_Iscatter.  These evaluate the
-    * same metrics as the blocking operations as well as the additional metric
+    * In addition to the blocking collective latency tests, we provide several
+    * non-blocking collectives as mentioned above. These evaluate the same
+    * metrics as the blocking operations as well as the additional metric
     * `overlap'.  This is defined as the amount of computation that can be
     * performed while the communication progresses in the background.
     * These benchmarks have the additional option:
@@ -638,11 +645,15 @@ MPI communication using buffers on NVIDIA GPU devices.
     osu_scatter       - MPI_Scatter Latency Test
     osu_scatterv      - MPI_Scatterv Latency Test
     osu_iallgather    - MPI_Iallgather Latency Test
+    osu_iallgatherv   - MPI_Iallgatherv Latency Test
     osu_ialltoall     - MPI_Ialltoall Latency Test
-    osu_ibarrier      - MPI_Ibarrier Latency Test
+    osu_ialltoallv    - MPI_Ialltoallv Latency Test
+    osu_ialltoallw    - MPI_Ialltoallw Latency Test
     osu_ibcast        - MPI_Ibcast Latency Test
     osu_igather       - MPI_Igather Latency Test
+    osu_igatherv      - MPI_Igatherv Latency Test
     osu_iscatter      - MPI_Iscatter Latency Test
+    osu_iscatterv     - MPI_Iscatterv Latency Test
 
 If both CUDA and OpenACC support is enabled you can switch between the modes
 using the -d [cuda|openacc] option to the benchmarks.  Whether a process

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [5.0], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [5.1], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([mpi/pt2pt/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -51,6 +51,9 @@ AC_ARG_WITH([cuda-libpath],
 
 # Checks for programs.
 AC_PROG_CC([mpicc oshcc upcc])
+
+# Checks for mpicxx used for compiling kernel.cu in nbc benchmarks
+AC_PROG_CXX(mpicxx)
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sqrt], [m])
