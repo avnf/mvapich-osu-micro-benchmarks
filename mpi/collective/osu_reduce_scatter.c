@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Reduce_scatter Latency Test"
 /*
- * Copyright (C) 2002-2015 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2016 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -67,6 +67,11 @@ int main(int argc, char *argv[])
         options.max_message_size = options.max_mem_limit;
     }
 
+    options.min_message_size /= sizeof(float);
+    if (options.min_message_size < DEFAULT_MIN_MESSAGE_SIZE) {
+        options.min_message_size = DEFAULT_MIN_MESSAGE_SIZE;
+    }
+
     if (allocate_buffer((void**)&recvcounts, numprocs*sizeof(int), none)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -89,7 +94,7 @@ int main(int argc, char *argv[])
 
     print_preamble(rank);
 
-    for(size=1; size*sizeof(float)<= options.max_message_size; size *= 2) {
+    for(size=options.min_message_size; size*sizeof(float) <= options.max_message_size; size *= 2) {
 
         if(size > LARGE_MESSAGE_SIZE) {
             options.skip = options.skip_large;

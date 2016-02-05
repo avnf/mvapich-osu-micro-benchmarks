@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI_Get_accumulate latency Test"
 /*
- * Copyright (C) 2003-2015 the Network-Based Computing Laboratory
+ * Copyright (C) 2003-2016 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.            
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -78,13 +78,13 @@ typedef enum {
 } SYNC;
 
 /*Header printout*/
-char *win_info[20] = {
+char const *win_info[20] = {
     "MPI_Win_create",
     "MPI_Win_create_dynamic",
     "MPI_Win_allocate",
 };
 
-char *sync_info[20] = {
+char const *sync_info[20] = {
     "MPI_Win_lock/unlock",
     "MPI_Win_flush",
     "MPI_Win_flush_local",

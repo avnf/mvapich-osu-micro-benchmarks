@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2015 the Network-Based Computing Laboratory
+ * Copyright (C) 2003-2016 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -14,7 +14,7 @@
 CUcontext cuContext;
 #endif
 
-char *win_info[20] = {
+char const *win_info[20] = {
     "MPI_Win_create",
 #if MPI_VERSION >=3
     "MPI_Win_allocate",
@@ -22,7 +22,7 @@ char *win_info[20] = {
 #endif
 };
 
-char *sync_info[20] = {
+char const *sync_info[20] = {
     "MPI_Win_lock/unlock",
     "MPI_Win_post/start/complete/wait",
     "MPI_Win_fence",
@@ -37,6 +37,7 @@ MPI_Aint disp_remote;
 MPI_Aint disp_local;
 
 int mem_on_dev; 
+struct options_t options;
 
 void 
 usage (int options_type, char const * name) 
@@ -442,9 +443,9 @@ allocate_memory(int rank, char *sbuf_orig, char *rbuf_orig, char **sbuf, char **
          set_device_memory(*rbuf, 'b', size);
     }
     else {
-         *sbuf = align_buffer(sbuf_orig, page_size);
+         *sbuf = (char *)align_buffer((void *)sbuf_orig, page_size);
          memset(*sbuf, 'a', size);
-         *rbuf = align_buffer(rbuf_orig, page_size);
+         *rbuf = (char *)align_buffer((void *)rbuf_orig, page_size);
          memset(*rbuf, 'b', size);
     }
 
@@ -510,14 +511,14 @@ allocate_atomic_memory(int rank, char *sbuf_orig, char *rbuf_orig, char *tbuf_or
          }
     }
     else {
-         *sbuf = align_buffer(sbuf_orig, page_size);
+         *sbuf = (char *)align_buffer((void *)sbuf_orig, page_size);
          memset(*sbuf, 'a', size);
-         *rbuf = align_buffer(rbuf_orig, page_size);
+         *rbuf = (char *)align_buffer((void *)rbuf_orig, page_size);
          memset(*rbuf, 'b', size);
-         *tbuf = align_buffer(tbuf_orig, page_size);
+         *tbuf = (char *)align_buffer((void *)tbuf_orig, page_size);
          memset(*tbuf, 'c', size);
          if (cbuf != NULL) {
-             *cbuf = align_buffer(cbuf_orig, page_size);
+             *cbuf = (char *)align_buffer((void *)cbuf_orig, page_size);
              memset(*cbuf, 'a', size);
          }
     }

@@ -32,7 +32,7 @@ osu_scatter_SOURCES = osu_scatter.c osu_coll.c osu_coll.h
 osu_iscatter_SOURCES = osu_iscatter.c osu_coll.c osu_coll.h  
 osu_iscatterv_SOURCES = osu_iscatterv.c osu_coll.c osu_coll.h  
 
-if CUDA
+if CUDA_KERNELS
 osu_alltoall_SOURCES += kernel.cu
 osu_alltoallv_SOURCES += kernel.cu
 osu_allgather_SOURCES += kernel.cu
@@ -57,6 +57,16 @@ osu_iscatter_SOURCES += kernel.cu
 osu_iscatterv_SOURCES += kernel.cu
 osu_igather_SOURCES += kernel.cu
 osu_igatherv_SOURCES += kernel.cu
+endif
+
+if EMBEDDED_BUILD
+    AM_LDFLAGS =
+    AM_CPPFLAGS = -I$(top_builddir)/../src/include \
+		  -I${top_srcdir}/../src/include
+if BUILD_PROFILING_LIB
+    AM_LDFLAGS += $(top_builddir)/../lib/lib@PMPILIBNAME@.la
+endif
+    AM_LDFLAGS += $(top_builddir)/../lib/lib@MPILIBNAME@.la
 endif
 
 if OPENACC

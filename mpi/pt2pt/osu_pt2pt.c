@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2015 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2016 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *    
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -13,8 +13,18 @@
  */
 #include "osu_pt2pt.h"
 
+MPI_Request request[MAX_REQ_NUM];
+MPI_Status  reqstat[MAX_REQ_NUM];
+MPI_Request send_request[MAX_REQ_NUM];
+MPI_Request recv_request[MAX_REQ_NUM];
+
+#ifdef _ENABLE_CUDA_
+CUcontext cuContext;
+#endif
+
 static char const * benchmark_header = NULL;
 static int benchmark_type;
+struct options_t options;
 
 void
 set_header (const char * header)
@@ -34,13 +44,13 @@ usage (char const * name)
 {
     if (CUDA_ENABLED || OPENACC_ENABLED) {
         printf("Usage: %s [options] [RANK0 RANK1]\n\n", name);
-        printf("RANK0 and RANK1 may be `D' or `H' which specifies whether\n"
-               "the buffer is allocated on the accelerator device or host\n"
-               "memory for each mpi rank\n\n");
+        printf("RANK0 and RANK1 may be `D', `H', or 'M' which specifies whether\n"
+               "the buffer is allocated on the accelerator device memory, host\n"
+               "memory or using CUDA Unified memory respectively for each mpi rank\n\n");
     }
 
     else {
-        printf("Usage: osu_bw [options]\n\n");
+        printf("Usage: %s [options]\n\n", name);
     }
 
     printf("options:\n");
@@ -182,6 +192,7 @@ process_options (int argc, char *argv[], int type)
             switch (options.src) {
                 case 'D':
                 case 'H':
+                case 'M':
                     break;
                 default:
                     return po_bad_usage;
@@ -190,6 +201,7 @@ process_options (int argc, char *argv[], int type)
             switch (options.dst) {
                 case 'D':
                 case 'H':
+                case 'M':
                     break;
                 default:
                     return po_bad_usage;
@@ -263,6 +275,32 @@ init_accel (void)
 }
 
 int
+allocate_managed_buffer (char ** buffer)
+{
+#ifdef _ENABLE_CUDA_
+    cudaError_t cuerr = cudaSuccess;
+#endif
+
+    switch (options.accel) {
+#ifdef _ENABLE_CUDA_
+        case cuda:
+            cuerr = cudaMallocManaged((void **)buffer, MYBUFSIZE, cudaMemAttachGlobal);
+
+            if (cudaSuccess != cuerr) {
+                fprintf(stderr, "Could not allocate device memory\n");
+                return 1;
+            }
+            break;
+#endif
+        default:
+            fprintf(stderr, "Could not allocate device memory\n");
+            return 1;
+
+    }
+    return 0;
+}
+
+int
 allocate_device_buffer (char ** buffer)
 {
 #ifdef _ENABLE_CUDA_
@@ -316,6 +354,18 @@ allocate_memory (char ** sbuf, char ** rbuf, int rank)
                 }
             }
 
+            else if ('M' == options.src) {
+                if (allocate_managed_buffer(sbuf)) {
+                    fprintf(stderr, "Error allocating cuda unified memory\n");
+                    return 1;
+                }
+
+                if (allocate_managed_buffer(rbuf)) {
+                    fprintf(stderr, "Error allocating cuda unified memory\n");
+                    return 1;
+                }
+            }
+
             else {
                 if (posix_memalign((void**)sbuf, align_size, MYBUFSIZE)) {
                     fprintf(stderr, "Error allocating host memory\n");
@@ -337,6 +387,18 @@ allocate_memory (char ** sbuf, char ** rbuf, int rank)
 
                 if (allocate_device_buffer(rbuf)) {
                     fprintf(stderr, "Error allocating cuda memory\n");
+                    return 1;
+                }
+            }
+
+            else if ('M' == options.dst) {
+                if (allocate_managed_buffer(sbuf)) {
+                    fprintf(stderr, "Error allocating cuda unified memory\n");
+                    return 1;
+                }
+
+                if (allocate_managed_buffer(rbuf)) {
+                    fprintf(stderr, "Error allocating cuda unified memory\n");
                     return 1;
                 }
             }
@@ -378,8 +440,8 @@ print_header (int rank, int type)
             case cuda:
             case openacc:
                 printf("# Send Buffer on %s and Receive Buffer on %s\n",
-                        'D' == options.src ? "DEVICE (D)" : "HOST (H)",
-                        'D' == options.dst ? "DEVICE (D)" : "HOST (H)");
+                        'M' == options.src ? "MANAGED (M)" : ('D' == options.src ? "DEVICE (D)" : "HOST (H)"),
+                        'M' == options.dst ? "MANAGED (M)" : ('D' == options.dst ? "DEVICE (D)" : "HOST (H)"));
             default:
                 if (type == BW) {
                     printf("%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Bandwidth (MB/s)");
@@ -489,7 +551,7 @@ free_memory (void * sbuf, void * rbuf, int rank)
 {
     switch (rank) {
         case 0:
-            if ('D' == options.src) {
+            if ('D' == options.src || 'M' == options.src) {
                 free_device_buffer(sbuf);
                 free_device_buffer(rbuf);
             }
@@ -500,7 +562,7 @@ free_memory (void * sbuf, void * rbuf, int rank)
             }
             break;
         case 1:
-            if ('D' == options.dst) {
+            if ('D' == options.dst || 'M' == options.dst) {
                 free_device_buffer(sbuf);
                 free_device_buffer(rbuf);
             }

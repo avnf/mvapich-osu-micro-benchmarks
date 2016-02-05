@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s All-to-All Personalized Exchange Latency Test"
 /*
- * Copyright (C) 2002-2015 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2016 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -85,7 +85,7 @@ main (int argc, char *argv[])
     set_buffer(recvbuf, options.accel, 0, bufsize);
     print_preamble(rank);
 
-    for (size=1; size <= options.max_message_size; size *= 2) {
+    for(size=options.min_message_size; size <= options.max_message_size; size *= 2) {
         if (size > LARGE_MESSAGE_SIZE) {
             options.skip = options.skip_large;
             options.iterations = options.iterations_large;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2015 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2016 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University. 
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -28,6 +28,7 @@ static char const * benchmark_header = NULL;
 static char const * benchmark_name = NULL;
 static int accel_enabled = 0;
 static int kernel_count = 0;
+struct options_t options;
 
 /* A is the A in DAXPY for the Compute Kernel */
 #define A 2.0
@@ -39,7 +40,7 @@ static int kernel_count = 0;
 #define DIM 25
 static float **a, *x, *y;
 
-#ifdef _ENABLE_CUDA_
+#ifdef _ENABLE_CUDA_KERNEL_
 /* Using new stream for kernels on gpu */
 static cudaStream_t stream;
 
@@ -54,6 +55,23 @@ static struct {
 } bad_usage;
 
 static int
+set_min_message_size (int value)
+{
+    int size = 1;
+    if (0 >= value) {
+        return -1;
+    }
+
+    while (size < value) {
+        size *= 2;
+    }
+
+    options.min_message_size = size;
+
+    return 0;
+}
+
+static int
 set_max_message_size (int value)
 {
     if (0 > value) {
@@ -63,6 +81,39 @@ set_max_message_size (int value)
     options.max_message_size = value;
 
     return 0;
+}
+
+static int
+set_message_size (char *val_str)
+{
+    int retval = -1;
+    int i, count = 0;
+    char *val1, *val2;
+
+    for (i=0; val_str[i]; i++) {
+        if (val_str[i] == ':')
+            count++;
+    }
+
+    if (!count) {
+        retval = set_max_message_size(atoi(val_str));
+    } else if (count == 1) {
+        val1 = strtok(val_str, ":");
+        val2 = strtok(NULL, ":");
+
+        if (val1 && val2) {
+            retval = set_min_message_size(atoi(val1));
+            retval = set_max_message_size(atoi(val2));
+        } else if (val1) {
+            if (val_str[0] == ':') {
+                retval = set_max_message_size(atoi(val1));
+            } else {
+                retval = set_min_message_size(atoi(val1));
+            }
+        }
+    }
+
+    return retval;
 }
 
 static int
@@ -153,8 +204,13 @@ process_options (int argc, char *argv[])
     extern char * optarg;
     extern int optind, optopt;
 
-    char const * optstring = (accel_enabled) ? "+:d:hvfm:i:x:M:t:r:s:" : "+:hvfm:i:x:M:t:r:s:";
+    char const * optstring = "+:hvfm:i:x:M:t:s:";
     int c;
+
+    if (accel_enabled) {
+        optstring = (CUDA_KERNEL_ENABLED) ? "+:d:hvfm:i:x:M:t:r:s:"
+            : "+:d:hvfm:i:x:M:t:s:";
+    }
 
     /*
      * SET DEFAULT OPTIONS
@@ -165,6 +221,7 @@ process_options (int argc, char *argv[])
     options.num_probes = 0;
     options.device_array_size = 32; 
     options.target = cpu;
+    options.min_message_size = DEFAULT_MIN_MESSAGE_SIZE;
     options.max_message_size = DEFAULT_MAX_MESSAGE_SIZE;
     options.max_mem_limit = MAX_MEM_LIMIT;
     options.iterations = 1000;
@@ -183,7 +240,7 @@ process_options (int argc, char *argv[])
             case 'v':
                 return po_version_message;
             case 'm':
-                if (set_max_message_size(atoi(optarg))) {
+                if (set_message_size(optarg)) {
                     bad_usage.message = "Invalid Message Size";
                     bad_usage.optarg = optarg;
 
@@ -250,6 +307,17 @@ process_options (int argc, char *argv[])
                         return po_bad_usage;
                     }
                 }
+                else if (0 == strncasecmp(optarg, "managed", 10)) {
+                    if (CUDA_ENABLED) {
+                        options.accel = managed;
+                    }
+                    else {
+                        bad_usage.message = "CUDA Managed Memory Support Not Enabled\n"
+                            "Please recompile benchmark with CUDA support";
+                        bad_usage.optarg = optarg;
+                        return po_bad_usage;
+                    }
+                }
                 else if (0 == strncasecmp(optarg, "openacc", 10)) {
                     if (OPENACC_ENABLED) {
                         options.accel = openacc;
@@ -268,21 +336,25 @@ process_options (int argc, char *argv[])
                 }
                 break;
             case 'r':
-                if (0 == strncasecmp(optarg, "cpu", 10)) {
-                    options.target = cpu;
-                }
-                else if (0 == strncasecmp(optarg, "gpu", 10)) {
-                    options.target = gpu;
-                }
-                else if (0 == strncasecmp(optarg, "both", 10)) {
-                    options.target = both;
-                }
-                else {
-                    bad_usage.message = "Please use cpu, gpu, or both";
+                if (CUDA_KERNEL_ENABLED) {
+                    if (0 == strncasecmp(optarg, "cpu", 10)) {
+                        options.target = cpu;
+                    } else if (0 == strncasecmp(optarg, "gpu", 10)) {
+                        options.target = gpu;
+                    } else if (0 == strncasecmp(optarg, "both", 10)) {
+                        options.target = both;
+                    } else {
+                        bad_usage.message = "Please use cpu, gpu, or both";
+                        bad_usage.optarg = optarg;
+                        return po_bad_usage;
+                    }
+                } else {
+                    bad_usage.message = "CUDA Kernel Support Not Enabled\n"
+                        "Please recompile benchmark with CUDA Kernel support";
                     bad_usage.optarg = optarg;
                     return po_bad_usage;
                 }
-                break;
+                 break;
             case ':':
                 bad_usage.message = "Option Missing Required Argument";
                 bad_usage.opt = optopt;
@@ -325,11 +397,16 @@ print_help_message (int rank)
 
     if (accel_enabled) {
         printf("  -d TYPE       use accelerator device buffers which can be of TYPE `cuda' or\n");
+        printf("                use accelerator managed device buffers which can be of TYPE `managed' or\n");
         printf("                `openacc' (uses standard host buffers if not specified)\n");
     }
 
     if (options.show_size) {
-        printf("  -m SIZE       set maximum message size to SIZE bytes (default 1048576)\n");
+        printf("  -m [MIN:]MAX  set the minimum and/or the maximum message size to MIN and/or MAX\n"
+               "                bytes respectively. Examples:\n"
+               "                -m 128      // min = default, max = 128\n"
+               "                -m 2:128    // min = 2, max = 128\n"
+               "                -m 2:       // min = 2, max = default\n");
         printf("  -M SIZE       set per process maximum memory consumption to SIZE bytes\n");
         printf("                (default %d)\n", MAX_MEM_LIMIT); 
     }
@@ -344,7 +421,7 @@ print_help_message (int rank)
     printf("  -t CALLS      set the number of MPI_Test() calls during the dummy computation, \n");
     printf("                set CALLS to 100, 1000, or any number > 0.\n");
 
-    if (accel_enabled) {
+    if (CUDA_KERNEL_ENABLED) {
         printf("  -r TARGET     set the compute target for dummy computation\n");
         printf("                set TARGET to cpu (default) to execute \n");
         printf("                on CPU only, set to gpu for executing kernel \n");
@@ -372,6 +449,9 @@ print_version_message (int rank)
         case openacc:
             printf(benchmark_header, "-OPENACC");
             break;
+        case managed:
+            printf(benchmark_header, "-CUDA MANAGED");
+            break;
         default:
             printf(benchmark_header, "");
             break;
@@ -393,6 +473,9 @@ print_preamble_nbc (int rank)
             break;
         case openacc:
             printf(benchmark_header, "-OPENACC");
+            break;
+        case managed:
+            printf(benchmark_header, "-MANAGED");
             break;
         default:
             printf(benchmark_header, "");
@@ -635,6 +718,7 @@ set_buffer (void * buffer, enum accel_type type, int data, size_t size)
             memset(buffer, data, size);
             break;
         case cuda:
+        case managed:
 #ifdef _ENABLE_CUDA_
             cudaMemset(buffer, data, size);
 #endif
@@ -671,6 +755,15 @@ allocate_buffer (void ** buffer, size_t size, enum accel_type type)
             else {
                 return 0;
             }
+        case managed:
+            cuerr = cudaMallocManaged(buffer, size, cudaMemAttachGlobal);
+            if (cudaSuccess != cuerr) {
+                return 1;
+            }
+
+            else {
+                return 0;
+            }
 #endif
 #ifdef _ENABLE_OPENACC_
         case openacc:
@@ -695,6 +788,7 @@ free_buffer (void * buffer, enum accel_type type)
         case none:
             free(buffer);
             break;
+        case managed:
         case cuda:
 #ifdef _ENABLE_CUDA_
             cudaFree(buffer);
@@ -712,7 +806,7 @@ free_buffer (void * buffer, enum accel_type type)
         if (options.target == cpu) {
             free_host_arrays();
         } 
-#ifdef _ENABLE_CUDA_   
+#ifdef _ENABLE_CUDA_KERNEL_ 
         else if (options.target == gpu || options.target == both) {
             free_host_arrays();
             free_device_arrays();
@@ -738,6 +832,7 @@ init_accel (void)
 
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
+        case managed:
         case cuda:
             if ((str = getenv("LOCAL_RANK")) != NULL) {
                 cudaGetDeviceCount(&dev_count);
@@ -789,6 +884,7 @@ cleanup_accel (void)
 
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
+        case managed:
         case cuda:
             curesult = cuCtxDestroy(cuContext);
 
@@ -810,7 +906,7 @@ cleanup_accel (void)
     return 0;
 }
 
-#ifdef _ENABLE_CUDA_
+#ifdef _ENABLE_CUDA_KERNEL_
 void
 free_device_arrays()
 {
@@ -843,7 +939,7 @@ dummy_compute(double seconds, MPI_Request* request)
     return test_time;
 }
 
-#ifdef _ENABLE_CUDA_
+#ifdef _ENABLE_CUDA_KERNEL_
 void
 do_compute_gpu(double seconds)
 {
@@ -910,7 +1006,7 @@ do_compute_and_probe(double seconds, MPI_Request* request)
         if (DEBUG) fprintf(stderr, "setting target seconds to %f\n", (target_seconds_for_compute * 1e6 ));
     }
 
-#ifdef _ENABLE_CUDA_
+#ifdef _ENABLE_CUDA_KERNEL_
     if (options.target == gpu) {
         if (options.num_probes) {
             /* Do the dummy compute on GPU only */
@@ -966,7 +1062,7 @@ do_compute_and_probe(double seconds, MPI_Request* request)
         }
     }
 
-#ifdef _ENABLE_CUDA_
+#ifdef _ENABLE_CUDA_KERNEL_
     if (options.target == gpu || options.target == both) {
         cudaDeviceSynchronize();    
         cudaStreamDestroy(stream);
@@ -983,13 +1079,14 @@ init_arrays(double target_time)
     if (DEBUG) fprintf(stderr, "called init_arrays with target_time = %f \n", (target_time * 1e6));
     int i = 0, j = 0;
     
-    a = malloc(DIM * sizeof(float *));
+    a = (float **)malloc(DIM * sizeof(float *));
     
-    for (i = 0; i < DIM; i++)
-        a[i] = malloc(DIM * sizeof(float));
+    for (i = 0; i < DIM; i++) {
+        a[i] = (float *)malloc(DIM * sizeof(float));
+    }
     
-    x = malloc(DIM * sizeof(float));
-    y = malloc(DIM * sizeof(float));
+    x = (float *)malloc(DIM * sizeof(float));
+    y = (float *)malloc(DIM * sizeof(float));
 
     for (i = 0; i < DIM; i++) {
         x[i] = y[i] = 1.0f;
@@ -998,7 +1095,7 @@ init_arrays(double target_time)
         }
     }
 
-#ifdef _ENABLE_CUDA_
+#ifdef _ENABLE_CUDA_KERNEL_
     if (options.target == gpu || options.target == both) {
     /* Setting size of arrays for Dummy Compute */
     int N = options.device_array_size;
@@ -1043,7 +1140,7 @@ init_arrays(double target_time)
 #endif
 
 }
-#ifdef _ENABLE_CUDA_
+#ifdef _ENABLE_CUDA_KENEL_
 void
 allocate_device_arrays(int n)
 {

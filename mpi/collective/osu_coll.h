@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2015 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2016 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University. 
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -28,6 +28,10 @@
 #define DEFAULT_MAX_MESSAGE_SIZE (1 << 20)
 #endif
 
+#ifndef DEFAULT_MIN_MESSAGE_SIZE
+#define DEFAULT_MIN_MESSAGE_SIZE 1
+#endif
+
 #define min(a,b) ((a)<(b)?(a):(b))
 #define max(a,b) ((a)>(b)?(a):(b))
 
@@ -48,6 +52,12 @@
 #   define CUDA_ENABLED 1
 #else
 #   define CUDA_ENABLED 0
+#endif
+
+#ifdef _ENABLE_CUDA_KERNEL_
+#   define CUDA_KERNEL_ENABLED 1
+#else
+#   define CUDA_KERNEL_ENABLED 0
 #endif
 
 #ifndef BENCHMARK
@@ -274,7 +284,8 @@ enum po_ret_type {
 enum accel_type {
     none,
     cuda,
-    openacc
+    openacc,
+    managed
 };
 
 enum target_type {
@@ -283,11 +294,12 @@ enum target_type {
     both
 };
 
-struct {
+struct options_t {
     enum accel_type accel;
     enum target_type target;
     int show_size;
     int show_full;
+    size_t min_message_size;
     size_t max_message_size;
     size_t iterations;
     size_t iterations_large;
@@ -296,8 +308,9 @@ struct {
     size_t skip_large;
     int num_probes;
     int device_array_size;
-} options;
+};
 
+extern struct options_t options;
 
 /*
  * Non-blocking Collectives
@@ -307,10 +320,9 @@ void allocate_device_arrays(int n);
 double dummy_compute(double target_secs, MPI_Request *request);
 void init_arrays(double seconds);
 double do_compute_and_probe(double seconds, MPI_Request *request);
-double test_time;
 void free_host_arrays();
 
-#ifdef _ENABLE_CUDA_
+#ifdef _ENABLE_CUDA_KERNEL_
 void free_device_arrays();
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2015 the Network-Based Computing Laboratory
+ * Copyright (C) 2003-2016 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -110,7 +110,7 @@ enum options_type {
    active_sync
 };
 
-struct {
+struct options_t {
     char rank0;
     char rank1;
     enum accel_type accel;
@@ -118,11 +118,13 @@ struct {
     int loop_large;
     int skip;
     int skip_large;
-} options;
+};
+
+extern struct options_t options;
 
 /*variables*/
-extern char *win_info[20];
-extern char *sync_info[20];
+extern char const *win_info[20];
+extern char const *sync_info[20];
 
 #ifdef _ENABLE_CUDA_
 extern CUcontext cuContext;

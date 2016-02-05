@@ -1,3 +1,24 @@
+OSU Micro Benchmarks v5.2 (02/05/16)
+* New Features & Enhancements
+    - Support for CUDA-Aware Managed memory
+        * osu_bibw
+        * osu_bw
+        * osu_latency
+        * osu_allgather
+        * osu_allgatherv
+        * osu_allreduce
+        * osu_alltoall
+        * osu_alltoallv
+        * osu_bcast
+        * osu_gather
+        * osu_gatherv
+        * osu_reduce
+        * osu_reduce_scatter
+        * osu_scatter
+        * osu_scatterv
+    - Add ability to specify minimum message size in addition to maximum
+      message size for all collective benchmarks
+
 OSU Micro Benchmarks v5.1 (11/10/15)
 * New Features & Enhancements
     - Introduce non-blocking collective v-variants as well as ialltoallw

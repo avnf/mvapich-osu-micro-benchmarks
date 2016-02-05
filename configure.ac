@@ -2,10 +2,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [5.1], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [5.2], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([mpi/pt2pt/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
+LT_INIT
 
 AC_ARG_ENABLE([openacc],
               [AS_HELP_STRING([--enable-openacc],
@@ -16,7 +17,10 @@ AC_ARG_ENABLE([openacc],
 
 AC_ARG_ENABLE([cuda],
               [AS_HELP_STRING([--enable-cuda],
-                              [Enable CUDA benchmarks])
+			      [Enable CUDA benchmarks (default is no).  Specify
+			       --enable-cuda=basic to enable basic cuda support
+			       without using cuda kernel support for
+			       non-blocking collectives])
               ],
               [],
               [enable_cuda=no])
@@ -67,11 +71,25 @@ AC_C_INLINE
 
 # Checks for library functions.
 AC_CHECK_FUNCS([getpagesize gettimeofday memset sqrt])
-AC_CHECK_FUNC([MPI_Init], [mpi_library=true])
-AC_CHECK_FUNC([MPI_Accumulate], [mpi2_library=true])
-AC_CHECK_FUNC([MPI_Get_accumulate], [mpi3_library=true])
-AC_CHECK_FUNC([shmem_barrier_all], [oshm_library=true])
-AC_CHECK_FUNC([upc_memput], [upc_compiler=true])
+
+AS_IF([test "x$enable_embedded" = xyes], [
+       AS_IF([test x"$enable_mpi3" = xyes], [mpi3_library=true])
+       AS_IF([test x"$enable_mpi2" = xyes], [mpi2_library=true])
+       AS_IF([test x"$enable_mpi" = xyes], [mpi_library=true])
+       AS_IF([test x"$enable_oshm" = xyes], [oshm_library=true])
+       AS_IF([test x"$enable_upc" = xyes], [upc_library=true])
+      ], [
+       AC_CHECK_FUNC([MPI_Init], [mpi_library=true])
+       AC_CHECK_FUNC([MPI_Accumulate], [mpi2_library=true])
+       AC_CHECK_FUNC([MPI_Get_accumulate], [mpi3_library=true])
+       AC_CHECK_FUNC([shmem_barrier_all], [oshm_library=true])
+       AC_CHECK_FUNC([upc_memput], [upc_compiler=true])
+      ])
+
+AM_CONDITIONAL([EMBEDDED_BUILD], [test x"$enable_embedded" = xyes])
+AM_CONDITIONAL([BUILD_PROFILING_LIB], [test x"$with_plib" = xyes])
+AC_SUBST([PMPILIBNAME], [$PMILIBNAME])
+AC_SUBST([MPILIBNAME], [$MPILIBNAME])
 
 AS_IF([test "x$enable_openacc" = xyes], [
        AC_CHECK_HEADERS([openacc.h], [],
@@ -79,7 +97,11 @@ AS_IF([test "x$enable_openacc" = xyes], [
        AC_DEFINE([_ENABLE_OPENACC_], [1], [Enable OpenACC])
        ])
 
-AS_IF([test "x$enable_cuda" = xyes], [
+AS_CASE([$enable_cuda],
+        [yes], [build_cuda_kernels=yes; build_cuda=yes],
+        [basic], [build_cuda=yes])
+
+AS_IF([test "x$build_cuda" = xyes], [
        AC_SEARCH_LIBS([cuPointerGetAttribute], [cuda], [],
                       [AC_MSG_ERROR([cannot link with -lcuda])])
        AC_SEARCH_LIBS([cudaFree], [cudart], [],
@@ -89,9 +111,14 @@ AS_IF([test "x$enable_cuda" = xyes], [
        AC_DEFINE([_ENABLE_CUDA_], [1], [Enable CUDA])
        ])
 
+AS_IF([test "xbuild_cuda_kernels" = xyes], [
+       AC_DEFINE([_ENABLE_CUDA_KERNEL_], [1], [Enable CUDA Kernel])
+       ])
+
 AM_CONDITIONAL([MPI2_LIBRARY], [test x$mpi2_library = xtrue])
 AM_CONDITIONAL([MPI3_LIBRARY], [test x$mpi3_library = xtrue])
-AM_CONDITIONAL([CUDA], [test x$enable_cuda = xyes])
+AM_CONDITIONAL([CUDA], [test x$build_cuda = xyes])
+AM_CONDITIONAL([CUDA_KERNELS], [test x$build_cuda_kernels = xyes])
 AM_CONDITIONAL([OPENACC], [test x$enable_openacc = xyes])
 AM_CONDITIONAL([OSHM], [test x$oshm_library = xtrue])
 AM_CONDITIONAL([MPI], [test x$mpi_library = xtrue])

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2015 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2016 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *  
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -61,13 +61,13 @@
 #   define CUDA_ENABLED 0
 #endif
 
-MPI_Request request[MAX_REQ_NUM];
-MPI_Status  reqstat[MAX_REQ_NUM];
-MPI_Request send_request[MAX_REQ_NUM];
-MPI_Request recv_request[MAX_REQ_NUM];
+extern MPI_Request request[MAX_REQ_NUM];
+extern MPI_Status  reqstat[MAX_REQ_NUM];
+extern MPI_Request send_request[MAX_REQ_NUM];
+extern MPI_Request recv_request[MAX_REQ_NUM];
 
 #ifdef _ENABLE_CUDA_
-CUcontext cuContext;
+extern CUcontext cuContext;
 #endif
 
 #define BW 0
@@ -97,7 +97,7 @@ enum accel_type {
     openacc
 };
 
-struct {
+struct options_t {
     char src;
     char dst;
     enum accel_type accel;
@@ -105,7 +105,11 @@ struct {
     int loop_large;
     int skip;
     int skip_large;
-} options;
+    char managedSend;
+    char managedRecv;
+};
+
+extern struct options_t options;
 
 void usage (char const *);
 int process_options (int argc, char *argv[], int type);

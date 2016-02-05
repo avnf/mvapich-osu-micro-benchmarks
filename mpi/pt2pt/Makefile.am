@@ -11,6 +11,16 @@ if MPI2_LIBRARY
     pt2pt_PROGRAMS += osu_latency_mt 
 endif
 
+if EMBEDDED_BUILD
+    AM_LDFLAGS =
+    AM_CPPFLAGS = -I$(top_builddir)/../src/include \
+		  -I${top_srcdir}/../src/include
+if BUILD_PROFILING_LIB
+    AM_LDFLAGS += $(top_builddir)/../lib/lib@PMPILIBNAME@.la
+endif
+    AM_LDFLAGS += $(top_builddir)/../lib/lib@MPILIBNAME@.la
+endif
+
 if OPENACC
     AM_CFLAGS = -acc
 endif
