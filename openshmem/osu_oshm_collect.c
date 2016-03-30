@@ -56,12 +56,13 @@ double pWrk2[_SHMEM_REDUCE_MIN_WRKDATA_SIZE];
 
 int main(int argc, char *argv[])
 {
-    int i, numprocs, rank, size, align_size;
+    int i, numprocs, rank, size;
+    unsigned long align_size = sysconf(_SC_PAGESIZE);
     int skip;
     static double latency = 0.0;
     int64_t t_start = 0, t_stop = 0, timer=0;
     static double avg_time = 0.0, max_time = 0.0, min_time = 0.0; 
-    char *recvbuff, *sendbuff, *r_buf1, *s_buf1;
+    char *recvbuff, *sendbuff;
     int max_msg_size = 1048576, full = 0, t;
     uint64_t requested_mem_limit = 0;
 
@@ -92,26 +93,19 @@ int main(int argc, char *argv[])
 
     print_header(rank, full);
 
-    r_buf1 = s_buf1=NULL;
-
-    r_buf1 = (char *) shmalloc(sizeof(char)*max_msg_size*numprocs + MAX_ALIGNMENT);
-    if(NULL == r_buf1) {
-        fprintf(stderr, "malloc failed.\n");
-        exit(1);
-    }
-    
-    s_buf1 = (char *) shmalloc(sizeof(char)*max_msg_size + MAX_ALIGNMENT);
-    if(NULL == s_buf1) {
-        fprintf(stderr, "malloc failed.\n");
+    recvbuff = (char *)shmemalign(align_size, sizeof(char) * max_msg_size
+            * numprocs);
+    if (NULL == recvbuff) {
+        fprintf(stderr, "shmemalign failed.\n");
         exit(1);
     }
 
-    align_size = getpagesize();
+    sendbuff = (char *)shmemalign(align_size, sizeof(char) * max_msg_size);
+    if (NULL == sendbuff) {
+        fprintf(stderr, "shmemalign failed.\n");
+        exit(1);
+    }
 
-    recvbuff = (char *)(((unsigned long) r_buf1 + (align_size - 1)) / align_size
-                        * align_size);
-    sendbuff = (char *)(((unsigned long) s_buf1 + (align_size - 1)) / align_size
-                        * align_size);
     memset(recvbuff, 1, max_msg_size*numprocs);
     memset(sendbuff, 0, max_msg_size);
 
@@ -153,8 +147,8 @@ int main(int argc, char *argv[])
     }
 
     shmem_barrier_all();
-    shfree(s_buf1);
-    shfree(r_buf1);
+    shfree(recvbuff);
+    shfree(sendbuff);
 
     return EXIT_SUCCESS;
 }

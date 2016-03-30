@@ -91,6 +91,7 @@ host_triplet = @host@
 @MPI_TRUE@am__append_1 = mpi
 @OSHM_TRUE@am__append_2 = openshmem
 @UPC_TRUE@am__append_3 = upc
+@UPCXX_TRUE@am__append_4 = upcxx
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -189,7 +190,7 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 CSCOPE = cscope
-DIST_SUBDIRS = mpi openshmem upc
+DIST_SUBDIRS = mpi openshmem upc upcxx
 am__DIST_COMMON = $(srcdir)/Makefile.in README compile config.guess \
 	config.sub depcomp install-sh ltmain.sh missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -356,7 +357,8 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = $(am__append_1) $(am__append_2) $(am__append_3)
+SUBDIRS = $(am__append_1) $(am__append_2) $(am__append_3) \
+	$(am__append_4)
 @CUDA_TRUE@dist_pkglibexec_SCRIPTS = get_local_rank
 EXTRA_DIST = README CHANGES COPYRIGHT
 all: all-recursive

@@ -1,25 +1,18 @@
 OMB (OSU Micro-Benchmarks)
 --------------------------
 The OSU Micro-Benchmarks use the GNU build system. Therefore you can simply
-use the following steps if mpicc or oshcc is in your PATH.
+use the following steps to build the MPI benchmarks.
 
 Example:
-	./configure
+	./configure CC=/path/to/mpicc CXX=/path/to/mpicxx
 	make
 	make install
 
-If your compiler is not in your path or you would like to use another
-particular version you can tell configure by setting CC.
-
-Example:
-	./configure CC=/path/to/mpicc
-	make
-	make install
-
-Configure will detect whether your library supports MPI-1, MPI-2, MPI-3, and
-OpenSHMEM to compile the corresponding benchmarks.  See
-http://mvapich.cse.ohio-state.edu/benchmarks/ to download the latest version of
-this package.
+CC and CXX can be set to other wrapper scripts as well to build OpenSHMEM or
+UPC++ benchmarks as well.  Based on this setting, configure will detect whether
+your library supports MPI-1, MPI-2, MPI-3, OpenSHMEM, and UPC++ to compile the
+corresponding benchmarks.  See http://mvapich.cse.ohio-state.edu/benchmarks/ to
+download the latest version of this package.
 
 This package also distributes UPC put, get, and collective benchmarks.
 These are located in the upc subdirectory and can be compiled by the
@@ -641,6 +634,52 @@ Collective Latency Tests
     * default version, the benchmarks report the latencies for up to 1MB
     * message lengths. "-i" can be used to set the number of iterations to run
     * for each message length.
+
+Point-to-Point UPC++ Benchmarks
+-------------------------------
+osu_upcxx_async_copy_put.c - Put Latency
+    * This benchmark measures the latency of the UPC++ async_copy operation
+    * between multiple UPC++ threads. In this benchmark, UPC+ threads with
+    * ranks less than (THREADS/2) issues UPC++ async_copy from local to remote
+    * memory on peer threads. Peer threads are identified as
+    * (MYTHREAD+THREADS/2). This is repeated for a fixed number of iterations,
+    * for varying data sizes. The average latency per iteration is reported. A
+    * few warm-up iterations are run without timing to ignore any start-up
+    * overheads. All UPC++ threads call barrier after the test for each message
+    * size.
+
+osu_upcxx_async_copy_get.c - Get Latency
+    * This benchmark is similar as the osu_upcxx_async_copy_put benchmark that
+    * is described above. The difference is that the async_copy operation
+    * copies from remote to local memory. The average get operation latency per
+    * iteration is reported.
+
+Collective UPC++ Benchmarks
+---------------------------
+osu_upcxx_allgather - UPC++ Allgather Latency Test
+osu_upcxx_alltoall  - UPC++ Alltoall Latency Test
+osu_upcxx_bcast     - UPC++ Broadcast Latency Test
+osu_upcxx_gather    - UPC++ Gather Latency Test
+osu_upcxx_reduce    - UPC++ Reduce Latency Test
+osu_upcxx_scatter   - UPC++ Scatter Latency Test
+
+Collective Latency Tests
+    * The latest OMB Version includes benchmarks for various UPC++ collective
+    * operations (upcxx_allgather, upcxx_alltoall, upcxx_bcast, upcxx_gather,
+    * upcxx_reduce, and upcxx_scatter).  These benchmarks work in the following
+    * manner. Suppose users run the osu_upcxx_bcast benchmark with N processes,
+    * the benchmark measures the min, max and the average latency of the
+    * upcxx_bcast collective operation across N processes, for various message
+    * lengths, over a large number of iterations. In the default version, these
+    * benchmarks report the average latency for each message length.
+    * Additionally, the benchmarks offer the following options:
+    * "-f" can be used to report additional statistics of the benchmark, such
+    * as min and max latencies and the number of iterations.
+    * "-m" option can be used to set the maximum message length to be used in a
+    * benchmark. In the default version, the benchmarks report the latencies
+    * for up to 1MB message lengths.
+    * "-i" can be used to set the number of iterations to run for each message
+    * length.
 
 CUDA and OpenACC Extensions to OMB
 ----------------------------------

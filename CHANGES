@@ -1,3 +1,19 @@
+OSU Micro Benchmarks v5.3 (03/29/16)
+* New Features & Enhancements
+    - Introduce new UPC++ Benchmarks
+        * osu_upcxx_allgather
+        * osu_upcxx_alltoall
+        * osu_upcxx_async_copy_get
+        * osu_upcxx_async_copy_put
+        * osu_upcxx_bcast
+        * osu_upcxx_gather
+        * osu_upcxx_reduce
+        * osu_upcxx_scatter
+
+* Bug Fixes
+    - Determine page size at runtime in OpenSHMEM benchmarks (fixes issue seen
+      on OpenPower machines)
+
 OSU Micro Benchmarks v5.2 (02/05/16)
 * New Features & Enhancements
     - Support for CUDA-Aware Managed memory

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2016 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2015 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University. 
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -21,35 +21,12 @@
 #define DEFAULT_MAX_MESSAGE_SIZE (1 << 20)
 #endif
 
-#define MAX(a,b) ((a) > (b)) ? a:b
-
 #define SKIP 200
 #define SKIP_LARGE 10
 #define LARGE_MESSAGE_SIZE 8192
+#define MAX_ALIGNMENT 16384
 #define MAX_MEM_LIMIT (512*1024*1024)
 #define MAX_MEM_LOWER_LIMIT (1*1024*1024)
-
-#ifdef _ENABLE_OPENACC_
-#   define OPENACC_ENABLED 1
-#else
-#   define OPENACC_ENABLED 0
-#endif
-
-#ifdef _ENABLE_CUDA_
-#   define CUDA_ENABLED 1
-#else
-#   define CUDA_ENABLED 0
-#endif
-
-#ifndef BENCHMARK
-#   define BENCHMARK "OpenSHMEM%s BENCHMARK NAME UNSET"
-#endif
-
-#ifdef PACKAGE_VERSION
-#   define HEADER "# " BENCHMARK " v" PACKAGE_VERSION "\n"
-#else
-#   define HEADER "# " BENCHMARK "\n"
-#endif
 
 #ifndef FIELD_WIDTH
 #   define FIELD_WIDTH 20
@@ -63,8 +40,9 @@ static int iterations = 1000;
 static int iterations_large = 100;
 static int print_size = 0;
 static uint64_t max_mem_limit = MAX_MEM_LIMIT; 
-static int process_args (int argc, char *argv[], int rank, int * size, int * full) __attribute__((unused));
-static void print_header (int rank, int full) __attribute__((unused));
+static int process_args (int argc, char *argv[], int rank, int * size, 
+        int * full, char *header) __attribute__((unused));
+static void print_header (char *header, int rank, int full) __attribute__((unused));
 static void print_data (int rank, int full, int size, double avg_time, double
         min_time, double max_time, int iterations) __attribute__((unused));
 
@@ -99,13 +77,13 @@ static void print_usage(int rank, const char * prog, int has_size)
     }
 }
 
-static void print_version()
+static void print_version(char *header)
 {
-        fprintf(stdout, HEADER, "");
+        fprintf(stdout, header, "");
         fflush(stdout);
 }
 
-static int process_args (int argc, char *argv[], int rank, int * size, int * full)
+static int process_args (int argc, char *argv[], int rank, int * size, int * full, char *header)
 {
     int c;
 
@@ -121,7 +99,7 @@ static int process_args (int argc, char *argv[], int rank, int * size, int * ful
 
             case 'v':
                 if (rank == 0) {
-                    print_version();
+                    print_version(header);
                 }
 
                 return 1;
@@ -176,10 +154,10 @@ static int process_args (int argc, char *argv[], int rank, int * size, int * ful
     return 0;
 }
 
-static void print_header (int rank, int full)
+static void print_header (char *header, int rank, int full)
 {
     if(rank == 0) {
-        fprintf(stdout, HEADER, "");
+        fprintf(stdout, header, "");
 
         if (print_size) {
             fprintf(stdout, "%-*s", 10, "# Size");

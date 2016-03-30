@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [5.2], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [5.3], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([mpi/pt2pt/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -54,10 +54,11 @@ AC_ARG_WITH([cuda-libpath],
             ])
 
 # Checks for programs.
-AC_PROG_CC([mpicc oshcc upcc])
+AC_PROG_CC([mpicc oshcc upcc upc++])
 
-# Checks for mpicxx used for compiling kernel.cu in nbc benchmarks
-AC_PROG_CXX(mpicxx)
+# Checks for mpicxx used for compiling kernel.cu in nbc benchmarks and/or the
+# upc++ compiler for upcxx benchmarks
+AC_PROG_CXX([mpicxx upc++])
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sqrt], [m])
@@ -77,13 +78,16 @@ AS_IF([test "x$enable_embedded" = xyes], [
        AS_IF([test x"$enable_mpi2" = xyes], [mpi2_library=true])
        AS_IF([test x"$enable_mpi" = xyes], [mpi_library=true])
        AS_IF([test x"$enable_oshm" = xyes], [oshm_library=true])
-       AS_IF([test x"$enable_upc" = xyes], [upc_library=true])
+       AS_IF([test x"$enable_upc" = xyes], [upc_compiler=true])
+       AS_IF([test x"$enable_upcxx" = xyes], [upcxx_compiler=true])
       ], [
        AC_CHECK_FUNC([MPI_Init], [mpi_library=true])
        AC_CHECK_FUNC([MPI_Accumulate], [mpi2_library=true])
        AC_CHECK_FUNC([MPI_Get_accumulate], [mpi3_library=true])
        AC_CHECK_FUNC([shmem_barrier_all], [oshm_library=true])
        AC_CHECK_FUNC([upc_memput], [upc_compiler=true])
+       AC_CHECK_DECL([upcxx_alltoall], [upcxx_compiler=true], [],
+                     [#include <upcxx.h>])
       ])
 
 AM_CONDITIONAL([EMBEDDED_BUILD], [test x"$enable_embedded" = xyes])
@@ -123,11 +127,12 @@ AM_CONDITIONAL([OPENACC], [test x$enable_openacc = xyes])
 AM_CONDITIONAL([OSHM], [test x$oshm_library = xtrue])
 AM_CONDITIONAL([MPI], [test x$mpi_library = xtrue])
 AM_CONDITIONAL([UPC], [test x$upc_compiler = xtrue])
+AM_CONDITIONAL([UPCXX], [test x$upcxx_compiler = xtrue])
 
 AC_DEFINE([FIELD_WIDTH], [18], [Width of field used to report numbers])
 AC_DEFINE([FLOAT_PRECISION], [2], [Precision of reported numbers])
 
 AC_CONFIG_FILES([Makefile mpi/Makefile mpi/pt2pt/Makefile mpi/startup/Makefile
                  mpi/one-sided/Makefile mpi/collective/Makefile
-                 openshmem/Makefile upc/Makefile])
+                 openshmem/Makefile upc/Makefile upcxx/Makefile])
 AC_OUTPUT
