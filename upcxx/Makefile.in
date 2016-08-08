@@ -105,7 +105,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(upcdir)"
 PROGRAMS = $(upc_PROGRAMS)
 am_osu_upcxx_allgather_OBJECTS = osu_upcxx_allgather.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_coll.$(OBJEXT) osu_common.$(OBJEXT)
 osu_upcxx_allgather_OBJECTS = $(am_osu_upcxx_allgather_OBJECTS)
 osu_upcxx_allgather_LDADD = $(LDADD)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -113,33 +113,35 @@ am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
 am_osu_upcxx_alltoall_OBJECTS = osu_upcxx_alltoall.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_coll.$(OBJEXT) osu_common.$(OBJEXT)
 osu_upcxx_alltoall_OBJECTS = $(am_osu_upcxx_alltoall_OBJECTS)
 osu_upcxx_alltoall_LDADD = $(LDADD)
 am_osu_upcxx_async_copy_get_OBJECTS =  \
-	osu_upcxx_async_copy_get.$(OBJEXT) osu_common.$(OBJEXT)
+	osu_upcxx_async_copy_get.$(OBJEXT) osu_coll.$(OBJEXT) \
+	osu_common.$(OBJEXT)
 osu_upcxx_async_copy_get_OBJECTS =  \
 	$(am_osu_upcxx_async_copy_get_OBJECTS)
 osu_upcxx_async_copy_get_LDADD = $(LDADD)
 am_osu_upcxx_async_copy_put_OBJECTS =  \
-	osu_upcxx_async_copy_put.$(OBJEXT) osu_common.$(OBJEXT)
+	osu_upcxx_async_copy_put.$(OBJEXT) osu_coll.$(OBJEXT) \
+	osu_common.$(OBJEXT)
 osu_upcxx_async_copy_put_OBJECTS =  \
 	$(am_osu_upcxx_async_copy_put_OBJECTS)
 osu_upcxx_async_copy_put_LDADD = $(LDADD)
 am_osu_upcxx_bcast_OBJECTS = osu_upcxx_bcast.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_coll.$(OBJEXT) osu_common.$(OBJEXT)
 osu_upcxx_bcast_OBJECTS = $(am_osu_upcxx_bcast_OBJECTS)
 osu_upcxx_bcast_LDADD = $(LDADD)
 am_osu_upcxx_gather_OBJECTS = osu_upcxx_gather.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_coll.$(OBJEXT) osu_common.$(OBJEXT)
 osu_upcxx_gather_OBJECTS = $(am_osu_upcxx_gather_OBJECTS)
 osu_upcxx_gather_LDADD = $(LDADD)
 am_osu_upcxx_reduce_OBJECTS = osu_upcxx_reduce.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_coll.$(OBJEXT) osu_common.$(OBJEXT)
 osu_upcxx_reduce_OBJECTS = $(am_osu_upcxx_reduce_OBJECTS)
 osu_upcxx_reduce_LDADD = $(LDADD)
 am_osu_upcxx_scatter_OBJECTS = osu_upcxx_scatter.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_coll.$(OBJEXT) osu_common.$(OBJEXT)
 osu_upcxx_scatter_OBJECTS = $(am_osu_upcxx_scatter_OBJECTS)
 osu_upcxx_scatter_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -354,28 +356,28 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 upcdir = $(pkglibexecdir)/upcxx
-osu_upcxx_allgather_SOURCES = osu_upcxx_allgather.cpp osu_coll.h \
+osu_upcxx_allgather_SOURCES = osu_upcxx_allgather.cpp osu_coll.h osu_coll.c  \
 			      osu_common.c osu_common.h
 
-osu_upcxx_alltoall_SOURCES = osu_upcxx_alltoall.cpp osu_coll.h \
+osu_upcxx_alltoall_SOURCES = osu_upcxx_alltoall.cpp osu_coll.h osu_coll.c \
 			     osu_common.c osu_common.h
 
-osu_upcxx_bcast_SOURCES = osu_upcxx_bcast.cpp osu_coll.h \
+osu_upcxx_bcast_SOURCES = osu_upcxx_bcast.cpp osu_coll.h osu_coll.c \
 			  osu_common.c osu_common.h
 
-osu_upcxx_gather_SOURCES = osu_upcxx_gather.cpp osu_coll.h \
+osu_upcxx_gather_SOURCES = osu_upcxx_gather.cpp osu_coll.h osu_coll.c \
 			   osu_common.c osu_common.h
 
-osu_upcxx_reduce_SOURCES = osu_upcxx_reduce.cpp osu_coll.h \
+osu_upcxx_reduce_SOURCES = osu_upcxx_reduce.cpp osu_coll.h osu_coll.c \
 			   osu_common.c osu_common.h
 
-osu_upcxx_scatter_SOURCES = osu_upcxx_scatter.cpp osu_coll.h \
+osu_upcxx_scatter_SOURCES = osu_upcxx_scatter.cpp osu_coll.h osu_coll.c \
 			    osu_common.c osu_common.h
 
-osu_upcxx_async_copy_get_SOURCES = osu_upcxx_async_copy_get.cpp \
+osu_upcxx_async_copy_get_SOURCES = osu_upcxx_async_copy_get.cpp osu_coll.c \
 				   osu_common.c osu_common.h
 
-osu_upcxx_async_copy_put_SOURCES = osu_upcxx_async_copy_put.cpp \
+osu_upcxx_async_copy_put_SOURCES = osu_upcxx_async_copy_put.cpp osu_coll.c \
 				   osu_common.c osu_common.h
 
 all: all-am
@@ -499,6 +501,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_coll.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_upcxx_allgather.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_upcxx_alltoall.Po@am__quote@

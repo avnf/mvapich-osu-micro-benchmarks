@@ -575,6 +575,7 @@ osu_iscatterv_SOURCES = osu_iscatterv.c osu_coll.c osu_coll.h \
 @EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include
 
 @OPENACC_TRUE@AM_CFLAGS = -acc
+@OPENACC_TRUE@AM_CXXFLAGS = -acc
 all: all-am
 
 .SUFFIXES:

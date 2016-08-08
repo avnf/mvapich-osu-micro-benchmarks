@@ -105,7 +105,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(upcdir)"
 PROGRAMS = $(upc_PROGRAMS)
 am_osu_upc_all_barrier_OBJECTS = osu_upc_all_barrier.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_upc_all_barrier_OBJECTS = $(am_osu_upc_all_barrier_OBJECTS)
 osu_upc_all_barrier_LDADD = $(LDADD)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -113,27 +113,27 @@ am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
 am_osu_upc_all_broadcast_OBJECTS = osu_upc_all_broadcast.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_upc_all_broadcast_OBJECTS = $(am_osu_upc_all_broadcast_OBJECTS)
 osu_upc_all_broadcast_LDADD = $(LDADD)
 am_osu_upc_all_exchange_OBJECTS = osu_upc_all_exchange.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_upc_all_exchange_OBJECTS = $(am_osu_upc_all_exchange_OBJECTS)
 osu_upc_all_exchange_LDADD = $(LDADD)
 am_osu_upc_all_gather_OBJECTS = osu_upc_all_gather.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_upc_all_gather_OBJECTS = $(am_osu_upc_all_gather_OBJECTS)
 osu_upc_all_gather_LDADD = $(LDADD)
 am_osu_upc_all_gather_all_OBJECTS = osu_upc_all_gather_all.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_upc_all_gather_all_OBJECTS = $(am_osu_upc_all_gather_all_OBJECTS)
 osu_upc_all_gather_all_LDADD = $(LDADD)
 am_osu_upc_all_reduce_OBJECTS = osu_upc_all_reduce.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_upc_all_reduce_OBJECTS = $(am_osu_upc_all_reduce_OBJECTS)
 osu_upc_all_reduce_LDADD = $(LDADD)
 am_osu_upc_all_scatter_OBJECTS = osu_upc_all_scatter.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_upc_all_scatter_OBJECTS = $(am_osu_upc_all_scatter_OBJECTS)
 osu_upc_all_scatter_LDADD = $(LDADD)
 osu_upc_memget_SOURCES = osu_upc_memget.c
@@ -337,13 +337,13 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 upcdir = $(pkglibexecdir)/upc
-osu_upc_all_barrier_SOURCES = osu_upc_all_barrier.c osu_common.c osu_common.h osu_coll.h
-osu_upc_all_broadcast_SOURCES = osu_upc_all_broadcast.c osu_common.c osu_common.h osu_coll.h
-osu_upc_all_exchange_SOURCES = osu_upc_all_exchange.c osu_common.c osu_common.h osu_coll.h
-osu_upc_all_gather_SOURCES = osu_upc_all_gather.c osu_common.c osu_common.h osu_coll.h
-osu_upc_all_gather_all_SOURCES = osu_upc_all_gather_all.c osu_common.c osu_common.h osu_coll.h
-osu_upc_all_reduce_SOURCES = osu_upc_all_reduce.c osu_common.c osu_common.h osu_coll.h
-osu_upc_all_scatter_SOURCES = osu_upc_all_scatter.c osu_common.c osu_common.h osu_coll.h
+osu_upc_all_barrier_SOURCES = osu_upc_all_barrier.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_upc_all_broadcast_SOURCES = osu_upc_all_broadcast.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_upc_all_exchange_SOURCES = osu_upc_all_exchange.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_upc_all_gather_SOURCES = osu_upc_all_gather.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_upc_all_gather_all_SOURCES = osu_upc_all_gather_all.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_upc_all_reduce_SOURCES = osu_upc_all_reduce.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_upc_all_scatter_SOURCES = osu_upc_all_scatter.c osu_common.c osu_common.h osu_coll.h osu_coll.c
 all: all-am
 
 .SUFFIXES:
@@ -469,6 +469,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_coll.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_upc_all_barrier.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_upc_all_broadcast.Po@am__quote@

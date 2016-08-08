@@ -105,7 +105,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(openshmemdir)"
 PROGRAMS = $(openshmem_PROGRAMS)
 am_osu_oshm_atomics_OBJECTS = osu_oshm_atomics.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_oshm_atomics_OBJECTS = $(am_osu_oshm_atomics_OBJECTS)
 osu_oshm_atomics_LDADD = $(LDADD)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -113,33 +113,35 @@ am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
 am_osu_oshm_barrier_OBJECTS = osu_oshm_barrier.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_oshm_barrier_OBJECTS = $(am_osu_oshm_barrier_OBJECTS)
 osu_oshm_barrier_LDADD = $(LDADD)
 am_osu_oshm_broadcast_OBJECTS = osu_oshm_broadcast.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_oshm_broadcast_OBJECTS = $(am_osu_oshm_broadcast_OBJECTS)
 osu_oshm_broadcast_LDADD = $(LDADD)
 am_osu_oshm_collect_OBJECTS = osu_oshm_collect.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_oshm_collect_OBJECTS = $(am_osu_oshm_collect_OBJECTS)
 osu_oshm_collect_LDADD = $(LDADD)
 am_osu_oshm_fcollect_OBJECTS = osu_oshm_fcollect.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_oshm_fcollect_OBJECTS = $(am_osu_oshm_fcollect_OBJECTS)
 osu_oshm_fcollect_LDADD = $(LDADD)
-am_osu_oshm_get_OBJECTS = osu_oshm_get.$(OBJEXT) osu_common.$(OBJEXT)
+am_osu_oshm_get_OBJECTS = osu_oshm_get.$(OBJEXT) osu_common.$(OBJEXT) \
+	osu_coll.$(OBJEXT)
 osu_oshm_get_OBJECTS = $(am_osu_oshm_get_OBJECTS)
 osu_oshm_get_LDADD = $(LDADD)
-am_osu_oshm_put_OBJECTS = osu_oshm_put.$(OBJEXT) osu_common.$(OBJEXT)
+am_osu_oshm_put_OBJECTS = osu_oshm_put.$(OBJEXT) osu_common.$(OBJEXT) \
+	osu_coll.$(OBJEXT)
 osu_oshm_put_OBJECTS = $(am_osu_oshm_put_OBJECTS)
 osu_oshm_put_LDADD = $(LDADD)
 am_osu_oshm_put_mr_OBJECTS = osu_oshm_put_mr.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_oshm_put_mr_OBJECTS = $(am_osu_oshm_put_mr_OBJECTS)
 osu_oshm_put_mr_LDADD = $(LDADD)
 am_osu_oshm_reduce_OBJECTS = osu_oshm_reduce.$(OBJEXT) \
-	osu_common.$(OBJEXT)
+	osu_common.$(OBJEXT) osu_coll.$(OBJEXT)
 osu_oshm_reduce_OBJECTS = $(am_osu_oshm_reduce_OBJECTS)
 osu_oshm_reduce_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -335,15 +337,15 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 openshmemdir = $(pkglibexecdir)/openshmem
-osu_oshm_get_SOURCES = osu_oshm_get.c osu_common.c osu_common.h
-osu_oshm_put_SOURCES = osu_oshm_put.c osu_common.c osu_common.h
-osu_oshm_put_mr_SOURCES = osu_oshm_put_mr.c osu_common.c osu_common.h
-osu_oshm_atomics_SOURCES = osu_oshm_atomics.c osu_common.c osu_common.h
-osu_oshm_barrier_SOURCES = osu_oshm_barrier.c osu_common.c osu_common.h osu_coll.h
-osu_oshm_broadcast_SOURCES = osu_oshm_broadcast.c osu_common.c osu_common.h osu_coll.h
-osu_oshm_collect_SOURCES = osu_oshm_collect.c osu_common.c osu_common.h osu_coll.h
-osu_oshm_fcollect_SOURCES = osu_oshm_fcollect.c osu_common.c osu_common.h osu_coll.h
-osu_oshm_reduce_SOURCES = osu_oshm_reduce.c osu_common.c osu_common.h osu_coll.h
+osu_oshm_get_SOURCES = osu_oshm_get.c osu_common.c osu_common.h osu_coll.c
+osu_oshm_put_SOURCES = osu_oshm_put.c osu_common.c osu_common.h osu_coll.c
+osu_oshm_put_mr_SOURCES = osu_oshm_put_mr.c osu_common.c osu_common.h osu_coll.c
+osu_oshm_atomics_SOURCES = osu_oshm_atomics.c osu_common.c osu_common.h osu_coll.c
+osu_oshm_barrier_SOURCES = osu_oshm_barrier.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_oshm_broadcast_SOURCES = osu_oshm_broadcast.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_oshm_collect_SOURCES = osu_oshm_collect.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_oshm_fcollect_SOURCES = osu_oshm_fcollect.c osu_common.c osu_common.h osu_coll.h osu_coll.c
+osu_oshm_reduce_SOURCES = osu_oshm_reduce.c osu_common.c osu_common.h osu_coll.h osu_coll.c
 all: all-am
 
 .SUFFIXES:
@@ -469,6 +471,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_coll.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_atomics.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_barrier.Po@am__quote@
