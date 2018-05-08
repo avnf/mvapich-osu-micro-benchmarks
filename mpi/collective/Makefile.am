@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 NVCC = nvcc
-NVCFLAGS = -cuda -maxrregcount 32
+NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX)
 SUFFIXES = .cu .cpp
 .cu.cpp:
 	$(NVCC) $(NVCFLAGS) $(INCLUDES) $(CPPFLAGS) --output-file $@ $<
@@ -44,6 +44,7 @@ osu_iscatterv_SOURCES = osu_iscatterv.c $(UTILITIES)
 if EMBEDDED_BUILD
     AM_LDFLAGS =
     AM_CPPFLAGS = -I$(top_builddir)/../src/include \
+          -I${top_srcdir}/util \
 		  -I${top_srcdir}/../src/include
 if BUILD_PROFILING_LIB
     AM_LDFLAGS += $(top_builddir)/../lib/lib@PMPILIBNAME@.la

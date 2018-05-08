@@ -342,6 +342,10 @@ AUTOMAKE_OPTIONS = subdir-objects
 upcdir = $(pkglibexecdir)/upc
 AM_CFLAGS = -I../util
 UTILITIES = ../util/osu_util.c osu_util.h
+@EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
+@EMBEDDED_BUILD_TRUE@                  -I${top_srcdir}/util \
+@EMBEDDED_BUILD_TRUE@                  -I${top_srcdir}/../src/include
+
 osu_upc_all_barrier_SOURCES = osu_upc_all_barrier.c $(UTILITIES)
 osu_upc_all_broadcast_SOURCES = osu_upc_all_broadcast.c $(UTILITIES)
 osu_upc_all_exchange_SOURCES = osu_upc_all_exchange.c $(UTILITIES)

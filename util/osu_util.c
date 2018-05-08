@@ -539,10 +539,10 @@ void usage_mbw_mr() {
     fprintf(stdout, "Options:\n");
     fprintf(stdout, "  -R=<0,1>, --print-rate         Print uni-directional message rate (default 1)\n");
     fprintf(stdout, "  -p=<pairs>, --num-pairs        Number of pairs involved (default np / 2)\n");
-    fprintf(stdout, "  -W=<window>, --window-size     Number of messages sent before acknowledgement (64, 10)\n");
+    fprintf(stdout, "  -W=<window>, --window-size     Number of messages sent before acknowledgement (default 64)\n");
     fprintf(stdout, "                                 [cannot be used with -v]\n");
     fprintf(stdout, "  -V, --vary-window              Vary the window size (default no)\n");
-    fprintf(stdout, "                                 [cannot be used with -w]\n");
+    fprintf(stdout, "                                 [cannot be used with -W]\n");
     if (options.show_size) {
         fprintf(stdout, "  -m, --message-size          [MIN:]MAX  set the minimum and/or the maximum message size to MIN and/or MAX\n");
         fprintf(stdout, "                              bytes respectively. Examples:\n");
@@ -648,9 +648,21 @@ int process_options (int argc, char *argv[])
 
     if(options.bench == PT2PT) {
         if (accel_enabled) {
-            optstring = (LAT_MT == options.subtype) ? "+:x:i:t:m:hv" : "+:x:i:m:d:hv";
+            if (options.subtype == LAT_MT) {
+                optstring = "+:x:i:t:m:hv";
+            } else if (options.subtype == BW) {
+                optstring = "+:x:i:t:m:W:hv";
+            } else {
+                optstring = "+:x:i:m:d:hv";
+            }
         } else{
-            optstring = (LAT_MT == options.subtype) ? "+:hvm:x:i:t:" : "+:hvm:x:i:";
+            if (options.subtype == LAT_MT) {
+                optstring = "+:hvm:x:i:t:";
+            } else if (options.subtype == BW) {
+                optstring = "+:hvm:x:i:t:W:";
+            } else {
+                optstring = "+:hvm:x:i:";
+            }
         }
     } else if (options.bench == COLLECTIVE) {
         optstring = "+:hvfm:i:x:M:t:a:";
@@ -799,21 +811,11 @@ int process_options (int argc, char *argv[])
                 }
                 break;
             case 'W':
-                if (options.bench == MBW_MR) {
-                    if (set_window_size(atoi(optarg))) {
-                        bad_usage.message = "Invalid Number of Iterations";
-                        bad_usage.optarg = optarg;
+                if (set_window_size(atoi(optarg))) {
+                    bad_usage.message = "Invalid Window Size";
+                    bad_usage.optarg = optarg;
 
-                        return PO_BAD_USAGE;
-                    }
-                }
-                else {
-                    if (set_window_size_large(atoi(optarg))) {
-                        bad_usage.message = "Invalid Number of Iterations";
-                        bad_usage.optarg = optarg;
-
-                        return PO_BAD_USAGE;
-                    }
+                    return PO_BAD_USAGE;
                 }
                 break;
             case 'V':
@@ -1029,6 +1031,10 @@ void print_help_message (int rank)
     fprintf(stdout, "  -i, --iterations ITER       set iterations per message size to ITER (default 1000 for small\n");
     fprintf(stdout, "                              messages, 100 for large messages)\n");
     fprintf(stdout, "  -x, --warmup ITER           set number of warmup iterations to skip before timing (default 200)\n");
+
+    if (options.subtype == BW) {
+        fprintf(stdout, "  -W, --window-size SIZE      set number of messages to send before synchronization (default 64)\n");
+    }
 
     if (options.bench == COLLECTIVE) {
         fprintf(stdout, "  -f, --full                  print full format listing (MIN/MAX latency and ITERATIONS\n");

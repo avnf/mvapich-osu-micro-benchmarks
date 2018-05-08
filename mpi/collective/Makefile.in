@@ -478,7 +478,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 NVCC = nvcc
-NVCFLAGS = -cuda -maxrregcount 32
+NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX)
 SUFFIXES = .cu .cpp
 collectivedir = $(pkglibexecdir)/mpi/collective
 AM_CFLAGS = -I../../util $(am__append_3)
@@ -510,6 +510,7 @@ osu_iscatterv_SOURCES = osu_iscatterv.c $(UTILITIES)
 @EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_2) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
+@EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/util \
 @EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include
 
 @OPENACC_TRUE@AM_CXXFLAGS = -acc

@@ -366,6 +366,10 @@ AUTOMAKE_OPTIONS = subdir-objects
 openshmemdir = $(pkglibexecdir)/openshmem
 AM_CFLAGS = -I../util
 UTILITIES = ../util/osu_util.c osu_util.h
+@EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
+@EMBEDDED_BUILD_TRUE@                  -I${top_srcdir}/util \
+@EMBEDDED_BUILD_TRUE@                  -I${top_srcdir}/../src/include
+
 osu_oshm_get_SOURCES = osu_oshm_get.c $(UTILITIES)
 osu_oshm_put_SOURCES = osu_oshm_put.c $(UTILITIES)
 osu_oshm_put_mr_SOURCES = osu_oshm_put_mr.c $(UTILITIES)

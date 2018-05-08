@@ -335,8 +335,8 @@ extern CUcontext cuContext;
 #define MIN_NUM_THREADS 1
 #define MAX_NUM_THREADS 128
 
-#define WINDOW_SIZES {8, 16, 32, 64, 128}
-#define WINDOW_SIZES_COUNT   (5)
+#define WINDOW_SIZES {1, 2, 4, 8, 16, 32, 64, 128}
+#define WINDOW_SIZES_COUNT   (8)
 
 void usage_mbw_mr();
 int allocate_memory_pt2pt (char **sbuf, char **rbuf, int rank);

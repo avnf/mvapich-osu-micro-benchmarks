@@ -383,7 +383,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 NVCC = nvcc
-NVCFLAGS = -cuda -maxrregcount 32
+NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX)
 SUFFIXES = .cu .cpp
 one_sideddir = $(pkglibexecdir)/mpi/one-sided
 AM_CFLAGS = -I../../util $(am__append_4)
@@ -400,6 +400,7 @@ osu_get_acc_latency_SOURCES = osu_get_acc_latency.c $(UTILITIES)
 @EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_3) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
+@EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/util \
 @EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include
 
 all: all-am
