@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
     }
     set_buffer(sendbuf, options.accel, 1, bufsize);
 
-    bufsize = sizeof(float)*((options.max_message_size/numprocs + 1)/sizeof(float));
+    bufsize = sizeof(float)*(options.max_message_size/numprocs/sizeof(float)+1);
     if (allocate_memory_coll((void**)&recvbuf, bufsize,
                 options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
