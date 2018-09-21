@@ -92,7 +92,7 @@ collective_PROGRAMS = osu_alltoallv$(EXEEXT) osu_allgatherv$(EXEEXT) \
 	osu_ialltoallw$(EXEEXT)
 @CUDA_KERNELS_TRUE@am__append_1 = ../../util/kernel.cu
 @BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_2 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
-@OPENACC_TRUE@am__append_3 = -acc
+@OPENACC_TRUE@am__append_3 = -acc -ta=tesla:nordc
 subdir = mpi/collective
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/depcomp
@@ -502,7 +502,7 @@ osu_iscatterv_SOURCES = osu_iscatterv.c $(UTILITIES)
 @EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/util \
 @EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include
 
-@OPENACC_TRUE@AM_CXXFLAGS = -acc
+@OPENACC_TRUE@AM_CXXFLAGS = -acc -ta=tesla:nordc
 all: all-am
 
 .SUFFIXES:

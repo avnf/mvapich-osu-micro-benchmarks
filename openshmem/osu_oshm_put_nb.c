@@ -121,6 +121,8 @@ int main(int argc, char *argv[])
 
         if(myid == 0) 
             {
+                shmem_fence();
+
                 for(i = 0; i < loop + skip; i++) {
                     if(i == skip) t_start = TIME();
 

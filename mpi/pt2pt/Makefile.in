@@ -84,7 +84,7 @@ pt2pt_PROGRAMS = osu_bibw$(EXEEXT) osu_bw$(EXEEXT) \
 @CUDA_KERNELS_TRUE@am__append_1 = ../../util/kernel.cu
 @MPI2_LIBRARY_TRUE@am__append_2 = osu_latency_mt 
 @BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_3 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
-@OPENACC_TRUE@am__append_4 = -acc
+@OPENACC_TRUE@am__append_4 = -acc -ta=tesla:nordc
 subdir = mpi/pt2pt
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/depcomp
@@ -360,6 +360,7 @@ osu_latency_mt_SOURCES = osu_latency_mt.c $(UTILITIES)
 @EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/util \
 @EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include
 
+@OPENACC_TRUE@AM_CXXFLAGS = -acc -ta=tesla:nordc
 all: all-am
 
 .SUFFIXES:

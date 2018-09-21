@@ -1,3 +1,14 @@
+OSU Micro Benchmarks v5.4.4 (09/21/18)
+* Bug Fixes
+    - Deprecate the need to specify get_local_rank when running GPU-based
+      benchmarks
+    - Enhance error checking for GPU-based benchmarks
+    - Fix issues in GPU-based OpenACC benchmarks
+
+OSU Micro Benchmarks v5.4.4 (08/04/18)
+* Bug Fixes
+    - Fix race condition with OpenSHMEM non-blocking and overlap benchmarks
+
 OSU Micro Benchmarks v5.4.3 (07/23/18)
 * Bug Fixes
     - Fix buffer overflow in osu_reduce_scatter

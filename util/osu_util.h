@@ -100,6 +100,19 @@ do {                                                             \
    assert(MPI_SUCCESS == mpi_errno);                             \
 } while (0)
 
+#if defined(_ENABLE_CUDA_)
+#define CUDA_CHECK(stmt)                                                \
+do {                                                                    \
+   int errno = (stmt);                                                  \
+   if (0 != errno) {                                                    \
+       fprintf(stderr, "[%s:%d] CUDA call '%s' failed with %d: %s \n",  \
+        __FILE__, __LINE__, #stmt, errno, cudaGetErrorString(errno));   \
+       exit(EXIT_FAILURE);                                              \
+   }                                                                    \
+   assert(cudaSuccess == errno);                                        \
+} while (0)
+#endif
+
 #define TIME() getMicrosecondTimeStamp()
 double getMicrosecondTimeStamp();
 
@@ -308,6 +321,8 @@ void print_stats_nbc (int rank, int size, double ovrl, double cpu, double comm,
 int allocate_memory_coll (void ** buffer, size_t size, enum accel_type type);
 void free_buffer (void * buffer, enum accel_type type);
 void set_buffer (void * buffer, enum accel_type type, int data, size_t size);
+void set_buffer_pt2pt (void * buffer, int rank, enum accel_type type, int data, size_t size);
+int setAccel(char);
 
 /*
  * CUDA Context Management

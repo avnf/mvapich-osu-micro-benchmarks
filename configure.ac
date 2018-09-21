@@ -2,11 +2,23 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [5.4.3], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [5.4.4], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([mpi/pt2pt/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
 LT_INIT
+
+if test "X$enable_shared" = "Xyes" -o "X$enable_static" = "Xno"; then
+        CFLAGS_orig="$CFLAGS"
+        CFLAGS=-qmkshrobj
+        AC_MSG_CHECKING([whether CC supports -qmkshrobj])
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+            [AC_MSG_RESULT([yes])]
+            [LDFLAGS="-qmkshrobj $LDFLAGS"],
+            [AC_MSG_RESULT([no])]
+        )
+        CFLAGS="$CFLAGS_orig"
+fi
 
 AC_ARG_ENABLE([openacc],
               [AS_HELP_STRING([--enable-openacc],

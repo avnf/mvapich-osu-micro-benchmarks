@@ -378,7 +378,7 @@ void set_device_memory (void * ptr, int data, size_t size)
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
         case CUDA:
-            cudaMemset(ptr, data, size);
+            CUDA_CHECK(cudaMemset(ptr, data, size));
             break;
 #endif
 #ifdef _ENABLE_OPENACC_
@@ -399,7 +399,7 @@ int free_device_buffer (void * buf)
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
         case CUDA:
-            cudaFree(buf);
+            CUDA_CHECK(cudaFree(buf));
             break;
 #endif
 #ifdef _ENABLE_OPENACC_
@@ -412,6 +412,7 @@ int free_device_buffer (void * buf)
             return 1;
     }
 
+    buf = NULL;
     return 0;
 }
 
@@ -942,51 +943,13 @@ int process_options (int argc, char *argv[])
     }
 
     if (accel_enabled) {
-
         if ((optind + 2) == argc) {
             options.src = argv[optind][0];
             options.dst = argv[optind + 1][0];
-
-            switch (options.src) {
-                case 'D':
-                case 'H':
-                case 'M':
-                    if (options.bench != PT2PT && options.bench != ONE_SIDED) {
-                        bad_usage.opt = options.src;
-                        bad_usage.message = "This argument is only supported for one-sided and pt2pt benchmarks";
-                        return PO_BAD_USAGE;
-                    }
-                    if (NONE == options.accel) {
-#if defined(_ENABLE_OPENACC_) && !defined(_ENABLE_CUDA_)
-                        options.accel = OPENACC;
-#else
-                        options.accel = CUDA;
-#endif
-                    }
-                    break;
-                default:
-                    return PO_BAD_USAGE;
-            }
-
-            switch (options.dst) {
-                case 'D':
-                case 'H':
-                case 'M':
-                    if (options.bench != PT2PT && options.bench != ONE_SIDED) {
-                        bad_usage.opt = options.dst;
-                        bad_usage.message = "This argument is only supported for one-sided and pt2pt benchmarks";
-                        return PO_BAD_USAGE;
-                    }
-                    if (NONE == options.accel) {
-#if defined(_ENABLE_OPENACC_) && !defined(_ENABLE_CUDA_)
-                        options.accel = OPENACC;
-#else
-                        options.accel = CUDA;
-#endif
-                    }
-                    break;
-                default:
-                    return PO_BAD_USAGE;
+            /* No need to check if '-d' is given */
+            if (NONE == options.accel) {
+                setAccel(options.src);
+                setAccel(options.dst);
             }
         } else if (optind != argc) {
             return PO_BAD_USAGE;
@@ -996,6 +959,31 @@ int process_options (int argc, char *argv[])
     return PO_OKAY;
 }
 
+/* Set the initial accelerator type */
+int setAccel(char buf_type) {
+    switch (buf_type) {
+        case 'H':
+            break;
+        case 'D':
+        case 'M':
+            if (options.bench != PT2PT && options.bench != ONE_SIDED) {
+                bad_usage.opt = buf_type;
+                bad_usage.message = "This argument is only supported for one-sided and pt2pt benchmarks";
+                return PO_BAD_USAGE;
+            }
+            if (NONE == options.accel) {
+#if defined(_ENABLE_OPENACC_) && !defined(_ENABLE_CUDA_)
+                options.accel = OPENACC;
+#else
+                options.accel = CUDA;
+#endif
+            }
+            break;
+        default:
+            return PO_BAD_USAGE;
+    }
+    return PO_OKAY;
+}
 
 void print_help_message (int rank)
 {
@@ -1378,6 +1366,36 @@ double getMicrosecondTimeStamp()
     return retval;
 }
 
+void set_buffer_pt2pt (void * buffer, int rank, enum accel_type type, int data, size_t size)
+{
+    char buf_type = (rank == 0) ? options.src : options.dst;
+
+    switch (buf_type) {
+        case 'H':
+            memset(buffer, data, size);
+            break;
+        case 'D':
+        case 'M':
+#ifdef _ENABLE_OPENACC_
+            if (type == OPENACC) {
+                size_t i;
+                char * p = (char *)buffer;
+                #pragma acc parallel loop deviceptr(p)
+                for (i = 0; i < size; i++) {
+                    p[i] = data;
+                }
+                break;
+            } else
+#endif
+#ifdef _ENABLE_CUDA_
+            {
+                CUDA_CHECK(cudaMemset(buffer, data, size));
+            }
+#endif
+            break;
+    }
+}
+
 void set_buffer (void * buffer, enum accel_type type, int data, size_t size)
 {
 #ifdef _ENABLE_OPENACC_
@@ -1391,7 +1409,7 @@ void set_buffer (void * buffer, enum accel_type type, int data, size_t size)
         case CUDA:
         case MANAGED:
 #ifdef _ENABLE_CUDA_
-            cudaMemset(buffer, data, size);
+            CUDA_CHECK(cudaMemset(buffer, data, size));
 #endif
             break;
         case OPENACC:
@@ -1412,28 +1430,17 @@ int allocate_memory_coll (void ** buffer, size_t size, enum accel_type type)
     }
 
     size_t alignment = sysconf(_SC_PAGESIZE);
-#ifdef _ENABLE_CUDA_
-    cudaError_t cuerr = cudaSuccess;
-#endif
 
     switch (type) {
         case NONE:
             return posix_memalign(buffer, alignment, size);
 #ifdef _ENABLE_CUDA_
         case CUDA:
-            cuerr = cudaMalloc(buffer, size);
-            if (cudaSuccess != cuerr) {
-                return 1;
-            } else {
-                return 0;
-            }
+            CUDA_CHECK(cudaMalloc(buffer, size));
+            return 0;
         case MANAGED:
-            cuerr = cudaMallocManaged(buffer, size, cudaMemAttachGlobal);
-            if (cudaSuccess != cuerr) {
-                return 1;
-            } else {
-                return 0;
-            }
+            CUDA_CHECK(cudaMallocManaged(buffer, size, cudaMemAttachGlobal));
+            return 0;
 #endif
 #ifdef _ENABLE_OPENACC_
         case OPENACC:
@@ -1451,19 +1458,10 @@ int allocate_memory_coll (void ** buffer, size_t size, enum accel_type type)
 
 int allocate_device_buffer (char ** buffer)
 {
-#ifdef _ENABLE_CUDA_
-    cudaError_t cuerr = cudaSuccess;
-#endif
-
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
         case CUDA:
-            cuerr = cudaMalloc((void **)buffer, options.max_message_size);
-
-            if (cudaSuccess != cuerr) {
-                fprintf(stderr, "Could not allocate device memory\n");
-                return 1;
-            }
+             CUDA_CHECK(cudaMalloc((void **)buffer, options.max_message_size));
             break;
 #endif
 #ifdef _ENABLE_OPENACC_
@@ -1485,27 +1483,14 @@ int allocate_device_buffer (char ** buffer)
 
 int allocate_device_buffer_one_sided (char ** buffer, size_t size)
 {
-#ifdef _ENABLE_CUDA_
-    cudaError_t cuerr = cudaSuccess;
-#endif
-
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
         case CUDA:
-            cuerr = cudaMalloc((void **)buffer, size);
-
-            if (cudaSuccess != cuerr) {
-                fprintf(stderr, "Could not allocate device memory\n");
-                return 1;
-            }
+            CUDA_CHECK(cudaMalloc((void **)buffer, size));
             break;
         case MANAGED:
-            cuerr = cudaMallocManaged((void **)buffer, size, cudaMemAttachGlobal);
-            if (cudaSuccess != cuerr) {
-                return 1;
-            } else {
-                return 0;
-            }
+            CUDA_CHECK(cudaMallocManaged((void **)buffer, size, cudaMemAttachGlobal));
+            break;
 #endif
 #ifdef _ENABLE_OPENACC_
         case OPENACC:
@@ -1526,19 +1511,10 @@ int allocate_device_buffer_one_sided (char ** buffer, size_t size)
 
 int allocate_managed_buffer (char ** buffer)
 {
-#ifdef _ENABLE_CUDA_
-    cudaError_t cuerr = cudaSuccess;
-#endif
-
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
         case CUDA:
-            cuerr = cudaMallocManaged((void **)buffer, options.max_message_size, cudaMemAttachGlobal);
-
-            if (cudaSuccess != cuerr) {
-                fprintf(stderr, "Could not allocate device memory\n");
-                return 1;
-            }
+            CUDA_CHECK(cudaMallocManaged((void **)buffer, options.max_message_size, cudaMemAttachGlobal));
             break;
 #endif
         default:
@@ -1641,10 +1617,6 @@ void allocate_memory_one_sided(int rank, char **sbuf, char **rbuf,
     }
 
     if (mem_on_dev) {
-        if (sbuf != NULL)
-            free_device_buffer(*sbuf);
-        if (rbuf != NULL)
-            free_device_buffer(*rbuf);
         CHECK(allocate_device_buffer_one_sided(sbuf, size));
         set_device_memory(*sbuf, 'a', size);
         CHECK(allocate_device_buffer_one_sided(rbuf, size));
@@ -1697,7 +1669,7 @@ void free_buffer (void * buffer, enum accel_type type)
         case MANAGED:
         case CUDA:
 #ifdef _ENABLE_CUDA_
-            cudaFree(buffer);
+            CUDA_CHECK(cudaFree(buffer));
 #endif
             break;
         case OPENACC:
@@ -1719,25 +1691,47 @@ void free_buffer (void * buffer, enum accel_type type)
     }
 }
 
+#if defined(_ENABLE_OPENACC_) || defined(_ENABLE_CUDA_)
+int omb_get_local_rank()
+{
+    char *str = NULL;
+    int local_rank = -1;
+
+    if ((str = getenv("MV2_COMM_WORLD_LOCAL_RANK")) != NULL) {
+        local_rank = atoi(str);
+    } else if ((str = getenv("OMPI_COMM_WORLD_LOCAL_RANK")) != NULL) {
+        local_rank = atoi(str);
+    } else if ((str = getenv("LOCAL_RANK")) != NULL) {
+        local_rank = atoi(str);
+    } else {
+        fprintf(stderr, "Warning: OMB could not identify the local rank of the process.\n");
+        fprintf(stderr, "         This can lead to multiple processes using the same GPU.\n");
+        fprintf(stderr, "         Please use the get_local_rank script in the OMB repo for this.\n");
+    }
+
+    return local_rank;
+}
+#endif /* defined(_ENABLE_OPENACC_) || defined(_ENABLE_CUDA_) */
+
 int init_accel (void)
 {
-#if defined(_ENABLE_OPENACC_) || defined(_ENABLE_CUDA_)
-    char * str;
-     int local_rank, dev_count;
-     int dev_id = 0;
-#endif
 #ifdef _ENABLE_CUDA_
     CUresult curesult = CUDA_SUCCESS;
     CUdevice cuDevice;
+#endif
+#if defined(_ENABLE_OPENACC_) || defined(_ENABLE_CUDA_)
+    int local_rank = -1, dev_count = 0;
+    int dev_id = 0;
+
+    local_rank = omb_get_local_rank();
 #endif
 
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
         case MANAGED:
         case CUDA:
-            if ((str = getenv("LOCAL_RANK")) != NULL) {
-                cudaGetDeviceCount(&dev_count);
-                local_rank = atoi(str);
+            if (local_rank >= 0) {
+                CUDA_CHECK(cudaGetDeviceCount(&dev_count));
                 dev_id = local_rank % dev_count;
             }
 
@@ -1759,9 +1753,9 @@ int init_accel (void)
 #endif
 #ifdef _ENABLE_OPENACC_
         case OPENACC:
-            if ((str = getenv("LOCAL_RANK")) != NULL) {
+            if (local_rank >= 0) {
                 dev_count = acc_get_num_devices(acc_device_not_host);
-                local_rank = atoi(str);
+                assert(dev_count > 0);
                 dev_id = local_rank % dev_count;
             }
 
@@ -1809,17 +1803,9 @@ int cleanup_accel (void)
 #ifdef _ENABLE_CUDA_KERNEL_
 void free_device_arrays()
 {
-    cudaError_t cuerr = cudaSuccess;
     if (is_alloc) {
-        cuerr = cudaFree(d_x);
-        if (cuerr != cudaSuccess) {
-            fprintf(stderr, "Failed to free device array\n");
-        }
-
-        cuerr = cudaFree(d_y);
-        if (cuerr != cudaSuccess) {
-            fprintf(stderr, "Failed to free device array\n");
-        }
+        CUDA_CHECK(cudaFree(d_x));
+        CUDA_CHECK(cudaFree(d_y));
 
         is_alloc = 0;
     }
@@ -1899,7 +1885,7 @@ void do_compute_gpu(double seconds)
         /* Execute Dummy Kernel on GPU if set by user */
         if (options.target == BOTH || options.target == GPU) {
             {
-                cudaStreamCreate(&stream);
+                CUDA_CHECK(cudaStreamCreate(&stream));
                 call_kernel(A, d_x, d_y, options.device_array_size, &stream);
             }
         }
@@ -2019,8 +2005,8 @@ double do_compute_and_probe(double seconds, MPI_Request* request)
 
 #ifdef _ENABLE_CUDA_KERNEL_
     if (options.target == GPU || options.target == BOTH) {
-        cudaDeviceSynchronize();
-        cudaStreamDestroy(stream);
+        CUDA_CHECK(cudaDeviceSynchronize());
+        CUDA_CHECK(cudaStreamDestroy(stream));
     }
 #endif
 
@@ -2169,11 +2155,11 @@ void init_arrays(double target_time)
         t1 = MPI_Wtime();
 
         if (options.target == GPU || options.target == BOTH) {
-            cudaStreamCreate(&stream);
+            CUDA_CHECK(cudaStreamCreate(&stream));
             call_kernel(A, d_x, d_y, N, &stream);
 
-            cudaDeviceSynchronize();
-            cudaStreamDestroy(stream);
+            CUDA_CHECK(cudaDeviceSynchronize());
+            CUDA_CHECK(cudaStreamDestroy(stream));
         }
 
         t2 = MPI_Wtime();
@@ -2201,24 +2187,16 @@ void init_arrays(double target_time)
 #ifdef _ENABLE_CUDA_KERNEL_
 void allocate_device_arrays(int n)
 {
-    cudaError_t cuerr = cudaSuccess;
-
     /* First free the old arrays */
     free_device_arrays();
 
     /* Allocate Device Arrays for Dummy Compute */
-    cuerr = cudaMalloc((void**)&d_x, n * sizeof(float));
-    if (cuerr != cudaSuccess) {
-        fprintf(stderr, "Failed to free device array");
-    }
+    CUDA_CHECK(cudaMalloc((void**)&d_x, n * sizeof(float)));
 
-    cuerr = cudaMalloc((void**)&d_y, n * sizeof(float));
-    if (cuerr != cudaSuccess) {
-        fprintf(stderr, "Failed to free device array");
-    }
+    CUDA_CHECK(cudaMalloc((void**)&d_y, n * sizeof(float)));
 
-    cudaMemset(d_x, 1.0f, n);
-    cudaMemset(d_y, 2.0f, n);
+    CUDA_CHECK(cudaMemset(d_x, 1.0f, n));
+    CUDA_CHECK(cudaMemset(d_y, 2.0f, n));
     is_alloc = 1;
 }
 #endif

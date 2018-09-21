@@ -84,7 +84,7 @@ one_sided_PROGRAMS = osu_acc_latency$(EXEEXT) osu_get_bw$(EXEEXT) \
 @MPI3_LIBRARY_TRUE@am__append_1 = osu_get_acc_latency osu_fop_latency osu_cas_latency
 @CUDA_KERNELS_TRUE@am__append_2 = ../../util/kernel.cu
 @BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_3 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
-@OPENACC_TRUE@am__append_4 = -acc
+@OPENACC_TRUE@am__append_4 = -acc -ta=tesla:nordc
 subdir = mpi/one-sided
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/depcomp
@@ -392,6 +392,7 @@ osu_get_acc_latency_SOURCES = osu_get_acc_latency.c $(UTILITIES)
 @EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/util \
 @EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include
 
+@OPENACC_TRUE@AM_CXXFLAGS = -acc -ta=tesla:nordc
 all: all-am
 
 .SUFFIXES:

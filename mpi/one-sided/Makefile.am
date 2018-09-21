@@ -42,5 +42,6 @@ endif
 endif
 
 if OPENACC
-    AM_CFLAGS += -acc
+    AM_CFLAGS += -acc -ta=tesla:nordc
+    AM_CXXFLAGS = -acc -ta=tesla:nordc
 endif

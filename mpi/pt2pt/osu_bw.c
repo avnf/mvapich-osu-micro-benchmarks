@@ -98,8 +98,8 @@ main (int argc, char *argv[])
 
     /* Bandwidth test */
     for(size = options.min_message_size; size <= options.max_message_size; size *= 2) {
-        set_buffer(s_buf, options.accel, 'a', size);
-        set_buffer(r_buf, options.accel, 'b', size);
+        set_buffer_pt2pt(s_buf, myid, options.accel, 'a', size);
+        set_buffer_pt2pt(r_buf, myid, options.accel, 'b', size);
 
 
         if(size > LARGE_MESSAGE_SIZE) {
