@@ -191,6 +191,7 @@ Non-Blocking Collective MPI Benchmarks
 --------------------------------------
 osu_iallgather    - MPI_Iallgather Latency Test
 osu_iallgatherv   - MPI_Iallgatherv Latency Test
+osu_iallreduce    - MPI_Iallreduce Latency Test
 osu_ialltoall     - MPI_Ialltoall Latency Test
 osu_ialltoallv    - MPI_Ialltoallv Latency Test
 osu_ialltoallw    - MPI_Ialltoallw Latency Test
@@ -198,6 +199,7 @@ osu_ibarrier      - MPI_Ibarrier Latency Test
 osu_ibcast        - MPI_Ibcast Latency Test
 osu_igather       - MPI_Igather Latency Test
 osu_igatherv      - MPI_Igatherv Latency Test
+osu_ireduce       - MPI_Ireduce Latency Test
 osu_iscatter      - MPI_Iscatter Latency Test
 osu_iscatterv     - MPI_Iscatterv Latency Test
 
@@ -783,12 +785,14 @@ MPI communication using buffers on NVIDIA GPU devices.
     osu_scatterv       - MPI_Scatterv Latency Test
     osu_iallgather     - MPI_Iallgather Latency Test
     osu_iallgatherv    - MPI_Iallgatherv Latency Test
+    osu_iallreduce     - MPI_Iallreduce Latency Test
     osu_ialltoall      - MPI_Ialltoall Latency Test
     osu_ialltoallv     - MPI_Ialltoallv Latency Test
     osu_ialltoallw     - MPI_Ialltoallw Latency Test
     osu_ibcast         - MPI_Ibcast Latency Test
     osu_igather        - MPI_Igather Latency Test
     osu_igatherv       - MPI_Igatherv Latency Test
+    osu_ireduce        - MPI_Ireduce Latency Test
     osu_iscatter       - MPI_Iscatter Latency Test
     osu_iscatterv      - MPI_Iscatterv Latency Test
 
@@ -837,9 +841,10 @@ launchers expose this information through different environment variables. The
 benchmarks use an environment variable called LOCAL_RANK to get this
 information.
 
-A script like below can be used to export this environment variable when using
-mpirun_rsh.  This can be adapted to work with other MPI launchers and
-libraries.
+Starting with OMB v5.4.4, the benchmarks automatically identify the process rank
+on a node for MVAPICH2 when launched with mpirun_rsh. However, a script like
+below can be used to export this environment variable when using OMB to work
+with other MPI launchers and libraries.
 
     #!/bin/bash
 
