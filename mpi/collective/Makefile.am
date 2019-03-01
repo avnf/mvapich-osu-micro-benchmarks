@@ -11,9 +11,12 @@ collective_PROGRAMS = osu_alltoallv osu_allgatherv osu_scatterv osu_gatherv osu_
 
 AM_CFLAGS = -I../../util
 
-UTILITIES = ../../util/osu_util.c osu_util.h
+UTILITIES = ../../util/osu_util.c ../../util/osu_util.h ../../util/osu_util_mpi.c ../../util/osu_util_mpi.h
 if CUDA_KERNELS
 UTILITIES += ../../util/kernel.cu
+if BUILD_USE_PGI
+AM_CXXFLAGS = --nvcchost --no_preincludes
+endif
 endif
 
 osu_allgatherv_SOURCES = osu_allgatherv.c $(UTILITIES)

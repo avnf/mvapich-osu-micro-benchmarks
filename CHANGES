@@ -1,3 +1,22 @@
+OSU Micro Benchmarks v5.6 (03/01/2019)
+
+* New Features & Enhancements
+    - Add support for benchmarking GPU-Aware multi-pair point-to-point
+      operations
+        * osu_mbw_mr
+        * osu_multi_lat
+    - Add support to specify different number of sender and receiver threads for
+      osu_latency_mt benchmark
+        
+* Bug Fixes
+    - Remove -t option for blocking collectives
+    - Fix issue when only building OpenSHMEM benchmarks
+    - Improve error reporting for one-sided benchmarks
+    - Fix compilation issues with PGI compilers for GPU-Aware benchmarks
+    - Fix incorrect handling of configure options
+        - Thanks to Tony Curtis @StonyBrook for the report
+    - Fix compilation warnings
+
 OSU Micro Benchmarks v5.5 (11/10/18)
 * New Features & Enhancements
     - Introduce new MPI non-blocking collective benchmarks with support to

@@ -14,6 +14,21 @@ your library supports MPI-1, MPI-2, MPI-3, OpenSHMEM, and UPC++ to compile the
 corresponding benchmarks.  See http://mvapich.cse.ohio-state.edu/benchmarks/ to
 download the latest version of this package.
 
+OMB also contains CUDA and OpenACC extensions to the benchmarks. CUDA extensions
+can be enabled by configuring OMB with --enable-cuda option as shown below. Similarly
+OpenACC extensions can be enabled using --enable-openacc option. The MPI library
+used should be able to support MPI communication from buffers in GPU Device memory.
+
+    ./configure CC=/path/to/mpicc
+                CXX=/path/to/mpicxx
+                --enable-cuda
+                --with-cuda-include=/path/to/cuda/include
+                --with-cuda-libpath=/path/to/cuda/lib
+    make
+    make install
+
+More information about the CUDA extensions are given towards the end of the README.
+
 This package also distributes UPC put, get, and collective benchmarks.
 These are located in the upc subdirectory and can be compiled by the
 following:
@@ -71,8 +86,13 @@ osu_latency_mt - Multi-threaded Latency Test
     * and waits for a reply from the receiver process. The receiving process has
     * a variable number of receiving threads (set by default to 2), where each
     * thread calls MPI_Recv and upon receiving a message sends back a response
-    * of equal size. Many iterations are performed and the average one-way
+    * of equal size. Many iterations are performed and the average one-way 
     * latency numbers are reported. This test is available here.
+    * "-t" option can be used to set the number of sender and receiver threads
+           to be used in a benchmark. Examples:
+            -t 4        // receiver threads = 4 and sender threads = 1 
+            -t 4:6      // sender threads = 4 and receiver threads = 6
+            -t 2:       // not defined 
 
 osu_bw - Bandwidth Test
     * The bandwidth tests were carried out by having the sender sending out a
@@ -161,6 +181,8 @@ from and to buffers allocated using CUDA Managed Memory.
     * osu_bibw              - Bidirectional Bandwidth Test
     * osu_bw                - Bandwidth Test
     * osu_latency           - Latency Test
+    * osu_mbw_mr            - Multiple Bandwidth / Message Rate Test
+    * osu_multi_lat         - Multi-pair Latency Test
     * osu_allgather         - MPI_Allgather Latency Test
     * osu_allgatherv        - MPI_Allgatherv Latency Test
     * osu_allreduce         - MPI_Allreduce Latency Test
@@ -763,6 +785,8 @@ MPI communication using buffers on NVIDIA GPU devices.
     osu_bibw           - Bidirectional Bandwidth Test
     osu_bw             - Bandwidth Test
     osu_latency        - Latency Test
+    osu_mbw_mr         - Multiple Bandwidth / Message Rate Test
+    osu_multi_lat      - Multi-pair Latency Test
     osu_put_latency    - Latency Test for Put
     osu_get_latency    - Latency Test for Get
     osu_put_bw         - Bandwidth Test for Put
