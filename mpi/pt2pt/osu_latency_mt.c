@@ -333,7 +333,7 @@ void * send_thread(void *arg) {
             t_end = MPI_Wtime ();
             t = t_end - t_start;
 
-            latency = (t) * 1.0e6 / (2.0 * options.iterations);
+            latency = (t) * 1.0e6 / (2.0 * options.iterations / num_threads_sender);
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                     latency);
             fflush(stdout);

@@ -1,3 +1,8 @@
+OSU Micro Benchmarks v5.6.1 (03/15/2019)
+
+* Bug Fixes (since v5.6)
+    - Fix issue with latency computation in osu_latency_mt benchmark.
+
 OSU Micro Benchmarks v5.6 (03/01/2019)
 
 * New Features & Enhancements

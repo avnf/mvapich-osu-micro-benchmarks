@@ -44,7 +44,7 @@ following:
                      osu_upc_all_barrier
         do
             echo "Compiling $bench..."
-            upcc $bench.c ../util/osu_util.c -o $bench
+            upcc $bench.c ../util/osu_util_pgas.c ../util/osu_util.c -o $bench
         done
 
 The MPI Multiple Bandwidth / Message Rate (osu_mbw_mr), OpenSHMEM Put Message
