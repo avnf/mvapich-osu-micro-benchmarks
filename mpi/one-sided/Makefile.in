@@ -402,7 +402,7 @@ NVCC = nvcc
 NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX)
 SUFFIXES = .cu .cpp
 one_sideddir = $(pkglibexecdir)/mpi/one-sided
-AM_CFLAGS = -I../../util $(am__append_4)
+AM_CFLAGS = -I${top_srcdir}/util $(am__append_4)
 UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	$(am__append_2)

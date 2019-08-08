@@ -296,6 +296,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 startupdir = $(pkglibexecdir)/mpi/startup
+AM_CFLAGS = -I${top_srcdir}/util
 @EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_1) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \

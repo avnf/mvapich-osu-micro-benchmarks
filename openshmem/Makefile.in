@@ -365,7 +365,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 openshmemdir = $(pkglibexecdir)/openshmem
-AM_CFLAGS = -I../util
+AM_CFLAGS = -I${top_srcdir}/util
 UTILITIES = ../util/osu_util.c ../util/osu_util.h ../util/osu_util_pgas.c ../util/osu_util_pgas.h
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
 @EMBEDDED_BUILD_TRUE@                  -I${top_srcdir}/util \
