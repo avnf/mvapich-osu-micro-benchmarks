@@ -1,3 +1,15 @@
+OSU Micro Benchmarks v5.6.3 (06/01/2020)
+
+* New Features & Enhancements
+    - Add support for benchmarking applications that use 'fork' system call
+        * osu_latency_mp
+
+* Bug Fixes (since v5.6.2)
+    - Allow passing flags to nvcc compiler
+    - Fix compilation issue with IBM XLC++ compilers and CUDA 10.2
+    - Fix issues in window creation with host-to-device and device-to-host
+      transfers for one-sided tests
+
 OSU Micro Benchmarks v5.6.2 (08/08/2019)
 
 * New Features & Enhancements

@@ -2,11 +2,17 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [5.6.2], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [5.6.3], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([mpi/pt2pt/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
 LT_INIT
+
+dnl
+dnl Add NVCCFLAGS for additional flags
+dnl
+AC_ARG_VAR(NVCCFLAGS,
+	[extra NVCCFLAGS used in building OMB with CUDA kernel support])
 
 AC_ARG_ENABLE([openacc],
               [AS_HELP_STRING([--enable-openacc],

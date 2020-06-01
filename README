@@ -94,6 +94,23 @@ osu_latency_mt - Multi-threaded Latency Test
             -t 4:6      // sender threads = 4 and receiver threads = 6
             -t 2:       // not defined 
 
+osu_latency_mp - Multi-process Latency Test
+    * The multi-process latency test performs a ping-pong test with a single
+    * sender process and a single receiver process, both having one or more
+    * child processes that are spawned using the fork() system call. In this test
+    * the sending process(parent) sends a message of a given data size to the
+    * receiver(parent) process and waits for a reply from the receiver process. 
+    * Both the sending and receiving process have a variable number of child
+    * processes (set by default to 1 child process), where each child process
+    * sleeps for 2 seconds after the fork call and exits. The parent processes 
+    * carry out the ping-pong test where many iterations are performed and the 
+    * average one-way latency numbers are reported. This test is available here.
+    * "-t" option can be used to set the number of sender and receiver processes
+    * including the parent processes to be used in a benchmark. Examples:
+            -t 4        // receiver processes = 4 and sender processes = 1 
+            -t 4:6      // sender processes = 4 and receiver processes = 6
+            -t 2:       // not defined 
+
 osu_bw - Bandwidth Test
     * The bandwidth tests were carried out by having the sender sending out a
     * fixed number (equal to the window size) of back-to-back messages to the
@@ -788,6 +805,7 @@ MPI communication using buffers on NVIDIA GPU devices.
     osu_mbw_mr         - Multiple Bandwidth / Message Rate Test
     osu_multi_lat      - Multi-pair Latency Test
     osu_latency_mt     - Multi-threaded Latency Test
+    osu_latency_mp     - Multi-process Latency Test
     osu_put_latency    - Latency Test for Put
     osu_get_latency    - Latency Test for Get
     osu_put_bw         - Bandwidth Test for Put

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2019 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2020 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -27,8 +27,7 @@
 #include <inttypes.h>
 #include <sys/time.h>
 #include <limits.h>
-
-
+#include <sys/types.h>
 
 #ifdef _ENABLE_CUDA_
 #include "cuda.h"
@@ -198,6 +197,7 @@ enum test_subtype {
     BW,
     LAT,
     LAT_MT,
+    LAT_MP,
     NBC,
 };
 
@@ -254,6 +254,8 @@ struct options_t {
     char dst;
     int num_threads;
     int sender_thread;
+    int num_processes;
+    int sender_processes;
     char managedSend;
     char managedRecv;
     enum WINDOW win;
@@ -294,6 +296,11 @@ void enable_accel_support (void);
 #define DEF_NUM_THREADS 2
 #define MIN_NUM_THREADS 1
 #define MAX_NUM_THREADS 128
+
+#define DEF_NUM_PROCESSES 2
+#define MIN_NUM_PROCESSES 1
+#define MAX_NUM_PROCESSES 128
+#define CHILD_SLEEP_SECONDS 2
 
 #define WINDOW_SIZES {1, 2, 4, 8, 16, 32, 64, 128}
 #define WINDOW_SIZES_COUNT   (8)

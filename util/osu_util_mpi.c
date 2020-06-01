@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2019 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2020 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -304,7 +304,7 @@ void print_help_message (int rank)
         fprintf(stdout, "Options:\n");
     }
 
-    if (accel_enabled && (options.subtype != LAT_MT)) {
+    if (accel_enabled && (options.subtype != LAT_MT) && (options.subtype != LAT_MP)) {
         fprintf(stdout, "  -d, --accelerator  TYPE     use accelerator device buffers, which can be of TYPE `cuda', \n");
         fprintf(stdout, "                              `managed' or `openacc' (uses standard host buffers if not specified)\n");
     }
@@ -352,6 +352,17 @@ void print_help_message (int rank)
         fprintf(stdout, "                              Examples: \n");
         fprintf(stdout, "                              -t 4        // receiver threads = 4 and sender threads = 1\n");
         fprintf(stdout, "                              -t 4:6      // sender threads = 4 and receiver threads = 6\n");
+        fprintf(stdout, "                              -t 2:       // not defined\n");
+        fprintf(stdout, "  -M, --mem-limit SIZE        set per process maximum memory consumption to SIZE bytes\n");
+    }
+
+    if (LAT_MP == options.subtype) {
+        fprintf(stdout, "  -t, --num_processes         SEND:[RECV]  set the sender and receiver number of processes \n");
+        fprintf(stdout, "                              min: %d default: (receiver processes: %d sender processes: 1), max: %d.\n",\
+                                                       MIN_NUM_PROCESSES, DEF_NUM_PROCESSES, MAX_NUM_PROCESSES);
+        fprintf(stdout, "                              Examples: \n");
+        fprintf(stdout, "                              -t 4        // receiver processes = 4 and sender processes = 1\n");
+        fprintf(stdout, "                              -t 4:6      // sender processes = 4 and receiver processes = 6\n");
         fprintf(stdout, "                              -t 2:       // not defined\n");
         fprintf(stdout, "  -M, --mem-limit SIZE        set per process maximum memory consumption to SIZE bytes\n");
     }
@@ -1025,10 +1036,15 @@ void allocate_memory_one_sided(int rank, char **sbuf, char **rbuf,
         char **win_base, size_t size, enum WINDOW type, MPI_Win *win)
 {
     int page_size;
+    int purehost = 0;
     int mem_on_dev = 0;
 
     page_size = getpagesize();
     assert(page_size <= MAX_ALIGNMENT);
+
+    if ('H' == options.src && 'H' == options.dst) {
+        purehost = 1;
+    }
 
     if (rank == 0) {
         mem_on_dev = ('H' == options.src) ? 0 : 1;
@@ -1068,10 +1084,10 @@ void allocate_memory_one_sided(int rank, char **sbuf, char **rbuf,
             }
             break;
         default:
-            if (mem_on_dev) {
-                MPI_CHECK(MPI_Win_create(*win_base, size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, win));
-            } else {
+            if (purehost) {
                 MPI_CHECK(MPI_Win_allocate(size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, *win_base, win));
+            } else {
+                MPI_CHECK(MPI_Win_create(*win_base, size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, win));
             }
             break;
     }
@@ -1466,10 +1482,15 @@ void allocate_atomic_memory(int rank,
         char **win_base, size_t size, enum WINDOW type, MPI_Win *win)
 {
     int page_size;
+    int purehost = 0;
     int mem_on_dev = 0;
 
     page_size = getpagesize();
     assert(page_size <= MAX_ALIGNMENT);
+
+    if ('H' == options.src && 'H' == options.dst) {
+        purehost = 1;
+    }
 
     if (rank == 0) {
         mem_on_dev = ('D' == options.src) ? 1 : 0;
@@ -1521,10 +1542,10 @@ void allocate_atomic_memory(int rank,
             }
             break;
         default:
-            if (mem_on_dev) {
-                MPI_CHECK(MPI_Win_create(*win_base, size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, win));
-            } else {
+            if (purehost) {
                 MPI_CHECK(MPI_Win_allocate(size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, *win_base, win));
+            } else {
+                MPI_CHECK(MPI_Win_create(*win_base, size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, win));
             }
             break;
     }
