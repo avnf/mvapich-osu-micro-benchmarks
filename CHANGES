@@ -1,3 +1,22 @@
+OSU Micro Benchmarks v5.7 (12/11/2020)
+
+* New Features & Enhancements
+    - Add support to OMB to evaluate the performance of various primitives with
+      AMD GPU device and ROCm support
+        - This functionality is exposed when configured with --enable-rocm
+          option
+        - Thanks to AMD for the initial patch
+
+* Bug Fixes (since v5.6.3)
+    - Enhance one-sided window creation and fix a potential issue when using
+       MPI_Win_allocate
+        * Thanks to Bert Wesarg and George Katevenis for reporting the issue
+          and providing initial patch
+    - Remove additional '-M' option that gets printed with help message for
+      osu_latency_mt and osu_latency_mp
+        * Thanks to Nick Papior for the report
+    - Added missing '-W' option support for one-sided bandwidth tests
+
 OSU Micro Benchmarks v5.6.3 (06/01/2020)
 
 * New Features & Enhancements

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2020 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2021 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -38,6 +38,9 @@ print_header(int rank, int full)
                     case OPENACC:
                         printf(benchmark_header, "-OPENACC");
                         break;
+                    case ROCM:
+                        printf(benchmark_header, "-ROCM");
+                        break;
                     default:
                         printf(benchmark_header, "");
                         break;
@@ -46,6 +49,7 @@ print_header(int rank, int full)
                 switch (options.accel) {
                     case CUDA:
                     case OPENACC:
+                    case ROCM:
                         fprintf(stdout, "# Send Buffer on %s and Receive Buffer on %s\n",
                                'M' == options.src ? "MANAGED (M)" : ('D' == options.src ? "DEVICE (D)" : "HOST (H)"),
                                'M' == options.dst ? "MANAGED (M)" : ('D' == options.dst ? "DEVICE (D)" : "HOST (H)"));
@@ -373,7 +377,8 @@ void set_benchmark_name (const char * name)
 
 void enable_accel_support (void)
 {
-    accel_enabled = (CUDA_ENABLED || OPENACC_ENABLED);
+    accel_enabled = ((CUDA_ENABLED || OPENACC_ENABLED || ROCM_ENABLED) &&
+            !(options.subtype == LAT_MT || options.subtype == LAT_MP));
 }
 
 int process_options (int argc, char *argv[])
@@ -411,11 +416,7 @@ int process_options (int argc, char *argv[])
 
     if (options.bench == PT2PT) {
         if (accel_enabled) {
-            if (options.subtype == LAT_MT) {
-                optstring = "+:x:i:t:m:d:hv";
-            } else if (options.subtype == LAT_MP) {
-                optstring = "+:x:i:t:m:d:hv";
-            } else if (options.subtype == BW) {
+            if (options.subtype == BW) {
                 optstring = "+:x:i:t:m:d:W:hv";
             } else {
                 optstring = "+:x:i:m:d:hv";
@@ -444,7 +445,12 @@ int process_options (int argc, char *argv[])
             }
         }
     } else if (options.bench == ONE_SIDED) {
-        optstring = (accel_enabled) ? "+:w:s:hvm:d:x:i:" : "+:w:s:hvm:x:i:";
+        if(options.subtype == BW) {
+            optstring = (accel_enabled) ? "+:w:s:hvm:d:x:i:W:" : "+:w:s:hvm:x:i:W:";
+        } else {
+            optstring = (accel_enabled) ? "+:w:s:hvm:d:x:i:" : "+:w:s:hvm:x:i:";
+        }
+        
     } else if (options.bench == MBW_MR){
         optstring = (accel_enabled) ? "p:W:R:x:i:m:d:Vhv" : "p:W:R:x:i:m:Vhv";
     } else if (options.bench == OSHM || options.bench == UPC || options.bench == UPCXX) {
@@ -658,6 +664,15 @@ int process_options (int argc, char *argv[])
                         bad_usage.optarg = optarg;
                         return PO_BAD_USAGE;
                     }
+                } else if (0 == strncasecmp(optarg, "rocm", 10)) {
+                    if (ROCM_ENABLED) {
+                        options.accel = ROCM;
+                    } else {
+                        bad_usage.message = "ROCm Support Not Enabled\n"
+                                "Please recompile benchmark with ROCm support";
+                        bad_usage.optarg = optarg;
+                        return PO_BAD_USAGE;
+                    }
                 } else {
                     bad_usage.message = "Invalid Accel Type Specified";
                     bad_usage.optarg = optarg;
@@ -731,7 +746,8 @@ int process_options (int argc, char *argv[])
 }
 
 /* Set the initial accelerator type */
-int setAccel(char buf_type) {
+int setAccel(char buf_type)
+{
     switch (buf_type) {
         case 'H':
             break;
@@ -745,8 +761,10 @@ int setAccel(char buf_type) {
             if (NONE == options.accel) {
 #if defined(_ENABLE_OPENACC_) && !defined(_ENABLE_CUDA_)
                 options.accel = OPENACC;
-#else
+#elif defined(_ENABLE_CUDA_)
                 options.accel = CUDA;
+#elif defined(_ENABLE_ROCM_)
+                options.accel = ROCM;
 #endif
             }
             break;

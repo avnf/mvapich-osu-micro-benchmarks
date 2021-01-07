@@ -349,6 +349,7 @@ top_srcdir = @top_srcdir@
 SUBDIRS = $(am__append_1) $(am__append_2) $(am__append_3) \
 	$(am__append_4)
 @CUDA_TRUE@dist_pkglibexec_SCRIPTS = get_local_rank
+@ROCM_TRUE@dist_pkglibexec_SCRIPTS = get_local_rank
 EXTRA_DIST = README CHANGES COPYRIGHT
 all: all-recursive
 
