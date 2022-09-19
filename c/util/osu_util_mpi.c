@@ -204,6 +204,42 @@ void usage_one_sided (char const * name)
     fflush(stdout);
 }
 
+void omb_ddt_process_options(char *optarg)
+{
+    char *option;
+    if (NULL == optarg) {
+        bad_usage.message = "Please pass a ddt"
+            " type[cont,vect,indx]\n";
+        bad_usage.optarg = optarg;
+        return PO_BAD_USAGE;
+    }
+    option = strtok(optarg, ":");
+    if (0 == strncasecmp(optarg, "vect", 4)) {
+        options.ddt_type = OMB_DDT_VECTOR;
+        option = strtok(NULL, ":");
+        if (NULL != option) {
+            options.ddt_type_parameters.stride = atoi(option);
+        }
+        option = strtok(NULL, ":");
+        if (NULL != option) {
+            options.ddt_type_parameters.block_length = atoi(option);
+        }
+    } else if (0 == strncasecmp(optarg, "indx", 4)) {
+        options.ddt_type = OMB_DDT_INDEXED;
+        option = strtok(NULL, ":");
+        if (NULL != option) {
+            strcpy(options.ddt_type_parameters.filepath, option);
+        }
+    } else if (0 == strncasecmp(optarg, "cont", 4)) {
+        options.ddt_type = OMB_DDT_CONTIGUOUS;
+    } else {
+        bad_usage.message = "Invalid ddt type. Valid ddt"
+            " types[cont,vect,indx]\n";
+        bad_usage.optarg = optarg;
+        return PO_BAD_USAGE;
+    }
+}
+
 int process_one_sided_options (int opt, char *arg)
 {
     switch(opt) {
@@ -418,7 +454,16 @@ void print_help_message (int rank)
         fprintf(stdout, "                              -t 4:6      // sender processes = 4 and receiver processes = 6\n");
         fprintf(stdout, "                              -t 2:       // not defined\n");
     }
-
+    if (options.subtype == GATHER || options.subtype == SCATTER ||
+            options.subtype == ALLTOALL || options.subtype == NBC_GATHER ||
+            options.subtype == NBC_SCATTER || options.subtype == NBC_ALLTOALL ||
+            options.subtype == NBC_BCAST || options.subtype == BCAST ||
+            options.bench == PT2PT) {
+        fprintf(stdout, "  -D, --ddt [TYPE]:[ARGS]     Enable DDT support\n");
+        fprintf(stdout, "                              -D cont                          //Contiguous\n");
+        fprintf(stdout, "                              -D vect:[stride]:[block_length]  //Vector\n");
+        fprintf(stdout, "                              -D indx:[ddt file path]          //Index\n");
+    }
     fprintf(stdout, "  -h, --help                  print this help\n");
     fprintf(stdout, "  -v, --version               print version info\n");
     fprintf(stdout, "\n");
@@ -594,6 +639,9 @@ void print_preamble_nbc (int rank)
     if (options.validate) {
         fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
     }
+    if (options.omb_enable_ddt){
+        fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
+    }
     fprintf(stdout, "\n");
     fflush(stdout);
 }
@@ -655,6 +703,9 @@ void print_preamble (int rank)
 
     if (options.validate)
         fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
+    if (options.omb_enable_ddt){
+        fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
+    }
     fprintf(stdout, "\n");
     fflush(stdout);
 }
@@ -775,7 +826,9 @@ void print_stats_nbc (int rank, int size, double overall_time, double cpu_time,
     if (options.validate) {
         fprintf(stdout, "%*s", FIELD_WIDTH, VALIDATION_STATUS(errors));
     }
-    fprintf(stdout, "\n");
+    if (!options.omb_enable_ddt) {
+        fprintf(stdout, "\n");
+    }
 
     fflush(stdout);
 }
@@ -794,14 +847,14 @@ void print_stats (int rank, int size, double avg_time, double min_time, double m
     }
 
     if (options.show_full) {
-        fprintf(stdout, "%*.*f%*.*f%*lu\n",
+        fprintf(stdout, "%*.*f%*.*f%*lu",
                 FIELD_WIDTH, FLOAT_PRECISION, min_time,
                 FIELD_WIDTH, FLOAT_PRECISION, max_time,
                 12, options.iterations);
-    } else {
+    }
+    if (!options.omb_enable_ddt) {
         fprintf(stdout, "\n");
     }
-
     fflush(stdout);
 }
 
@@ -825,8 +878,23 @@ void print_stats_validate(int rank, int size, double avg_time, double min_time,
                 FIELD_WIDTH, FLOAT_PRECISION, max_time,
                 12, options.iterations);
     }
-    fprintf(stdout, "%*s\n", FIELD_WIDTH, VALIDATION_STATUS(errors));
+    fprintf(stdout, "%*s", FIELD_WIDTH, VALIDATION_STATUS(errors));
+    if (!options.omb_enable_ddt) {
+        fprintf(stdout, "\n");
+    }
     fflush(stdout);
+}
+
+void append_stats_ddt(size_t omb_ddt_transmit_size)
+{
+    int rank;
+    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+    if (rank) {
+        return;
+    }
+    if (options.omb_enable_ddt) {
+        fprintf(stdout, "%*d\n", FIELD_WIDTH, omb_ddt_transmit_size);
+    }
 }
 
 void set_buffer_pt2pt (void * buffer, int rank, enum accel_type type, int data,
@@ -1919,6 +1987,84 @@ void allocate_memory_one_sided(int rank, char **user_buf,
 #else
     MPI_CHECK(MPI_Win_create(*win_base, size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, win));
 #endif
+}
+
+size_t omb_ddt_assign(MPI_Datatype *datatype, MPI_Datatype base_datatype,
+        size_t size)
+{
+/* Since all the benchmarks that supports ddt currently use char, count is
+ * equal to char. This should be modified in the future if ddt support
+ * for other bencharks are included.
+ */
+    size_t count = size;
+    size_t transmit_size = 0;
+    FILE *fp = NULL;
+    char line[OMB_DDT_FILE_LINE_MAX_LENGTH];
+    char *token;
+    int i = 0;
+    int block_lengths[OMB_DDT_INDEXED_MAX_LENGTH] = {0};
+    int displacements[OMB_DDT_INDEXED_MAX_LENGTH] = {0};
+
+    if (0 == options.omb_enable_ddt) {
+        return;
+    }
+    switch (options.ddt_type) {
+        case OMB_DDT_CONTIGUOUS:
+            MPI_Type_contiguous(count, base_datatype, datatype);
+            MPI_Type_commit(datatype);
+            transmit_size = count;
+            break;
+        case OMB_DDT_VECTOR:
+            MPI_Type_vector(count / options.ddt_type_parameters.stride,
+                    options.ddt_type_parameters.block_length,
+                    options.ddt_type_parameters.stride, base_datatype,
+                    datatype);
+            MPI_Type_commit(datatype);
+            transmit_size = (count / options.ddt_type_parameters.stride) *
+                options.ddt_type_parameters.block_length;
+            break;
+        case OMB_DDT_INDEXED:
+            fp = fopen(options.ddt_type_parameters.filepath, "r");
+            OMB_CHECK_NULL_AND_EXIT(fp, "Unable to open ddt indexed file.\n");
+            transmit_size = 0;
+            while (fgets(line, OMB_DDT_FILE_LINE_MAX_LENGTH, fp)) {
+                if ('#' == line[0]) {
+                    continue;
+                }
+                token = strtok(line, ",");
+                if (NULL != token) {
+                    displacements[i] = atoi(token);
+                }
+                token = strtok(NULL, ",");
+                if (NULL != token) {
+                    block_lengths[i] = atoi(token);
+                    transmit_size += block_lengths[i];
+                }
+                i++;
+            }
+            fclose(fp);
+            MPI_Type_indexed(i-1,
+                    block_lengths, displacements, base_datatype, datatype);
+            MPI_Type_commit(datatype);
+            break;
+    }
+    return transmit_size;
+}
+
+void omb_ddt_free(MPI_Datatype *datatype) {
+    if (0 == options.omb_enable_ddt) {
+        return;
+    }
+    OMB_CHECK_NULL_AND_EXIT(datatype, "Received NULL datatype");
+    MPI_Type_free(datatype);
+}
+
+size_t omb_ddt_get_size(size_t size)
+{
+    if (0 == options.omb_enable_ddt) {
+        return size;
+    }
+    return 1;
 }
 
 void free_buffer (void * buffer, enum accel_type type)
