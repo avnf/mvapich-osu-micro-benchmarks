@@ -78,12 +78,12 @@ main (int argc, char **argv)
 
     for (int size = 1; size <= MAX_MESSAGE_SIZE; size*=2) {
         if (iamsender) {
-            for(i = 0; i < size; i++) {
+            for (i = 0; i < size; i++) {
                 char *lptr = (char *)local;
                 lptr[i] = 'a';
             }
         } else {
-            for(i = 0; i < size; i++) {
+            for (i = 0; i < size; i++) {
                 char *lptr = (char *)local;
                 lptr[i] = 'b';
             }
@@ -98,7 +98,7 @@ main (int argc, char **argv)
 
         if (iamsender) {
             for (i = 0; i < loop + skip; i++) {
-                if(i == skip) {
+                if (i == skip) {
                     barrier();
                     t_start = getMicrosecondTimeStamp();
                 }

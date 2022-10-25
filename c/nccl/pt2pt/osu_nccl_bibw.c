@@ -87,8 +87,8 @@ int main(int argc, char *argv[])
             break;
     }
 
-    if(numprocs != 2) {
-        if(myid == 0) {
+    if (numprocs != 2) {
+        if (myid == 0) {
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
@@ -108,24 +108,24 @@ int main(int argc, char *argv[])
     print_header(myid, BW);
 
     /* Bi-Directional Bandwidth test */
-    for(size = options.min_message_size; size <= options.max_message_size; size *= 2) {
+    for (size = options.min_message_size; size <= options.max_message_size; size *= 2) {
         /* touch the data */
         set_buffer_pt2pt(s_buf, myid, options.accel, 'a', size);
         set_buffer_pt2pt(r_buf, myid, options.accel, 'b', size);
 
-        if(size > LARGE_MESSAGE_SIZE) {
+        if (size > LARGE_MESSAGE_SIZE) {
             options.iterations = options.iterations_large;
             options.skip = options.skip_large;
         }
 
-        for(i = 0; i < options.iterations + options.skip; i++) {
-            if(myid == 0) {
-                if(i == options.skip) {
+        for (i = 0; i < options.iterations + options.skip; i++) {
+            if (myid == 0) {
+                if (i == options.skip) {
                     t_start = MPI_Wtime();
                 }
             }
             ncclGroupStart();
-            for(j = 0; j < window_size; j++) {
+            for (j = 0; j < window_size; j++) {
                 NCCL_CHECK(ncclSend(s_buf, size, ncclChar, peer, nccl_comm, nccl_stream));
                 NCCL_CHECK(ncclRecv(r_buf, size, ncclChar, peer, nccl_comm, nccl_stream));
             }
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
             CUDA_STREAM_SYNCHRONIZE(nccl_stream);
         }
 
-        if(myid == 0) {
+        if (myid == 0) {
             t_end = MPI_Wtime();
             t = t_end - t_start;
             double tmp = size / 1e6 * options.iterations * window_size * 2;

@@ -22,6 +22,9 @@ int main(int argc, char *argv[])
     int errors = 0, local_errors = 0;
     double wait_time = 0.0, init_time = 0.0;
     double init_total = 0.0, wait_total = 0.0;
+    double avg_time = 0.0;
+    omb_graph_options_t omb_graph_options;
+    omb_graph_data_t *omb_graph_data = NULL;
     options.bench = COLLECTIVE;
     options.subtype = NBC_REDUCE;
 
@@ -47,6 +50,7 @@ int main(int argc, char *argv[])
     MPI_Request request;
     MPI_Status status;
 
+    omb_graph_options_init(&omb_graph_options);
     switch (po_ret) {
         case PO_BAD_USAGE:
             print_bad_usage_message(rank);
@@ -72,17 +76,7 @@ int main(int argc, char *argv[])
         MPI_CHECK(MPI_Finalize());
         exit(EXIT_FAILURE);
     }
-
-    if (options.max_message_size > options.max_mem_limit) {
-        if (rank == 0) {
-            fprintf(stderr, "Warning! Increase the Max Memory Limit to be able"
-                    " to run up to %ld bytes.\n"
-                    " Continuing with max message size of %ld bytes\n",
-                    options.max_message_size, options.max_mem_limit);
-        }
-        options.max_message_size = options.max_mem_limit;
-    }
-
+    check_mem_limit(numprocs);
     options.min_message_size /= sizeof(float);
     if (options.min_message_size < MIN_MESSAGE_SIZE) {
         options.min_message_size = MIN_MESSAGE_SIZE;
@@ -111,6 +105,8 @@ int main(int argc, char *argv[])
             options.iterations = options.iterations_large;
         }
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_options, size, options.iterations);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
         timer = 0.0;
@@ -204,6 +200,10 @@ int main(int argc, char *argv[])
                 wait_total += wait_time;
                 test_total += test_time;
                 init_total += init_time;
+                if (options.graph && 0 == rank) {
+                    omb_graph_data->data[i - options.skip] = (t_stop -
+                            t_start) * 1e6;
+                }
             }
         }
 
@@ -214,16 +214,24 @@ int main(int argc, char *argv[])
                         MPI_COMM_WORLD));
         }
 
-        calculate_and_print_stats(rank, size * sizeof(float),
+        avg_time = calculate_and_print_stats(rank, size * sizeof(float),
                                   numprocs, timer, latency,
                                   test_total, tcomp_total,
                                   wait_total, init_total,
                                   errors);
 
+        if (options.graph && 0 == rank) {
+            omb_graph_data->avg = avg_time;
+        }
         if (0 != errors) {
             break;
         }
     }
+    if (0 == rank && options.graph) {
+        omb_graph_plot(&omb_graph_options, benchmark_name);
+    }
+    omb_graph_combined_plot(&omb_graph_options, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_options);
 
     free_buffer(sendbuf, options.accel);
     free_buffer(recvbuf, options.accel);

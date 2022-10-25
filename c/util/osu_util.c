@@ -24,8 +24,7 @@ struct options_t options;
 
 struct bad_usage_t bad_usage;
 
-void
-print_header(int rank, int full)
+void print_header(int rank, int full)
 {
     switch(options.bench) {
         case MBW_MR :
@@ -33,7 +32,7 @@ print_header(int rank, int full)
             if (0 == rank) {
                 if (options.omb_enable_ddt) {
                     fprintf(stdout, "# Set Derived DataTypes block_length to"
-                            " %d, stride to %d\n",
+                            " %zu, stride to %zu\n",
                             options.ddt_type_parameters.block_length,
                             options.ddt_type_parameters.stride);
                 }
@@ -66,16 +65,16 @@ print_header(int rank, int full)
                             fprintf(stdout, "%-*s%*s", 10, "# Size", FIELD_WIDTH, "Bandwidth (MB/s)");
                         } else if (options.subtype == LAT) {
                             fprintf(stdout, "%-*s%*s", 10, "# Size", FIELD_WIDTH, "Latency (us)");
-                        } else if (options.subtype == LAT_MP){
+                        } else if (options.subtype == LAT_MP) {
                             fprintf(stdout, "%-*s%*s", 10, "# Size", FIELD_WIDTH,"Latency (us)");
-                        } else if (options.subtype == LAT_MT){
+                        } else if (options.subtype == LAT_MT) {
                             fprintf(stdout, "%-*s%*s", 10, "# Size", FIELD_WIDTH, "Latency (us)");
                         }
-                        if (options.validate && !(options.subtype == BW && options.bench == MBW_MR)){
+                        if (options.validate && !(options.subtype == BW && options.bench == MBW_MR)) {
                             fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
                         }
                         if (options.omb_enable_ddt && !(options.subtype == BW &&
-                                    options.bench == MBW_MR)){
+                                    options.bench == MBW_MR)) {
                             fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
                         }
                         fprintf(stdout, "\n");
@@ -140,8 +139,7 @@ void print_data (int rank, int full, int size, double avg_time,
 }
 
 
-static int
-set_min_message_size (long long value)
+static int set_min_message_size (long long value)
 {
     if (0 >= value) {
         return -1;
@@ -152,8 +150,7 @@ set_min_message_size (long long value)
     return 0;
 }
 
-static int
-set_max_message_size (long long value)
+static int set_max_message_size (long long value)
 {
     if (0 > value) {
         return -1;
@@ -164,8 +161,7 @@ set_max_message_size (long long value)
     return 0;
 }
 
-static int
-set_message_size (char *val_str)
+static int set_message_size (char *val_str)
 {
     int retval = -1;
     int i, count = 0;
@@ -197,8 +193,8 @@ set_message_size (char *val_str)
     return retval;
 }
 
-static int
-set_receiver_threads (int value){
+static int set_receiver_threads (int value)
+{
     if (MIN_NUM_THREADS > value || value >= MAX_NUM_THREADS) {
         return -1;
     }
@@ -209,8 +205,8 @@ set_receiver_threads (int value){
 
 }
 
-static int
-set_sender_threads (int value){
+static int set_sender_threads (int value)
+{
     if (MIN_NUM_THREADS > value || value >= MAX_NUM_THREADS) {
         return -1;
     }
@@ -221,8 +217,7 @@ set_sender_threads (int value){
 
 }
 
-static int
-set_threads (char *val_str)
+static int set_threads (char *val_str)
 {
     int retval = -1;
     int i, count = 0;
@@ -242,11 +237,11 @@ set_threads (char *val_str)
 
         if (val1 && val2) {
             retval = set_sender_threads(atoi(val1));
-            if (retval == -1){
+            if (retval == -1) {
                 return retval;
             }
             retval = set_receiver_threads(atoi(val2));
-            if (retval == -1){
+            if (retval == -1) {
                 return retval;
             }
         }
@@ -256,8 +251,8 @@ set_threads (char *val_str)
     return retval;
 }
 
-static int
-set_receiver_processes (int value){
+static int set_receiver_processes (int value)
+{
     if (MIN_NUM_PROCESSES > value || value >= MAX_NUM_PROCESSES) {
         return -1;
     }
@@ -268,8 +263,8 @@ set_receiver_processes (int value){
 
 }
 
-static int
-set_sender_processes (int value){
+static int set_sender_processes (int value)
+{
     if (MIN_NUM_PROCESSES > value || value >= MAX_NUM_PROCESSES) {
         return -1;
     }
@@ -280,8 +275,7 @@ set_sender_processes (int value){
 
 }
 
-static int
-set_processes (char *val_str)
+static int set_processes (char *val_str)
 {
     int retval = -1;
     int i, count = 0;
@@ -301,11 +295,11 @@ set_processes (char *val_str)
 
         if (val1 && val2) {
             retval = set_sender_processes(atoi(val1));
-            if (retval == -1){
+            if (retval == -1) {
                 return retval;
             }
             retval = set_receiver_processes(atoi(val2));
-            if (retval == -1){
+            if (retval == -1) {
                 return retval;
             }
         }
@@ -418,14 +412,11 @@ int process_options (int argc, char *argv[])
     extern int optind, optopt;
 
     char const * optstring = NULL;
-    char *temp_optstring = NULL;
     int c, ret = PO_OKAY;
 
     int option_index = 0;
-    char *ddt_type = NULL;
+    char *graph_term_type = NULL;
     int omb_long_options_itr = OMB_LONG_OPTIONS_ARRAY_SIZE - 1;
-
-
     static struct option long_options[OMB_LONG_OPTIONS_ARRAY_SIZE] = {
             {"help",                no_argument,        0,  'h'},
             {"version",             no_argument,        0,  'v'},
@@ -447,7 +438,7 @@ int process_options (int argc, char *argv[])
             {"validation",          no_argument,        0,  'c'},
             {"buffer-num",          required_argument,  0,  'b'},
             {"validation-warmup",   required_argument,  0,  'u'},
-            {"ddt",                 required_argument,  0,  'D'}
+            {"graph",               required_argument,  0,  'G'}
     };
 
     enable_accel_support();
@@ -455,19 +446,19 @@ int process_options (int argc, char *argv[])
     if (options.bench == PT2PT) {
         if (accel_enabled) {
             if (options.subtype == BW) {
-                optstring = "+:x:i:t:m:d:W:hvb:cu:D:";
+                optstring = "+:x:i:t:m:d:W:hvb:cu:G:D:";
             } else {
-                optstring = "+:x:i:m:d:hvcu:D:";
+                optstring = "+:x:i:m:d:hvcu:G:D:";
             }
         } else{
             if (options.subtype == LAT_MT) {
-                optstring = "+:hvm:x:i:t:cu:D:";
+                optstring = "+:hvm:x:i:t:cu:G:D:";
             } else if (options.subtype == LAT_MP) {
-                optstring = "+:hvm:x:i:t:cu:D:";
+                optstring = "+:hvm:x:i:t:cu:G:D:";
             } else if (options.subtype == BW) {
-                optstring = "+:hvm:x:i:t:W:b:cu:D:";
+                optstring = "+:hvm:x:i:t:W:b:cu:G:D:";
             } else {
-                optstring = "+:hvm:x:i:b:cu:D:";
+                optstring = "+:hvm:x:i:b:cu:G:D:";
             }
         }
         long_options[omb_long_options_itr].name = "ddt";
@@ -476,6 +467,7 @@ int process_options (int argc, char *argv[])
         long_options[omb_long_options_itr].val = 'D';
     } else if (options.bench == COLLECTIVE) {
         if (options.subtype == LAT ||
+                options.subtype == BARRIER || 
                 options.subtype == ALLTOALL ||
                 options.subtype == GATHER ||
                 options.subtype == REDUCE ||
@@ -485,65 +477,75 @@ int process_options (int argc, char *argv[])
             if (options.subtype == GATHER ||
                     options.subtype == SCATTER ||
                     options.subtype == ALLTOALL ||
-                    options.subtype == BCAST ){
-                optstring = "+:hvfm:i:x:M:a:cu:D:";
+                    options.subtype == BCAST ) {
+                optstring = "+:hvfm:i:x:M:a:cu:G:D:";
                 if (accel_enabled) {
                     optstring = (CUDA_KERNEL_ENABLED) ? 
-                        "+:d:hvfm:i:x:M:r:a:cu:D:" :
-                        "+:d:hvfm:i:x:M:a:cu:D:";
+                        "+:d:hvfm:i:x:M:r:a:cu:G:D:" :
+                        "+:d:hvfm:i:x:M:a:cu:G:D:";
                 }
                 long_options[omb_long_options_itr].name = "ddt";
                 long_options[omb_long_options_itr].has_arg = required_argument;
                 long_options[omb_long_options_itr].flag = 0;
                 long_options[omb_long_options_itr].val = 'D';
             } else {
-                optstring = "+:hvfm:i:x:M:a:cu:";
-                if (accel_enabled) {
-                    optstring = (CUDA_KERNEL_ENABLED) ? 
-                        "+:d:hvfm:i:x:M:r:a:cu:" :
-                        "+:d:hvfm:i:x:M:a:cu:";
+                if (options.subtype == BARRIER) {
+                    optstring = "+:hvfm:i:x:M:a:u:G:";
+                    if (accel_enabled) {
+                        optstring = (CUDA_KERNEL_ENABLED) ?
+                            "+:d:hvfm:i:x:M:r:a:u:G:" :
+                            "+:d:hvfm:i:x:M:a:u:G:";
+                    }
+                } else {
+                    optstring = "+:hvfm:i:x:M:a:cu:G:";
+                    if (accel_enabled) {
+                        optstring = (CUDA_KERNEL_ENABLED) ?
+                            "+:d:hvfm:i:x:M:r:a:cu:G:" :
+                            "+:d:hvfm:i:x:M:a:cu:G:";
+                    }
                 }
             }
         } else if (options.subtype == NBC) {
-            optstring = "+:hvfm:i:x:M:t:a:";
+            optstring = "+:hvfm:i:x:M:t:a:G:";
             if (accel_enabled) {
-                optstring = (CUDA_KERNEL_ENABLED) ? "+:d:hvfm:i:x:M:t:r:a:" :
-                    "+:d:hvfm:i:x:M:t:a:";
+                optstring = (CUDA_KERNEL_ENABLED) ? "+:d:hvfm:i:x:M:t:r:a:G:" :
+                    "+:d:hvfm:i:x:M:t:a:G:";
             }
         } else { /* Non-Blocking */
             if (options.subtype == NBC_GATHER ||
                     options.subtype == NBC_ALLTOALL || 
                     options.subtype == NBC_SCATTER ||  
                     options.subtype == NBC_BCAST) {
-                optstring = "+:hvfm:i:x:M:t:a:cu:D:";
+                optstring = "+:hvfm:i:x:M:t:a:cu:G:D:";
                 if (accel_enabled) {
                     optstring = (CUDA_KERNEL_ENABLED) ? 
-                        "+:d:hvfm:i:x:M:t:r:a:cu:D:" :
-                        "+:d:hvfm:i:x:M:t:a:cu:D:";
+                        "+:d:hvfm:i:x:M:t:r:a:cu:G:D:" :
+                        "+:d:hvfm:i:x:M:t:a:cu:G:D:";
                 }
                 long_options[omb_long_options_itr].name = "ddt";
                 long_options[omb_long_options_itr].has_arg = required_argument;
                 long_options[omb_long_options_itr].flag = 0;
                 long_options[omb_long_options_itr].val = 'D';
             } else {
-                optstring = "+:hvfm:i:x:M:t:a:cu:";
+                optstring = "+:hvfm:i:x:M:t:a:cu:G:";
                 if (accel_enabled) {
-                    optstring = (CUDA_KERNEL_ENABLED) ?
-                        "+:d:hvfm:i:x:M:t:r:a:cu:" :
-                        "+:d:hvfm:i:x:M:t:a:cu:";
+                    optstring = (CUDA_KERNEL_ENABLED) ? "+:d:hvfm:i:x:M:t:r:a:cu:G:"
+                        : "+:d:hvfm:i:x:M:t:a:cu:G:";
                 }
             }
         }
     } else if (options.bench == ONE_SIDED) {
         if(options.subtype == BW) {
-            optstring = (accel_enabled) ? "+:w:s:hvm:d:x:i:W:" : "+:w:s:hvm:x:i:W:";
+            optstring = (accel_enabled) ? "+:w:s:hvm:d:x:i:W:G:" :
+                "+:w:s:hvm:x:i:W:G:";
         } else {
-            optstring = (accel_enabled) ? "+:w:s:hvm:d:x:i:" : "+:w:s:hvm:x:i:";
+            optstring = (accel_enabled) ? "+:w:s:hvm:d:x:i:G:" :
+                "+:w:s:hvm:x:i:G:";
         }
 
-    } else if (options.bench == MBW_MR){
-        optstring = (accel_enabled) ? "p:W:R:x:i:m:d:Vhvb:cu:D:" :
-            "p:W:R:x:i:m:Vhvb:cu:D:";
+    } else if (options.bench == MBW_MR) {
+        optstring = (accel_enabled) ? "p:W:R:x:i:m:d:Vhvb:cu:G:D:" :
+            "p:W:R:x:i:m:Vhvb:cu:G:D:";
         long_options[omb_long_options_itr].name = "ddt";
         long_options[omb_long_options_itr].has_arg = required_argument;
         long_options[omb_long_options_itr].flag = 0;
@@ -578,6 +580,13 @@ int process_options (int argc, char *argv[])
     options.omb_enable_ddt = 0;
     options.ddt_type_parameters.block_length = OMB_DDT_BLOCK_LENGTH_DEFAULT;
     options.ddt_type_parameters.stride = OMB_DDT_STRIDE_DEFAULT;
+    options.graph = 0;
+    options.graph_output_term = 0;
+    options.graph_output_png = 0;
+    options.graph_output_pdf = 0;
+    options.omb_enable_ddt = 0;
+    options.ddt_type_parameters.block_length = OMB_DDT_BLOCK_LENGTH_DEFAULT;
+    options.ddt_type_parameters.stride = OMB_DDT_STRIDE_DEFAULT;
     options.src = 'H';
     options.dst = 'H';
 
@@ -598,6 +607,7 @@ int process_options (int argc, char *argv[])
             options.min_message_size = 0;
             options.sender_processes = DEF_NUM_PROCESSES;
         case LAT:
+        case BARRIER:
         case GATHER:
         case ALLTOALL:
         case NBC_ALLTOALL:
@@ -665,7 +675,7 @@ int process_options (int argc, char *argv[])
                 break;
             case 't':
                 if (options.bench == COLLECTIVE) {
-                    if (set_num_probes(atoi(optarg))){
+                    if (set_num_probes(atoi(optarg))) {
                         bad_usage.message = "Invalid Number of Probes";
                         bad_usage.optarg = optarg;
 
@@ -673,14 +683,14 @@ int process_options (int argc, char *argv[])
                     }
                 } else if (options.bench == PT2PT) {
                     if (options.subtype == LAT_MT) {
-                        if (set_threads(optarg)){
+                        if (set_threads(optarg)) {
                             bad_usage.message = "Invalid Number of Threads";
                             bad_usage.optarg = optarg;
 
                             return PO_BAD_USAGE;
                         }
                     } else if (options.subtype == LAT_MP) {
-                        if (set_processes(optarg)){
+                        if (set_processes(optarg)) {
                             bad_usage.message = "Invalid Number of Processes";
                             bad_usage.optarg = optarg;
 
@@ -726,7 +736,7 @@ int process_options (int argc, char *argv[])
                 options.pairs = atoi(optarg);
                 break;
             case 'a':
-                if (set_device_array_size(atoi(optarg))){
+                if (set_device_array_size(atoi(optarg))) {
                     bad_usage.message = "Invalid Device Array Size";
                     bad_usage.optarg = optarg;
 
@@ -865,6 +875,33 @@ int process_options (int argc, char *argv[])
                     return PO_BAD_USAGE;
                 }
                 break;
+            case 'G':
+                options.graph = 1;
+                graph_term_type = strtok(optarg, ",");
+                if (NULL == graph_term_type) {
+                    bad_usage.message = "Please pass graph"
+                        " types[tty,png,pdf]\n";
+                    bad_usage.optarg = optarg;
+                    return PO_BAD_USAGE;
+                }
+                while(NULL != graph_term_type) {
+                    if (0 == strncasecmp(graph_term_type, "png", 3)) {
+                        options.graph_output_png = 1;
+                    }
+                    else if (0 == strncasecmp(graph_term_type, "tty", 3)) {
+                        options.graph_output_term = 1;
+                    }
+                    else if (0 == strncasecmp(graph_term_type, "pdf", 3)) {
+                        options.graph_output_pdf = 1;
+                    } else {
+                       bad_usage.message = "Invalid graph type. Valid graph"
+                           " types[tty,png,pdf]\n";
+                       bad_usage.optarg = optarg;
+                       return PO_BAD_USAGE;
+                    }
+                    graph_term_type = strtok(NULL, ",");
+                }
+                break;
             case 'D':
                 options.omb_enable_ddt = 1;
                 if (options.validate) {
@@ -873,7 +910,11 @@ int process_options (int argc, char *argv[])
                     bad_usage.optarg = optarg;
                     return PO_BAD_USAGE;
                 }
-                omb_ddt_process_options(optarg);
+                ret = PO_OKAY;
+                ret = omb_ddt_process_options(optarg, &bad_usage);
+                if (ret == PO_BAD_USAGE) {
+                    return ret;
+                }
                 break;
             case ':':
                 bad_usage.message = "Option Missing Required Argument";
@@ -948,6 +989,55 @@ int process_options (int argc, char *argv[])
         }
     }
 
+    return PO_OKAY;
+}
+
+int omb_ddt_process_options(char *optarg, struct bad_usage_t *bad_usage)
+{
+    char *option;
+    if (NULL == optarg) {
+        bad_usage->message = "Please pass a ddt"
+            " type[cont,vect,indx]\n";
+        bad_usage->optarg = optarg;
+        return PO_BAD_USAGE;
+    }
+    option = strtok(optarg, ":");
+    if (0 == strncasecmp(optarg, "vect", 4)) {
+        options.ddt_type = OMB_DDT_VECTOR;
+        option = strtok(NULL, ":");
+        if (NULL != option) {
+            options.ddt_type_parameters.stride = atoi(option);
+        }
+        option = strtok(NULL, ":");
+        if (NULL != option) {
+            options.ddt_type_parameters.block_length = atoi(option);
+        }
+    } else if (0 == strncasecmp(optarg, "indx", 4)) {
+        options.ddt_type = OMB_DDT_INDEXED;
+        option = strtok(NULL, ":");
+        if (NULL != option) {
+            if (OMB_DDT_FILE_PATH_MAX_LENGTH < strlen(option)) {
+                fprintf(stderr, "ERROR: Max allowed size for filepath is:%d\n"
+                        "To increase the max allowed filepath limit, update"
+                        " OMB_DDT_FILE_PATH_MAX_LENGTH in c/util/osu_util.h.\n",
+                        OMB_DDT_FILE_PATH_MAX_LENGTH);
+                fflush(stderr);
+                bad_usage->message = "Index DDT filepath exceeds maximum length"
+                    " allowed";
+                bad_usage->optarg = optarg;
+                return PO_BAD_USAGE;
+
+            }
+            strcpy(options.ddt_type_parameters.filepath, option);
+        }
+    } else if (0 == strncasecmp(optarg, "cont", 4)) {
+        options.ddt_type = OMB_DDT_CONTIGUOUS;
+    } else {
+        bad_usage->message = "Invalid ddt type. Valid ddt"
+            " types[cont,vect,indx]\n";
+        bad_usage->optarg = optarg;
+        return PO_BAD_USAGE;
+    }
     return PO_OKAY;
 }
 

@@ -16,7 +16,7 @@ void compute_kernel(float a, float * x, float * y, int N)
     int count = 0;
     
     if (i < N) {
-        for(count=0; count < (N/8); count++) { 
+        for (count=0; count < (N/8); count++) { 
             y[i] = a * x[i] + y[i];
         }
     }

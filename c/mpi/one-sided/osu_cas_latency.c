@@ -1,7 +1,7 @@
 #define BENCHMARK "OSU MPI_Compare_and_swap%s latency Test"
 /*
  * Copyright (C) 2003-2022 the Network-Based Computing Laboratory
- * (NBCL), The Ohio State University.            
+ * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
  *
@@ -13,6 +13,7 @@
 
 double  t_start = 0.0, t_end = 0.0;
 uint64_t *sbuf=NULL, *tbuf=NULL, *cbuf=NULL, *win_base=NULL;
+omb_graph_options_t omb_graph_op;
 
 void print_latency (int, int);
 void run_cas_with_lock (int, enum WINDOW);
@@ -108,13 +109,13 @@ int main (int argc, char *argv[])
         case PSCW:
             run_cas_with_pscw(rank, options.win);
             break;
-        case FENCE: 
+        case FENCE:
             run_cas_with_fence(rank, options.win);
             break;
-        case FLUSH_LOCAL: 
+        case FLUSH_LOCAL:
             run_cas_with_flush_local(rank, options.win);
             break;
-        default: 
+        default:
             run_cas_with_flush(rank, options.win);
             break;
     }
@@ -143,10 +144,15 @@ void print_latency(int rank, int size)
 /*Run CAS with flush */
 void run_cas_with_flush (int rank, enum WINDOW type)
 {
-    int i;
+    int i = 0;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
+    omb_graph_op.number_of_graphs = 0;
+    omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+            &omb_graph_op, 8, options.iterations);
     allocate_atomic_memory(rank, (char **)&sbuf,
             (char **)&tbuf, (char **) &cbuf, (char **)&win_base,
             options.max_message_size, type, &win);
@@ -162,27 +168,46 @@ void run_cas_with_flush (int rank, enum WINDOW type)
             if (i == options.skip) {
                 t_start = MPI_Wtime ();
             }
+            if (i >= options.skip) {
+                t_graph_start = MPI_Wtime();
+            }
             MPI_CHECK(MPI_Compare_and_swap(sbuf, cbuf, tbuf, MPI_LONG_LONG, 1, disp, win));
             MPI_CHECK(MPI_Win_flush(1, win));
+            if (i >= options.skip) {
+                t_graph_end = MPI_Wtime();
+                if (options.graph) {
+                    omb_graph_data->data[i - options.skip] = (t_graph_end -
+                            t_graph_start) * 1.0e6;
+                }
+            }
         }
         t_end = MPI_Wtime ();
         MPI_CHECK(MPI_Win_unlock(1, win));
-    }                
+    }
 
     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
     print_latency(rank, 8);
-
+    if (options.graph && 0 == rank) {
+        omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations;
+    }
+    omb_graph_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
     free_atomic_memory (sbuf, win_base, tbuf, cbuf, type, win, rank);
 }
 
 /*Run CAS with Lock_all/unlock_all */
 void run_cas_with_lock_all (int rank, enum WINDOW type)
 {
-    int i;
+    int i = 0;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
+    omb_graph_op.number_of_graphs = 0;
+    omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+            &omb_graph_op, 8, options.iterations);
     allocate_atomic_memory(rank, (char **)&sbuf,
             (char **)&tbuf, (char **) &cbuf, (char **)&win_base,
             options.max_message_size, type, &win);
@@ -197,27 +222,46 @@ void run_cas_with_lock_all (int rank, enum WINDOW type)
             if (i == options.skip) {
                 t_start = MPI_Wtime ();
             }
+            if (i >= options.skip) {
+                t_graph_start = MPI_Wtime();
+            }
             MPI_CHECK(MPI_Win_lock_all(0, win));
             MPI_CHECK(MPI_Compare_and_swap(sbuf, cbuf, tbuf, MPI_LONG_LONG, 1, disp, win));
             MPI_CHECK(MPI_Win_unlock_all(win));
+            if (i >= options.skip) {
+                t_graph_end = MPI_Wtime();
+                if (options.graph) {
+                    omb_graph_data->data[i - options.skip] = (t_graph_end -
+                            t_graph_start) * 1.0e6;
+                }
+            }
         }
         t_end = MPI_Wtime ();
-    }                
+    }
 
     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
     print_latency(rank, 8);
-
+    if (options.graph && 0 == rank) {
+        omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations;
+    }
+    omb_graph_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
     free_atomic_memory (sbuf, win_base, tbuf, cbuf, type, win, rank);
 }
 
 /*Run CAS with flush */
 void run_cas_with_flush_local (int rank, enum WINDOW type)
 {
-    int i;
+    int i = 0;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
+    omb_graph_op.number_of_graphs = 0;
+    omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+            &omb_graph_op, 8, options.iterations);
     allocate_atomic_memory(rank, (char **)&sbuf,
             (char **)&tbuf, (char **) &cbuf, (char **)&win_base,
             options.max_message_size, type, &win);
@@ -234,27 +278,46 @@ void run_cas_with_flush_local (int rank, enum WINDOW type)
             if (i == options.skip) {
                 t_start = MPI_Wtime ();
             }
+            if (i >= options.skip) {
+                t_graph_start = MPI_Wtime();
+            }
             MPI_CHECK(MPI_Compare_and_swap(sbuf, cbuf, tbuf, MPI_LONG_LONG, 1, disp, win));
             MPI_CHECK(MPI_Win_flush_local(1, win));
+            if (i >= options.skip) {
+                t_graph_end = MPI_Wtime();
+                if (options.graph) {
+                    omb_graph_data->data[i - options.skip] = (t_graph_end -
+                            t_graph_start) * 1.0e6;
+                }
+            }
         }
         t_end = MPI_Wtime ();
         MPI_CHECK(MPI_Win_unlock(1, win));
-    }                
+    }
 
     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
     print_latency(rank, 8);
-
+    if (options.graph && 0 == rank) {
+        omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations;
+    }
+    omb_graph_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
     free_atomic_memory (sbuf, win_base, tbuf, cbuf, type, win, rank);
 }
 
 /*Run CAS with Lock/unlock */
 void run_cas_with_lock(int rank, enum WINDOW type)
 {
-    int i;
+    int i = 0;
+    double t_graph_start = 0, t_graph_end = 0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
+    omb_graph_op.number_of_graphs = 0;
+    omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+            &omb_graph_op, 8, options.iterations);
     allocate_atomic_memory(rank, (char **)&sbuf,
             (char **)&tbuf, (char **) &cbuf, (char **)&win_base,
             options.max_message_size, type, &win);
@@ -268,27 +331,46 @@ void run_cas_with_lock(int rank, enum WINDOW type)
             if (i == options.skip) {
                 t_start = MPI_Wtime ();
             }
+            if (i >= options.skip) {
+                t_graph_start = MPI_Wtime();
+            }
             MPI_CHECK(MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 1, 0, win));
             MPI_CHECK(MPI_Compare_and_swap(sbuf, cbuf, tbuf, MPI_LONG_LONG, 1, disp, win));
             MPI_CHECK(MPI_Win_unlock(1, win));
+            if (i >= options.skip) {
+                t_graph_end = MPI_Wtime();
+                if (options.graph) {
+                    omb_graph_data->data[i - options.skip] = (t_graph_end -
+                            t_graph_start) * 1.0e6;
+                }
+            }
         }
         t_end = MPI_Wtime ();
-    }                
+    }
 
     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
     print_latency(rank, 8);
-
+    if (options.graph && 0 == rank) {
+        omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations;
+    }
+    omb_graph_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
     free_atomic_memory (sbuf, win_base, tbuf, cbuf, type, win, rank);
 }
 
 /*Run CAS with Fence */
 void run_cas_with_fence(int rank, enum WINDOW type)
 {
-    int i;
+    int i = 0;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
+    omb_graph_op.number_of_graphs = 0;
+    omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+            &omb_graph_op, 8, options.iterations);
     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
     allocate_atomic_memory(rank, (char **)&sbuf,
@@ -303,10 +385,20 @@ void run_cas_with_fence(int rank, enum WINDOW type)
             if (i == options.skip) {
                 t_start = MPI_Wtime ();
             }
+            if (i >= options.skip) {
+                t_graph_start = MPI_Wtime();
+            }
             MPI_CHECK(MPI_Win_fence(0, win));
             MPI_CHECK(MPI_Compare_and_swap(sbuf, cbuf, tbuf, MPI_LONG_LONG, 1, disp, win));
             MPI_CHECK(MPI_Win_fence(0, win));
             MPI_CHECK(MPI_Win_fence(0, win));
+            if (i >= options.skip) {
+                t_graph_end = MPI_Wtime();
+                if (options.graph) {
+                    omb_graph_data->data[i - options.skip] = (t_graph_end -
+                            t_graph_start) * 1.0e6 / 2.0;
+                }
+            }
         }
         t_end = MPI_Wtime ();
     } else {
@@ -325,7 +417,12 @@ void run_cas_with_fence(int rank, enum WINDOW type)
                 FLOAT_PRECISION, (t_end - t_start) * 1.0e6 / options.iterations / 2);
         fflush(stdout);
     }
-
+    if (options.graph && 0 == rank) {
+        omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations
+            / 2;
+    }
+    omb_graph_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
     free_atomic_memory (sbuf, win_base, tbuf, cbuf, type, win, rank);
 }
 
@@ -333,12 +430,17 @@ void run_cas_with_fence(int rank, enum WINDOW type)
 void run_cas_with_pscw(int rank, enum WINDOW type)
 {
     int destrank, i;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
     MPI_Group       comm_group, group;
     MPI_CHECK(MPI_Comm_group(MPI_COMM_WORLD, &comm_group));
 
+    omb_graph_op.number_of_graphs = 0;
+    omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+            &omb_graph_op, 8, options.iterations);
     allocate_atomic_memory(rank, (char **)&sbuf,
             (char **)&tbuf, (char **) &cbuf, (char **)&win_base,
             options.max_message_size, type, &win);
@@ -360,10 +462,20 @@ void run_cas_with_pscw(int rank, enum WINDOW type)
                 t_start = MPI_Wtime ();
             }
 
+            if (i >= options.skip) {
+                t_graph_start = MPI_Wtime();
+            }
             MPI_CHECK(MPI_Compare_and_swap(sbuf, cbuf, tbuf, MPI_LONG_LONG, 1, disp, win));
             MPI_CHECK(MPI_Win_complete(win));
             MPI_CHECK(MPI_Win_post(group, 0, win));
             MPI_CHECK(MPI_Win_wait(win));
+            if (i >= options.skip) {
+                t_graph_end = MPI_Wtime();
+                if (options.graph) {
+                    omb_graph_data->data[i - options.skip] = (t_graph_end -
+                            t_graph_start) * 1.0e6 / 2.0;
+                }
+            }
         }
 
         t_end = MPI_Wtime ();
@@ -390,6 +502,12 @@ void run_cas_with_pscw(int rank, enum WINDOW type)
                 FLOAT_PRECISION, (t_end - t_start) * 1.0e6 / options.iterations / 2);
         fflush(stdout);
     }
+    if (options.graph && 0 == rank) {
+        omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations
+            / 2;
+    }
+    omb_graph_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
 
     MPI_CHECK(MPI_Group_free(&group));
     MPI_CHECK(MPI_Group_free(&comm_group));

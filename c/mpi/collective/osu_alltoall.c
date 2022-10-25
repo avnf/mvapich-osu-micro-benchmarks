@@ -20,6 +20,8 @@ int main (int argc, char *argv[])
     char *sendbuf = NULL, *recvbuf = NULL;
     int po_ret;
     size_t bufsize;
+    omb_graph_options_t omb_graph_options;
+    omb_graph_data_t *omb_graph_data = NULL;
     options.bench = COLLECTIVE;
     options.subtype = ALLTOALL;
     MPI_Datatype omb_ddt_datatype = MPI_CHAR;
@@ -41,6 +43,7 @@ int main (int argc, char *argv[])
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
 
+    omb_graph_options_init(&omb_graph_options);
     switch (po_ret) {
         case PO_BAD_USAGE:
             print_bad_usage_message(rank);
@@ -66,13 +69,8 @@ int main (int argc, char *argv[])
         MPI_CHECK(MPI_Finalize());
         exit(EXIT_FAILURE);
     }
-
-    if ((options.max_message_size * numprocs) > options.max_mem_limit) {
-        options.max_message_size = options.max_mem_limit / numprocs;
-    }
-
+    check_mem_limit(numprocs);
     bufsize = options.max_message_size * numprocs;
-
     if (allocate_memory_coll((void**)&sendbuf, bufsize, options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
         MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
@@ -97,6 +95,8 @@ int main (int argc, char *argv[])
             options.iterations = options.iterations_large;
         }
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_options, size, options.iterations);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
         timer = 0.0;
 
@@ -128,6 +128,10 @@ int main (int argc, char *argv[])
 
             if (i >= options.skip) {
                 timer += t_stop - t_start;
+                if (options.graph && 0 == rank) {
+                    omb_graph_data->data[i - options.skip] = (t_stop -
+                            t_start) * 1e6;
+                }
             }
         }
         latency = (double)(timer * 1e6) / options.iterations;
@@ -151,7 +155,10 @@ int main (int argc, char *argv[])
         } else {
             print_stats(rank, size, avg_time, min_time, max_time);
         }
-        append_stats_ddt(omb_ddt_transmit_size);
+        if (options.graph && 0 == rank) {
+            omb_graph_data->avg = avg_time;
+        }
+        omb_ddt_append_stats(omb_ddt_transmit_size);
         omb_ddt_free(&omb_ddt_datatype);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
@@ -159,6 +166,11 @@ int main (int argc, char *argv[])
             break;
         }
     }
+    if (0 == rank && options.graph) {
+        omb_graph_plot(&omb_graph_options, benchmark_name);
+    }
+    omb_graph_combined_plot(&omb_graph_options, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_options);
 
     free_buffer(sendbuf, options.accel);
     free_buffer(recvbuf, options.accel);

@@ -27,6 +27,8 @@ int main(int argc, char *argv[])
     int po_ret = 0;
     int errors = 0;
     double tmp_total = 0.0;
+    omb_graph_options_t omb_graph_options;
+    omb_graph_data_t *omb_graph_data = NULL;
     options.bench = PT2PT;
     options.subtype = BW;
     MPI_Datatype omb_ddt_datatype = MPI_CHAR;
@@ -56,6 +58,7 @@ int main(int argc, char *argv[])
     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myid));
 
+    omb_graph_options_init(&omb_graph_options);
     if (0 == myid) {
         switch (po_ret) {
             case PO_CUDA_NOT_AVAIL:
@@ -161,6 +164,8 @@ int main(int argc, char *argv[])
         }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_options, size, options.iterations);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
         t_total = 0.0;
 
@@ -227,6 +232,17 @@ int main(int argc, char *argv[])
                         t_end = MPI_Wtime();
                         t_total += calculate_total(t_start, t_end, t_lo,
                                 window_size);
+                        if (options.graph) {
+                            if (options.omb_enable_ddt) {
+                                tmp_total = omb_ddt_transmit_size / 1e6 *
+                                    window_size * 2;
+                            } else {
+                                tmp_total = size / 1e6 * window_size * 2;
+                            }
+                            omb_graph_data->data[i - options.skip] = tmp_total
+                                / calculate_total(t_start, t_end, t_lo,
+                                        window_size);
+                        }
                     }
                 } else {
 #ifdef _ENABLE_CUDA_KERNEL_
@@ -302,10 +318,13 @@ int main(int argc, char *argv[])
                         tmp_total / t_total);
             }
             if (options.omb_enable_ddt) {
-                fprintf(stdout, "%*d", FIELD_WIDTH, omb_ddt_transmit_size);
+                fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);
             }
             fprintf(stdout, "\n");
             fflush(stdout);
+            if (options.graph && 0 == myid) {
+                omb_graph_data->avg = tmp_total / t_total;
+            }
         }
 
         omb_ddt_free(&omb_ddt_datatype);
@@ -322,6 +341,11 @@ int main(int argc, char *argv[])
             }
         }
     }
+    if (options.graph) {
+        omb_graph_plot(&omb_graph_options, benchmark_name);
+    }
+    omb_graph_combined_plot(&omb_graph_options, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_options);
 
     if (options.buf_num == SINGLE) {
         free_memory(s_buf[0], r_buf[0], myid);

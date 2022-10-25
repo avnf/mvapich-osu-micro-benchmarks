@@ -84,8 +84,8 @@ main (int argc, char *argv[])
             break;
     }
 
-    if(numprocs != 2) {
-        if(myid == 0) {
+    if (numprocs != 2) {
+        if (myid == 0) {
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
@@ -106,20 +106,20 @@ main (int argc, char *argv[])
 
     
     /* Latency test */
-    for(size = options.min_message_size; size <= options.max_message_size; size = (size ? size * 2 : 1)) {
+    for (size = options.min_message_size; size <= options.max_message_size; size = (size ? size * 2 : 1)) {
         set_buffer_pt2pt(send_buf, myid, options.accel, 'a', size);
         set_buffer_pt2pt(recv_buf, myid, options.accel, 'b', size);
 
-        if(size > LARGE_MESSAGE_SIZE) {
+        if (size > LARGE_MESSAGE_SIZE) {
             options.iterations = options.iterations_large;
             options.skip = options.skip_large;
         }
 
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
-        if(myid == 0) {
-            for(i = 0; i < options.iterations + options.skip; i++) {
-                if(i == options.skip) {
+        if (myid == 0) {
+            for (i = 0; i < options.iterations + options.skip; i++) {
+                if (i == options.skip) {
                     t_start = MPI_Wtime();
                 }
 
@@ -132,8 +132,8 @@ main (int argc, char *argv[])
             t_end = MPI_Wtime();
         }
 
-        else if(myid == 1) {
-            for(i = 0; i < options.iterations + options.skip; i++) {
+        else if (myid == 1) {
+            for (i = 0; i < options.iterations + options.skip; i++) {
                 NCCL_CHECK(ncclRecv(recv_buf, size, ncclChar, 0, nccl_comm, nccl_stream));
                 CUDA_STREAM_SYNCHRONIZE(nccl_stream);
                 NCCL_CHECK(ncclSend(send_buf, size, ncclChar, 0, nccl_comm, nccl_stream));
@@ -141,7 +141,7 @@ main (int argc, char *argv[])
             }
         }
 
-        if(myid == 0) {
+        if (myid == 0) {
             double latency = (t_end - t_start) * 1e6 / (2.0 * options.iterations);
 
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,

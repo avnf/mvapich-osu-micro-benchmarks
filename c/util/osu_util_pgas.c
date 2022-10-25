@@ -12,14 +12,14 @@
 
 void usage_oshm_pt2pt(int myid)
 {
-    if(myid == 0) {
+    if (myid == 0) {
         fprintf(stderr, "Invalid arguments. Usage: <prog_name> <heap|global>\n");
     }
 }
 
 void print_header_pgas (const char *header, int rank, int full)
 {
-    if(rank == 0) {
+    if (rank == 0) {
         fprintf(stdout, header, "");
 
         if (options.show_size) {
@@ -48,7 +48,7 @@ void print_header_pgas (const char *header, int rank, int full)
 void print_data_pgas (int rank, int full, int size, double avg_time, double
 min_time, double max_time, int iterations)
 {
-    if(rank == 0) {
+    if (rank == 0) {
         if (size) {
             fprintf(stdout, "%-*d", 10, size);
             fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, avg_time);

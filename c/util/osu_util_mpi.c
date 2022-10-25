@@ -85,7 +85,7 @@ void set_device_memory (void * ptr, int data, size_t size)
 #ifdef _ENABLE_OPENACC_
         case OPENACC:
 #pragma acc parallel copyin(size) deviceptr(p)
-            for(i = 0; i < size; i++) {
+            for (i = 0; i < size; i++) {
                 p[i] = data;
             }
             break;
@@ -194,50 +194,16 @@ void usage_one_sided (char const * name)
     fprintf(stdout, "  -x, --warmup ITER           number of warmup iterations to skip before timing"
                    "(default 100)\n");
 
-    if(options.subtype == BW) {
+    if (options.subtype == BW) {
         fprintf(stdout, "  -W, --window-size SIZE      set number of messages to send before synchronization (default 64)\n");
     }
 
+    fprintf(stdout, "  -G, --graph tty,png,pdf    graph output of per"
+            " iteration values.\n");
     fprintf(stdout, "  -i, --iterations ITER       number of iterations for timing (default 10000)\n");
 
     fprintf(stdout, "  -h, --help                  print this help message\n");
     fflush(stdout);
-}
-
-void omb_ddt_process_options(char *optarg)
-{
-    char *option;
-    if (NULL == optarg) {
-        bad_usage.message = "Please pass a ddt"
-            " type[cont,vect,indx]\n";
-        bad_usage.optarg = optarg;
-        return PO_BAD_USAGE;
-    }
-    option = strtok(optarg, ":");
-    if (0 == strncasecmp(optarg, "vect", 4)) {
-        options.ddt_type = OMB_DDT_VECTOR;
-        option = strtok(NULL, ":");
-        if (NULL != option) {
-            options.ddt_type_parameters.stride = atoi(option);
-        }
-        option = strtok(NULL, ":");
-        if (NULL != option) {
-            options.ddt_type_parameters.block_length = atoi(option);
-        }
-    } else if (0 == strncasecmp(optarg, "indx", 4)) {
-        options.ddt_type = OMB_DDT_INDEXED;
-        option = strtok(NULL, ":");
-        if (NULL != option) {
-            strcpy(options.ddt_type_parameters.filepath, option);
-        }
-    } else if (0 == strncasecmp(optarg, "cont", 4)) {
-        options.ddt_type = OMB_DDT_CONTIGUOUS;
-    } else {
-        bad_usage.message = "Invalid ddt type. Valid ddt"
-            " types[cont,vect,indx]\n";
-        bad_usage.optarg = optarg;
-        return PO_BAD_USAGE;
-    }
 }
 
 int process_one_sided_options (int opt, char *arg)
@@ -323,6 +289,8 @@ void usage_mbw_mr()
         fprintf(stdout, "  -d, --accelerator  TYPE     use accelerator device buffers, which can be of TYPE `cuda', \n");
         fprintf(stdout, "                              `managed', `openacc', or `rocm' (uses standard host buffers if not specified)\n");
     }
+    fprintf(stdout, "  -G, --graph tty,png,pdf        graph output of per"
+            " iteration values.\n");
     fprintf(stdout, "  -c, --validation               Enable or disable validation. Disabled by default. \n");
     fprintf(stdout, "  -h, --help                     Print this help\n");
     fprintf(stdout, "\n");
@@ -464,6 +432,8 @@ void print_help_message (int rank)
         fprintf(stdout, "                              -D vect:[stride]:[block_length]  //Vector\n");
         fprintf(stdout, "                              -D indx:[ddt file path]          //Index\n");
     }
+    fprintf(stdout, "  -G, --graph tty,png,pdf    graph output of per"
+                        " iteration values.\n");
     fprintf(stdout, "  -h, --help                  print this help\n");
     fprintf(stdout, "  -v, --version               print version info\n");
     fprintf(stdout, "\n");
@@ -520,7 +490,7 @@ void print_help_message_get_acc_lat (int rank)
 
 void print_header_one_sided (int rank, enum WINDOW win, enum SYNC sync)
 {
-    if(rank == 0) {
+    if (rank == 0) {
         switch (options.accel) {
             case CUDA:
                 printf(benchmark_header, "-CUDA");
@@ -639,7 +609,7 @@ void print_preamble_nbc (int rank)
     if (options.validate) {
         fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
     }
-    if (options.omb_enable_ddt){
+    if (options.omb_enable_ddt) {
         fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
     }
     fprintf(stdout, "\n");
@@ -703,14 +673,49 @@ void print_preamble (int rank)
 
     if (options.validate)
         fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
-    if (options.omb_enable_ddt){
+    if (options.omb_enable_ddt) {
         fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
     }
     fprintf(stdout, "\n");
     fflush(stdout);
 }
 
-void calculate_and_print_stats(int rank, int size, int numprocs, double timer,
+void check_mem_limit(int numprocs) 
+{
+    int rank = 0;
+
+    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+    if (options.subtype == GATHER || 
+            options.subtype == ALLTOALL ||
+            options.subtype == SCATTER ||
+            options.subtype == NBC_GATHER ||
+            options.subtype == NBC_ALLTOALL ||
+            options.subtype == NBC_SCATTER) {
+        if ((options.max_message_size * numprocs) > options.max_mem_limit) {
+            options.max_message_size = options.max_mem_limit / numprocs;
+            if (0 == rank) {
+                fprintf(stderr, "Warning! Limiting max message size. Increase"
+                        " -M, --mem-limit for higher message sizes.",
+                        options.max_message_size); 
+            }
+        }
+    } else if (options.subtype == REDUCE || 
+            options.subtype == BCAST ||
+            options.subtype == NBC_REDUCE ||
+            options.subtype == NBC_BCAST  ||
+            options.subtype == REDUCE_SCATTER) {
+        if (options.max_message_size > options.max_mem_limit) {
+            if (0 == rank) {
+                fprintf(stderr, "Warning! Limiting max message size. Increase"
+                        " -M, --mem-limit for higher message sizes.",
+                        options.max_message_size); 
+            }
+            options.max_message_size = options.max_mem_limit;
+        }
+    }
+}
+
+double calculate_and_print_stats(int rank, int size, int numprocs, double timer,
                                double latency, double test_time,
                                double cpu_time, double wait_time,
                                double init_time, int errors)
@@ -723,7 +728,7 @@ void calculate_and_print_stats(int rank, int size, int numprocs, double timer,
     double avg_comm_time   = latency;
     double min_comm_time = latency, max_comm_time = latency;
 
-    if(rank != 0) {
+    if (rank != 0) {
         MPI_CHECK(MPI_Reduce(&test_total, &test_total, 1, MPI_DOUBLE, MPI_SUM, 0,
                    MPI_COMM_WORLD));
         MPI_CHECK(MPI_Reduce(&avg_comm_time, &avg_comm_time, 1, MPI_DOUBLE, MPI_SUM, 0,
@@ -778,6 +783,7 @@ void calculate_and_print_stats(int rank, int size, int numprocs, double timer,
     print_stats_nbc(rank, size, overall_time, tcomp_total, avg_comm_time,
                     min_comm_time, max_comm_time, wait_total, init_total,
                     test_total, errors);
+    return overall_time;
 
 }
 
@@ -885,7 +891,7 @@ void print_stats_validate(int rank, int size, double avg_time, double min_time,
     fflush(stdout);
 }
 
-void append_stats_ddt(size_t omb_ddt_transmit_size)
+void omb_ddt_append_stats(size_t omb_ddt_transmit_size)
 {
     int rank;
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -893,7 +899,7 @@ void append_stats_ddt(size_t omb_ddt_transmit_size)
         return;
     }
     if (options.omb_enable_ddt) {
-        fprintf(stdout, "%*d\n", FIELD_WIDTH, omb_ddt_transmit_size);
+        fprintf(stdout, "%*zu\n", FIELD_WIDTH, omb_ddt_transmit_size);
     }
 }
 
@@ -968,6 +974,8 @@ void set_buffer (void * buffer, enum accel_type type, int data, size_t size)
             ROCM_CHECK(hipMemset(buffer, data, size));
 #endif
             break;
+        default:
+            break;
     }
 }
 
@@ -990,11 +998,11 @@ void set_buffer_validation(void* s_buf, void* r_buf, size_t size,
                 char* temp_char_s_buffer = (char*) temp_s_buffer;
                 char* temp_char_r_buffer = (char*) temp_r_buffer;
                 register int i;
-                for(i = 0; i < num_elements; i++) {
+                for (i = 0; i < num_elements; i++) {
                     temp_char_s_buffer[i] = (CHAR_VALIDATION_MULTIPLIER * (i +
                                 1) + size + iter) % CHAR_RANGE;
                 }
-                for(i = 0; i < num_elements; i++) {
+                for (i = 0; i < num_elements; i++) {
                     temp_char_r_buffer[i] = 0;
                 }
                 if (options.bench == MBW_MR) {
@@ -1134,6 +1142,8 @@ void set_buffer_validation(void* s_buf, void* r_buf, size_t size,
                             }
                         }
                         break;
+                    default:
+                        break;
                 }
             }
             break;
@@ -1153,12 +1163,12 @@ void set_buffer_float (float* buffer, int is_send_buf, size_t size, int iter,
     int num_elements = size;
     float *temp_buffer = malloc(size * sizeof(float));
     if (is_send_buf) {
-        for(i = 0; i < num_elements; i++) {
+        for (i = 0; i < num_elements; i++) {
             j = (i % 100);
             temp_buffer[i] = (j + 1) * (iter + 1) * 1.0;
         }
     } else {
-        for(i = 0; i < num_elements; i++) {
+        for (i = 0; i < num_elements; i++) {
             temp_buffer[i] = 0.0;
         }
     }
@@ -1173,6 +1183,8 @@ void set_buffer_float (float* buffer, int is_send_buf, size_t size, int iter,
                        size * sizeof(float), cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaDeviceSynchronize());
 #endif
+            break;
+        default:
             break;
     }
     free(temp_buffer);
@@ -1189,15 +1201,15 @@ void set_buffer_char (char * buffer, int is_send_buf, size_t size, int rank,
     int i, j;
     char *temp_buffer = malloc(size * num_procs);
     if (is_send_buf) {
-        for(i = 0; i < num_procs; i++) {
-            for(j = 0; j < num_elements; j++) {
+        for (i = 0; i < num_procs; i++) {
+            for (j = 0; j < num_elements; j++) {
                 temp_buffer[i * num_elements + j] = (rank * num_procs + i +
                         ((iter + 1) * (rank * num_procs + 1) * (i + 1))) %
                         (1<<8);
             }
         }
     } else {
-        for(i = 0; i < num_procs * num_elements; i++) {
+        for (i = 0; i < num_procs * num_elements; i++) {
             temp_buffer[i] = 0;
         }
     }
@@ -1212,6 +1224,8 @@ void set_buffer_char (char * buffer, int is_send_buf, size_t size, int rank,
                        size * num_procs, cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaDeviceSynchronize());
 #endif
+            break;
+        default:
             break;
     }
     free(temp_buffer);
@@ -1274,11 +1288,11 @@ uint8_t validate_data(void* r_buf, size_t size, int num_procs,
 #endif
                         break;
                 }
-                for(i = 0; i < num_elements; i++) {
+                for (i = 0; i < num_elements; i++) {
                     expected_buffer[i] = (CHAR_VALIDATION_MULTIPLIER * (i + 1) +
                             size + iter) % CHAR_RANGE;
                 }
-                if(memcmp(temp_char_r_buf, expected_buffer, num_elements)) {
+                if (memcmp(temp_char_r_buf, expected_buffer, num_elements)) {
                     free(temp_r_buf);
                     return 1;
                 }
@@ -1374,6 +1388,8 @@ int validate_reduce_scatter(float *buffer, size_t size, int* recvcounts,
             CUDA_CHECK(cudaDeviceSynchronize());
             break;
 #endif
+        default:
+            break;
     }
 
     i = 0;
@@ -1414,6 +1430,8 @@ int validate_reduction(float *buffer, size_t size, int iter, int num_procs,
             CUDA_CHECK(cudaDeviceSynchronize());
             break;
 #endif
+        default:
+            break;
     }
 
     for (i = 0; i < num_elements; i++) {
@@ -1449,10 +1467,12 @@ int validate_collective(char *buffer, size_t size, int value1, int value2,
             CUDA_CHECK(cudaDeviceSynchronize());
             break;
 #endif
+        default:
+            break;
     }
 
     for (i = 0; i < value2; i++) {
-        for(j = 0; j < num_elements; j++) {
+        for (j = 0; j < num_elements; j++) {
             expected_buffer[i * num_elements + j] = (i * value2 + value1 +
                             ((itr + 1) * (value1 + 1) * (i * value2 + 1))) %
                             (1<<8);
@@ -1598,6 +1618,7 @@ int allocate_managed_buffer_size (char ** buffer, size_t size)
     }
     return 0;
 }
+
 int allocate_memory_pt2pt_mul (char ** sbuf, char ** rbuf, int rank, int pairs)
 {
     unsigned long align_size = sysconf(_SC_PAGESIZE);
@@ -1968,7 +1989,7 @@ void allocate_memory_one_sided(int rank, char **user_buf,
             MPI_CHECK(MPI_Win_create_dynamic(MPI_INFO_NULL, MPI_COMM_WORLD, win));
             MPI_CHECK(MPI_Win_attach(*win, (void *)*win_base, size));
             MPI_CHECK(MPI_Get_address(*win_base, &disp_local));
-            if(rank == 0){
+            if (rank == 0) {
                 MPI_CHECK(MPI_Send(&disp_local, 1, MPI_AINT, 1, 1, MPI_COMM_WORLD));
                 MPI_CHECK(MPI_Recv(&disp_remote, 1, MPI_AINT, 1, 1, MPI_COMM_WORLD, &reqstat));
             } else {
@@ -2006,20 +2027,21 @@ size_t omb_ddt_assign(MPI_Datatype *datatype, MPI_Datatype base_datatype,
     int displacements[OMB_DDT_INDEXED_MAX_LENGTH] = {0};
 
     if (0 == options.omb_enable_ddt) {
-        return;
+        return size;
     }
     switch (options.ddt_type) {
         case OMB_DDT_CONTIGUOUS:
-            MPI_Type_contiguous(count, base_datatype, datatype);
-            MPI_Type_commit(datatype);
+            MPI_CHECK(MPI_Type_contiguous(count, base_datatype, datatype));
+            MPI_CHECK(MPI_Type_commit(datatype));
             transmit_size = count;
             break;
         case OMB_DDT_VECTOR:
-            MPI_Type_vector(count / options.ddt_type_parameters.stride,
-                    options.ddt_type_parameters.block_length,
-                    options.ddt_type_parameters.stride, base_datatype,
-                    datatype);
-            MPI_Type_commit(datatype);
+            MPI_CHECK(MPI_Type_vector(count /
+                        options.ddt_type_parameters.stride,
+                        options.ddt_type_parameters.block_length,
+                        options.ddt_type_parameters.stride, base_datatype,
+                        datatype));
+            MPI_CHECK(MPI_Type_commit(datatype));
             transmit_size = (count / options.ddt_type_parameters.stride) *
                 options.ddt_type_parameters.block_length;
             break;
@@ -2043,20 +2065,21 @@ size_t omb_ddt_assign(MPI_Datatype *datatype, MPI_Datatype base_datatype,
                 i++;
             }
             fclose(fp);
-            MPI_Type_indexed(i-1,
-                    block_lengths, displacements, base_datatype, datatype);
-            MPI_Type_commit(datatype);
+            MPI_CHECK(MPI_Type_indexed(i-1,
+                    block_lengths, displacements, base_datatype, datatype));
+            MPI_CHECK(MPI_Type_commit(datatype));
             break;
     }
     return transmit_size;
 }
 
-void omb_ddt_free(MPI_Datatype *datatype) {
+void omb_ddt_free(MPI_Datatype *datatype)
+{
     if (0 == options.omb_enable_ddt) {
         return;
     }
     OMB_CHECK_NULL_AND_EXIT(datatype, "Received NULL datatype");
-    MPI_Type_free(datatype);
+    MPI_CHECK(MPI_Type_free(datatype));
 }
 
 size_t omb_ddt_get_size(size_t size)
@@ -2114,6 +2137,8 @@ int omb_get_local_rank()
     } else if ((str = getenv("OMPI_COMM_WORLD_LOCAL_RANK")) != NULL) {
         local_rank = atoi(str);
     } else if ((str = getenv("MPI_LOCALRANKID")) != NULL) {
+        local_rank = atoi(str);
+    } else if ((str = getenv("SLURM_PROCID")) != NULL) {
         local_rank = atoi(str);
     } else if ((str = getenv("LOCAL_RANK")) != NULL) {
         local_rank = atoi(str);
@@ -2434,8 +2459,7 @@ void do_compute_gpu(double seconds)
 }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
-void
-compute_on_host()
+void compute_on_host()
 {
     int i = 0, j = 0;
     for (i = 0; i < DIM; i++)
@@ -2618,7 +2642,7 @@ void allocate_atomic_memory(int rank,
             MPI_CHECK(MPI_Win_create_dynamic(MPI_INFO_NULL, MPI_COMM_WORLD, win));
             MPI_CHECK(MPI_Win_attach(*win, (void *)*win_base, size));
             MPI_CHECK(MPI_Get_address(*win_base, &disp_local));
-            if(rank == 0){
+            if (rank == 0) {
                 MPI_CHECK(MPI_Send(&disp_local, 1, MPI_AINT, 1, 1, MPI_COMM_WORLD));
                 MPI_CHECK(MPI_Recv(&disp_remote, 1, MPI_AINT, 1, 1, MPI_COMM_WORLD, &reqstat));
             } else {

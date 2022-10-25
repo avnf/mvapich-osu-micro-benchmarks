@@ -95,14 +95,14 @@ main (int argc, char **argv)
         }
 
         timer=0;
-        for(i=0; i < iterations + skip ; i++) {
+        for (i=0; i < iterations + skip ; i++) {
             //t_start = TIME();
             t_start = getMicrosecondTimeStamp();
 
             upcxx_allgather((char *)src, (char *)dst, size*sizeof(char));
             t_stop = getMicrosecondTimeStamp();
 
-            if(i>=skip){
+            if (i>=skip) {
                 timer+=t_stop-t_start;
             }
             barrier();

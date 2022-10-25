@@ -16,7 +16,9 @@ endif
 
 AM_CFLAGS = -I${top_srcdir}/c/util
 
-UTILITIES = ../../util/osu_util.c ../../util/osu_util.h ../../util/osu_util_mpi.c ../../util/osu_util_mpi.h
+UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
+			../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
+			../../util/osu_util_graph.c ../../util/osu_util_graph.h
 if CUDA_KERNELS
 UTILITIES += ../../util/kernel.cu
 if BUILD_USE_PGI

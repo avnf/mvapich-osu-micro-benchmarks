@@ -80,7 +80,7 @@ check_usage (int me, int npes, int argc, char * argv [])
 void
 print_header_local (int myid)
 {
-    if(myid == 0) {
+    if (myid == 0) {
         fprintf(stdout, HEADER);
         fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Messages/s");
         fflush(stdout);

@@ -8,11 +8,13 @@ SUFFIXES = .cu .cpp
 	mv $@.ii $@
 
 pt2ptdir = $(pkglibexecdir)/mpi/pt2pt
-pt2pt_PROGRAMS = osu_bibw osu_bw osu_latency osu_mbw_mr osu_multi_lat
+pt2pt_PROGRAMS = osu_bibw osu_bw osu_latency osu_mbw_mr osu_multi_lat 
 
 AM_CFLAGS = -I${top_srcdir}/c/util
 
-UTILITIES = ../../util/osu_util.c ../../util/osu_util.h ../../util/osu_util_mpi.c ../../util/osu_util_mpi.h
+UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
+	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h ../../util/osu_util_graph.c \
+	../../util/osu_util_graph.h
 if CUDA_KERNELS
 UTILITIES += ../../util/kernel.cu
 CLEANFILES = ../../util/kernel.cpp

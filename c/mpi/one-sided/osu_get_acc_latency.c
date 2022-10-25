@@ -1,7 +1,7 @@
 #define BENCHMARK "OSU MPI_Get_accumulate latency Test"
 /*
  * Copyright (C) 2003-2022 the Network-Based Computing Laboratory
- * (NBCL), The Ohio State University.            
+ * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
  *
@@ -15,7 +15,7 @@ double  t_start = 0.0, t_end = 0.0;
 char    *sbuf=NULL, *rbuf=NULL, *cbuf=NULL;
 MPI_Aint sdisp_remote;
 MPI_Aint sdisp_local;
-
+omb_graph_options_t omb_graph_op;
 
 void allocate_memory_get_acc_lat (int, char *, int, enum WINDOW, MPI_Win *win);
 void print_header_get_acc_lat (int, enum WINDOW, enum SYNC);
@@ -27,17 +27,15 @@ void run_get_acc_with_flush (int, enum WINDOW);
 void run_get_acc_with_flush_local (int, enum WINDOW);
 void run_get_acc_with_pscw (int, enum WINDOW);
 
-
 int main (int argc, char *argv[])
 {
     int         rank,nprocs;
     int         page_size;
     int         po_ret = PO_OKAY;
     size_t      size;
-
     options.bench = ONE_SIDED;
     options.subtype = LAT;
- 
+
     MPI_CHECK(MPI_Init(&argc, &argv));
     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &nprocs));
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -81,7 +79,6 @@ int main (int argc, char *argv[])
 
     page_size = getpagesize();
     assert(page_size <= MAX_ALIGNMENT);
-    
     size = options.max_message_size;
     CHECK(posix_memalign((void **)&sbuf, page_size, size));
     memset(sbuf, 0, size);
@@ -107,10 +104,10 @@ int main (int argc, char *argv[])
         case FLUSH_LOCAL:
             run_get_acc_with_flush_local(rank, options.win);
             break;
-        case FENCE: 
+        case FENCE:
             run_get_acc_with_fence(rank, options.win);
             break;
-        default: 
+        default:
             run_get_acc_with_flush(rank, options.win);
             break;
     }
@@ -126,11 +123,12 @@ int main (int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-
 /*Run Get_accumulate with flush */
 void run_get_acc_with_flush(int rank, enum WINDOW type)
 {
     int size, i;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
@@ -146,32 +144,53 @@ void run_get_acc_with_flush(int rank, enum WINDOW type)
              options.skip = options.skip_large;
         }
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_op, size, options.iterations);
         if (rank == 0) {
             MPI_CHECK(MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 1, 0, win));
             for (i = 0; i <  options.skip +  options.iterations; i++) {
                 if (i ==  options.skip) {
                     t_start = MPI_Wtime ();
                 }
+                if (i >= options.skip) {
+                    t_graph_start = MPI_Wtime();
+                }
                 MPI_CHECK(MPI_Get_accumulate(sbuf, size, MPI_CHAR, cbuf, size, MPI_CHAR, 1, disp, size,
                     MPI_CHAR, MPI_SUM, win));
                 MPI_CHECK(MPI_Win_flush(1, win));
+                if (i >= options.skip) {
+                    t_graph_end = MPI_Wtime();
+                    if (options.graph) {
+                        omb_graph_data->data[i - options.skip] = (t_graph_end -
+                                t_graph_start) * 1.0e6;
+                    }
+                }
             }
             t_end = MPI_Wtime ();
             MPI_CHECK(MPI_Win_unlock(1, win));
-        }                
+        }
 
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
-        
         print_latency_get_acc_lat(rank, size);
-        
+        if (options.graph && 0 == rank) {
+            omb_graph_data->avg = (t_end - t_start) * 1.0e6 /
+                options.iterations;
+        }
+        if (options.graph) {
+            omb_graph_plot(&omb_graph_op, benchmark_name);
+        }
         MPI_Win_free(&win);
     }
+    omb_graph_combined_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
 }
 
 /*Run Get_accumulate with flush local*/
 void run_get_acc_with_flush_local(int rank, enum WINDOW type)
 {
     int size, i;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
@@ -187,32 +206,53 @@ void run_get_acc_with_flush_local(int rank, enum WINDOW type)
              options.skip = options.skip_large;
         }
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_op, size, options.iterations);
         if (rank == 0) {
             MPI_CHECK(MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 1, 0, win));
             for (i = 0; i <  options.skip +  options.iterations; i++) {
                 if (i ==  options.skip) {
                     t_start = MPI_Wtime ();
                 }
+                if (i >= options.skip) {
+                    t_graph_start = MPI_Wtime();
+                }
                 MPI_CHECK(MPI_Get_accumulate(sbuf, size, MPI_CHAR, cbuf, size, MPI_CHAR, 1, disp, size,
                     MPI_CHAR, MPI_SUM, win));
                 MPI_CHECK(MPI_Win_flush_local(1, win));
+                if (i >= options.skip) {
+                    t_graph_end = MPI_Wtime();
+                    if (options.graph) {
+                        omb_graph_data->data[i - options.skip] = (t_graph_end -
+                                t_graph_start) * 1.0e6;
+                    }
+                }
             }
             t_end = MPI_Wtime ();
             MPI_CHECK(MPI_Win_unlock(1, win));
-        }                
+        }
 
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
-        
         print_latency_get_acc_lat(rank, size);
-
+        if (options.graph && 0 == rank) {
+            omb_graph_data->avg = (t_end - t_start) * 1.0e6 /
+                options.iterations;
+        }
+        if (options.graph) {
+            omb_graph_plot(&omb_graph_op, benchmark_name);
+        }
         MPI_Win_free(&win);
     }
+    omb_graph_combined_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
 }
 
 /*Run Get_accumulate with Lock_all/unlock_all */
 void run_get_acc_with_lock_all(int rank, enum WINDOW type)
 {
     int size, i;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
@@ -228,31 +268,53 @@ void run_get_acc_with_lock_all(int rank, enum WINDOW type)
              options.skip = options.skip_large;
         }
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_op, size, options.iterations);
         if (rank == 0) {
             for (i = 0; i <  options.skip +  options.iterations; i++) {
                 if (i ==  options.skip) {
                     t_start = MPI_Wtime ();
                 }
+                if (i >= options.skip) {
+                    t_graph_start = MPI_Wtime();
+                }
                 MPI_CHECK(MPI_Win_lock_all(0, win));
                 MPI_CHECK(MPI_Get_accumulate(sbuf, size, MPI_CHAR, cbuf, size, MPI_CHAR, 1, disp, size,
                     MPI_CHAR, MPI_SUM, win));
                 MPI_CHECK(MPI_Win_unlock_all(win));
+                if (i >= options.skip) {
+                    t_graph_end = MPI_Wtime();
+                    if (options.graph) {
+                        omb_graph_data->data[i - options.skip] = (t_graph_end -
+                                t_graph_start) * 1.0e6;
+                    }
+                }
             }
             t_end = MPI_Wtime ();
-        }                
+        }
 
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
         print_latency_get_acc_lat(rank, size);
-        
+        if (options.graph && 0 == rank) {
+            omb_graph_data->avg = (t_end - t_start) * 1.0e6 /
+                options.iterations;
+        }
+        if (options.graph) {
+            omb_graph_plot(&omb_graph_op, benchmark_name);
+        }
         MPI_Win_free(&win);
     }
+    omb_graph_combined_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
 }
 
 /*Run Get_accumulate with Lock/unlock */
 void run_get_acc_with_lock(int rank, enum WINDOW type)
 {
     int size, i;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
@@ -268,31 +330,53 @@ void run_get_acc_with_lock(int rank, enum WINDOW type)
              options.skip = options.skip_large;
         }
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_op, size, options.iterations);
         if (rank == 0) {
             for (i = 0; i <  options.skip +  options.iterations; i++) {
                 if (i ==  options.skip) {
                     t_start = MPI_Wtime ();
                 }
+                if (i >= options.skip) {
+                    t_graph_start = MPI_Wtime();
+                }
                 MPI_CHECK(MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 1, 0, win));
                 MPI_CHECK(MPI_Get_accumulate(sbuf, size, MPI_CHAR, cbuf, size, MPI_CHAR, 1, disp, size,
                     MPI_CHAR, MPI_SUM, win));
                 MPI_CHECK(MPI_Win_unlock(1, win));
+                if (i >= options.skip) {
+                    t_graph_end = MPI_Wtime();
+                    if (options.graph) {
+                        omb_graph_data->data[i - options.skip] = (t_graph_end -
+                                t_graph_start) * 1.0e6;
+                    }
+                }
             }
             t_end = MPI_Wtime ();
-        }                
+        }
 
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
         print_latency_get_acc_lat(rank, size);
-        
+        if (options.graph && 0 == rank) {
+            omb_graph_data->avg = (t_end - t_start) * 1.0e6 /
+                options.iterations;
+        }
+        if (options.graph) {
+            omb_graph_plot(&omb_graph_op, benchmark_name);
+        }
         MPI_Win_free(&win);
     }
+    omb_graph_combined_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
 }
 
 /*Run Get_accumulate with Fence */
 void run_get_acc_with_fence(int rank, enum WINDOW type)
 {
     int size, i;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
@@ -308,6 +392,8 @@ void run_get_acc_with_fence(int rank, enum WINDOW type)
             options.skip = options.skip_large;
         }
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_op, size, options.iterations);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
         if (rank == 0) {
@@ -315,11 +401,21 @@ void run_get_acc_with_fence(int rank, enum WINDOW type)
                 if (i ==  options.skip) {
                     t_start = MPI_Wtime ();
                 }
+                if (i >= options.skip) {
+                    t_graph_start = MPI_Wtime();
+                }
                 MPI_CHECK(MPI_Win_fence(0, win));
                 MPI_CHECK(MPI_Get_accumulate(sbuf, size, MPI_CHAR, cbuf, size, MPI_CHAR, 1, disp, size,
                     MPI_CHAR, MPI_SUM, win));
                 MPI_CHECK(MPI_Win_fence(0, win));
                 MPI_CHECK(MPI_Win_fence(0, win));
+                if (i >= options.skip) {
+                    t_graph_end = MPI_Wtime();
+                    if (options.graph) {
+                        omb_graph_data->data[i - options.skip] = (t_graph_end -
+                                t_graph_start) * 1.0e6 / 2.0;
+                    }
+                }
             }
             t_end = MPI_Wtime ();
         } else {
@@ -338,16 +434,27 @@ void run_get_acc_with_fence(int rank, enum WINDOW type)
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
                     FLOAT_PRECISION, (t_end - t_start) * 1.0e6 /  options.iterations / 2);
             fflush(stdout);
+            if (options.graph && 0 == rank) {
+                omb_graph_data->avg = (t_end - t_start) * 1.0e6 /
+                    options.iterations / 2;
+            }
+            if (options.graph) {
+                omb_graph_plot(&omb_graph_op, benchmark_name);
+            }
         }
 
         MPI_Win_free(&win);
     }
+    omb_graph_combined_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
 }
 
 /*Run GET with Post/Start/Complete/Wait */
 void run_get_acc_with_pscw(int rank, enum WINDOW type)
 {
     int destrank, size, i;
+    double t_graph_start = 0.0, t_graph_end = 0.0;
+    omb_graph_data_t *omb_graph_data = NULL;
     MPI_Aint disp = 0;
     MPI_Win     win;
 
@@ -365,7 +472,8 @@ void run_get_acc_with_pscw(int rank, enum WINDOW type)
             options.iterations = options.iterations_large;
             options.skip = options.skip_large;
         }
-        
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_op, size, options.iterations);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
         if (rank == 0) {
@@ -379,11 +487,21 @@ void run_get_acc_with_pscw(int rank, enum WINDOW type)
                 if (i ==  options.skip) {
                     t_start = MPI_Wtime ();
                 }
+                if (i >= options.skip) {
+                    t_graph_start = MPI_Wtime();
+                }
                 MPI_CHECK(MPI_Get_accumulate(sbuf, size, MPI_CHAR, cbuf, size, MPI_CHAR, 1, disp, size,
                     MPI_CHAR, MPI_SUM, win));
                 MPI_CHECK(MPI_Win_complete(win));
                 MPI_CHECK(MPI_Win_post(group, 0, win));
                 MPI_CHECK(MPI_Win_wait(win));
+                if (i >= options.skip) {
+                    t_graph_end = MPI_Wtime();
+                    if (options.graph) {
+                        omb_graph_data->data[i - options.skip] = (t_graph_end -
+                                t_graph_start) * 1.0e6 / 2.0;
+                    }
+                }
             }
 
             t_end = MPI_Wtime ();
@@ -410,12 +528,21 @@ void run_get_acc_with_pscw(int rank, enum WINDOW type)
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
                     FLOAT_PRECISION, (t_end - t_start) * 1.0e6 /  options.iterations / 2);
             fflush(stdout);
+            if (options.graph && 0 == rank) {
+                omb_graph_data->avg = (t_end - t_start) * 1.0e6 /
+                    options.iterations / 2;
+            }
+            if (options.graph) {
+                omb_graph_plot(&omb_graph_op, benchmark_name);
+            }
         }
 
         MPI_CHECK(MPI_Group_free(&group));
 
         MPI_Win_free(&win);
     }
+    omb_graph_combined_plot(&omb_graph_op, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_op);
 
     MPI_CHECK(MPI_Group_free(&comm_group));
 }

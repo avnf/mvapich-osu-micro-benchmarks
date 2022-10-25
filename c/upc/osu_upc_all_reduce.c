@@ -51,8 +51,8 @@ int main(int argc, char *argv[])
             break;
     }
     
-    if(THREADS < 2) {
-        if(MYTHREAD == 0) {
+    if (THREADS < 2) {
+        if (MYTHREAD == 0) {
             fprintf(stderr, "This test requires at least two processes\n");
         }
         return -1;
@@ -61,13 +61,13 @@ int main(int argc, char *argv[])
 
     src = upc_all_alloc(THREADS, max_msg_size*sizeof(char));
 
-    if(NULL == src) {
+    if (NULL == src) {
         fprintf(stderr, "malloc failed.\n");
         exit(1);
     }
     
-    for(size=1; size <=max_msg_size; size *= 2) {
-        if(size > LARGE_MESSAGE_SIZE) {
+    for (size=1; size <=max_msg_size; size *= 2) {
+        if (size > LARGE_MESSAGE_SIZE) {
             skip = options.skip_large;
             iterations = options.iterations_large;
         }
@@ -76,13 +76,13 @@ int main(int argc, char *argv[])
         }
 
         timer=0;        
-        for(i=0; i < iterations + skip ; i++) {
+        for (i=0; i < iterations + skip ; i++) {
             upc_barrier;
             t_start = TIME();
             upc_all_reduceC(&dst, src, UPC_MAX, size * THREADS, size, NULL, SYNC_MODE);
             t_stop = TIME();
 
-            if(i>=skip){
+            if (i>=skip) {
                 timer+=t_stop-t_start;
             } 
             upc_barrier;
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
         upc_all_reduceD(&min_time, latency, UPC_MIN, THREADS, 1, NULL, SYNC_MODE);
         upc_all_reduceD(&max_time, latency, UPC_MAX, THREADS, 1, NULL, SYNC_MODE);
         upc_all_reduceD(&avg_time, latency, UPC_ADD, THREADS, 1, NULL, SYNC_MODE);
-        if(!MYTHREAD)
+        if (!MYTHREAD)
             avg_time = avg_time/THREADS;
 
         print_data_pgas(MYTHREAD, full, size*sizeof(char), avg_time, min_time, max_time, iterations);

@@ -23,8 +23,8 @@ int main(int argc, char **argv)
     int iamsender = 0;
     int i;
 
-    if( THREADS == 1 ) {
-        if(MYTHREAD == 0) {
+    if ( THREADS == 1 ) {
+        if (MYTHREAD == 0) {
             fprintf(stderr, "This test requires at least two UPC threads\n");
         }
         return 0;
@@ -47,25 +47,25 @@ int main(int argc, char **argv)
     for (int size = 1; size <= MAX_MESSAGE_SIZE; size*=2) {
 
         if ( iamsender )
-            for(i = 0; i < size; i++) {
+            for (i = 0; i < size; i++) {
                 local[i] = 'a';
             }
         else
-            for(i = 0; i < size; i++) {
+            for (i = 0; i < size; i++) {
                 local[i] = 'b';
             }
 
         upc_barrier;
 
-        if(size > LARGE_MESSAGE_SIZE) {
+        if (size > LARGE_MESSAGE_SIZE) {
             loop = UPC_LOOP_LARGE;
             skip = UPC_SKIP_LARGE;
         }
 
-        if( iamsender )
+        if ( iamsender )
         {
             for ( i = 0; i < loop + skip; i++) {
-                if(i == skip) {
+                if (i == skip) {
                     upc_barrier;
                     wtime(&t_start);
                 }
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
             upc_barrier;
 
             wtime(&t_end);
-            if( !MYTHREAD )
+            if ( !MYTHREAD )
             {
                 double latency = (t_end - t_start)/(1.0 * loop);
                 fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,

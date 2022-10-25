@@ -23,6 +23,8 @@ main (int argc, char *argv[])
     int myid, numprocs, i, j;
     int size;
     MPI_Status reqstat;
+    omb_graph_options_t omb_graph_options;
+    omb_graph_data_t *omb_graph_data = NULL;
     char *s_buf, *r_buf;
     double t_start = 0.0, t_end = 0.0, t_lo = 0.0, t_total = 0.0;
     int po_ret = 0;
@@ -49,6 +51,7 @@ main (int argc, char *argv[])
     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myid));
 
+    omb_graph_options_init(&omb_graph_options);
     if (0 == myid) {
         switch (po_ret) {
             case PO_CUDA_NOT_AVAIL:
@@ -136,6 +139,8 @@ main (int argc, char *argv[])
         }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_options, size, options.iterations);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
         t_total = 0.0;
 
@@ -166,6 +171,11 @@ main (int argc, char *argv[])
                     if (i >= options.skip && j == options.warmup_validation) {
                         t_end = MPI_Wtime();
                         t_total += calculate_total(t_start, t_end, t_lo);
+                        if (options.graph) {
+                            omb_graph_data->data[i - options.skip] =
+                                calculate_total(t_start, t_end, t_lo) * 1e6 /
+                                2.0;
+                        }
                     }
                 }
                 if (options.validate) {
@@ -210,10 +220,13 @@ main (int argc, char *argv[])
                         latency);
             }
             if (options.omb_enable_ddt) {
-                fprintf(stdout, "%*d", FIELD_WIDTH, omb_ddt_transmit_size);
+                fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);
             }
             fprintf(stdout, "\n");
             fflush(stdout);
+            if (options.graph && 0 == myid) {
+                omb_graph_data->avg = latency;
+            }
         }
         omb_ddt_free(&omb_ddt_datatype);
         if (options.buf_num == MULTIPLE) {
@@ -227,6 +240,11 @@ main (int argc, char *argv[])
             }
         }
     }
+    if (options.graph) {
+        omb_graph_plot(&omb_graph_options, benchmark_name);
+    }
+    omb_graph_combined_plot(&omb_graph_options, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_options);
 
     if (options.buf_num == SINGLE) {
         free_memory(s_buf, r_buf, myid);

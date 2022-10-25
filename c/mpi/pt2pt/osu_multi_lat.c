@@ -132,9 +132,12 @@ static int multi_latency(int rank, int pairs)
     MPI_Datatype omb_ddt_datatype = MPI_CHAR;
     size_t omb_ddt_size = 0;
     size_t omb_ddt_transmit_size = 0;
+    omb_graph_options_t omb_graph_options;
+    omb_graph_data_t *omb_graph_data = NULL;
 
     MPI_Status reqstat;
 
+    omb_graph_options_init(&omb_graph_options);
     for (size = options.min_message_size; size <= options.max_message_size;
             size = (size ? size * 2 : 1)) {
 
@@ -164,6 +167,8 @@ static int multi_latency(int rank, int pairs)
         }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_options, size, options.iterations);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
         t_total = 0.0;
 
@@ -198,6 +203,11 @@ static int multi_latency(int rank, int pairs)
                     if (i >= options.skip && j == options.warmup_validation) {
                         t_end = MPI_Wtime();
                         t_total += calculate_total(t_start, t_end, t_lo);
+                        if (options.graph) {
+                            omb_graph_data->data[i - options.skip] =
+                                calculate_total(t_start, t_end, t_lo) * 1e6 /
+                                2.0;
+                        }
                     }
                 } else {
                     partner = rank - pairs;
@@ -241,13 +251,16 @@ static int multi_latency(int rank, int pairs)
                         latency);
             }
             if (options.omb_enable_ddt) {
-                fprintf(stdout, "%*d", FIELD_WIDTH, omb_ddt_transmit_size);
+                fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);
             }
             fprintf(stdout, "\n");
             fflush(stdout);
-            omb_ddt_free(&omb_ddt_datatype);
+            if (options.graph && 0 == rank) {
+                omb_graph_data->avg = latency;
+            }
         }
 
+        omb_ddt_free(&omb_ddt_datatype);
         free_memory_pt2pt_mul(s_buf, r_buf, rank, pairs);
 
         if (options.validate) {
@@ -258,7 +271,12 @@ static int multi_latency(int rank, int pairs)
             }
         }
     }
-return size;
+    if (options.graph) {
+        omb_graph_plot(&omb_graph_options, benchmark_name);
+    }
+    omb_graph_combined_plot(&omb_graph_options, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_options);
+    return size;
 }
 
 #ifdef _ENABLE_CUDA_KERNEL_

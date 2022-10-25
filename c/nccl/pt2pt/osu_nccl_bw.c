@@ -89,8 +89,8 @@ main (int argc, char *argv[])
             break;
     }
 
-    if(numprocs != 2) {
-        if(myid == 0) {
+    if (numprocs != 2) {
+        if (myid == 0) {
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
@@ -110,23 +110,23 @@ main (int argc, char *argv[])
     print_header(myid, BW);
 
     /* Bandwidth test */
-    for(size = options.min_message_size; size <= options.max_message_size; size *= 2) {
+    for (size = options.min_message_size; size <= options.max_message_size; size *= 2) {
         set_buffer_pt2pt(s_buf, myid, options.accel, 'a', size);
         set_buffer_pt2pt(r_buf, myid, options.accel, 'b', size);
 
 
-        if(size > LARGE_MESSAGE_SIZE) {
+        if (size > LARGE_MESSAGE_SIZE) {
             options.iterations = options.iterations_large;
             options.skip = options.skip_large;
         }
         
-        if(myid == 0) {
-            for(i = 0; i < options.iterations + options.skip; i++) {
-                if(i == options.skip) {
+        if (myid == 0) {
+            for (i = 0; i < options.iterations + options.skip; i++) {
+                if (i == options.skip) {
                     t_start = MPI_Wtime();
                 }
 
-                for(j = 0; j < window_size; j++) {
+                for (j = 0; j < window_size; j++) {
                     NCCL_CHECK(ncclSend(s_buf, size, ncclChar, peer, nccl_comm, nccl_stream));
                 }
                 CUDA_STREAM_SYNCHRONIZE(nccl_stream);
@@ -137,9 +137,9 @@ main (int argc, char *argv[])
             t = t_end - t_start;
         }
         
-        else if(myid == 1) {
-            for(i = 0; i < options.iterations + options.skip; i++) {
-                for(j = 0; j < window_size; j++) {
+        else if (myid == 1) {
+            for (i = 0; i < options.iterations + options.skip; i++) {
+                for (j = 0; j < window_size; j++) {
                     NCCL_CHECK(ncclRecv(r_buf, size, ncclChar, peer, nccl_comm, nccl_stream));
                 }
                 CUDA_STREAM_SYNCHRONIZE(nccl_stream);
@@ -147,7 +147,7 @@ main (int argc, char *argv[])
             }
         }
 
-        if(myid == 0) {
+        if (myid == 0) {
             double tmp = size / 1e6 * options.iterations * window_size;
 
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,

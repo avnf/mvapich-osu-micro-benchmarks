@@ -145,14 +145,11 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-
     if (options.sender_thread != -1) {
         num_threads_sender = options.sender_thread;
     }
 
-
     pthread_barrier_init(&sender_barrier, NULL, num_threads_sender);
-
 
     if (myid == 0) {
         printf("# Number of Sender threads: %d \n# Number of Receiver threads: %d\n",num_threads_sender,options.num_threads );
@@ -292,7 +289,6 @@ void * recv_thread(void *arg)
     return 0;
 }
 
-
 void * send_thread(void *arg)
 {
     int size = 0, i = 0, val = 0, iter = 0, j;
@@ -305,6 +301,8 @@ void * send_thread(void *arg)
     MPI_Datatype omb_ddt_datatype = MPI_CHAR;
     size_t omb_ddt_size = 0;
     size_t omb_ddt_transmit_size = 0;
+    omb_graph_options_t omb_graph_options;
+    omb_graph_data_t *omb_graph_data = NULL;
 
     val = thread_id->id;
 
@@ -322,6 +320,7 @@ void * send_thread(void *arg)
         *ret = '1';
         return ret;
     }
+    omb_graph_options_init(&omb_graph_options);
 
     for (size = options.min_message_size, iter = 0; size <=
             options.max_message_size; size = (size ? size * 2 : 1)) {
@@ -350,6 +349,8 @@ void * send_thread(void *arg)
 
         omb_ddt_transmit_size = omb_ddt_assign(&omb_ddt_datatype, MPI_CHAR,
                 size);
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_options, size, options.iterations);
         /* touch the data */
         set_buffer_pt2pt(s_buf, myid, options.accel, 'a', size);
         set_buffer_pt2pt(r_buf, myid, options.accel, 'b', size);
@@ -390,6 +391,10 @@ void * send_thread(void *arg)
                 if (i >= options.skip && j == options.warmup_validation) {
                     t_end = MPI_Wtime();
                     t_total += (t_end - t_start);
+                    if (options.graph) {
+                        omb_graph_data->data[i - options.skip] = (t_end -
+                                t_start) * 1.0e6 / 2.0 ;
+                    }
                 }
             }
             if (options.validate) {
@@ -417,10 +422,13 @@ void * send_thread(void *arg)
                         latency);
             }
             if (options.omb_enable_ddt) {
-                fprintf(stdout, "%*d", FIELD_WIDTH, omb_ddt_transmit_size);
+                fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);
             }
             fprintf(stdout, "\n");
             fflush(stdout);
+            if (options.graph && 0 == myid) {
+                omb_graph_data->avg = latency;
+            }
         }
         omb_ddt_free(&omb_ddt_datatype);
         iter++;
@@ -428,6 +436,11 @@ void * send_thread(void *arg)
             break;
         }
     }
+    if (options.graph) {
+        omb_graph_plot(&omb_graph_options, benchmark_name);
+    }
+    omb_graph_combined_plot(&omb_graph_options, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_options);
 
     free_memory(s_buf, r_buf, myid);
 

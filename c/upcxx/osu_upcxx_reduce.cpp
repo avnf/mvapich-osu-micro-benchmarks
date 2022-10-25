@@ -101,7 +101,7 @@ main (int argc, char **argv)
                     root, UPCXX_SUM, UPCXX_CHAR);
             t_stop = getMicrosecondTimeStamp();
 
-            if (i>=skip){
+            if (i>=skip) {
                 timer+=t_stop-t_start;
             }
             barrier();

@@ -66,8 +66,8 @@ int main(int argc, char *argv[])
             break;
     }
 
-    if(numprocs < 2) {
-        if(rank == 0) {
+    if (numprocs < 2) {
+        if (rank == 0) {
             fprintf(stderr, "This test requires at least two processes\n");
         }
         return EXIT_FAILURE;
@@ -80,15 +80,15 @@ int main(int argc, char *argv[])
     iterations = options.iterations_large;
     timer = 0;
 
-    for(i=0; i < iterations + skip ; i++) {
+    for (i=0; i < iterations + skip ; i++) {
         t_start = TIME();
-        if(i%2)
+        if (i%2)
             shmem_barrier(0, 0, numprocs, pSyncBarrier1);
         else
             shmem_barrier(0, 0, numprocs, pSyncBarrier2);
         t_stop = TIME();
 
-        if(i>=skip){
+        if (i>=skip) {
             timer+=t_stop-t_start;
         } 
     }

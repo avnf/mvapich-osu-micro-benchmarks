@@ -10,7 +10,7 @@
 
 #include <mpi.h>
 #include "osu_util.h"
-
+#include "osu_util_graph.h"
 
 #define MPI_CHECK(stmt)                                          \
 do {                                                             \
@@ -91,6 +91,7 @@ void set_buffer_float (float * buffer, int is_send_buf, size_t size, int iter,
                        enum accel_type type);
 void set_buffer_char (char * buffer, int is_send_buf, size_t size, int rank,
                       int num_procs, enum accel_type type, int iter);
+void check_mem_limit(int numprocs); 
 
 /*
  * CUDA Context Management
@@ -156,4 +157,4 @@ size_t omb_ddt_assign(MPI_Datatype *datatype, MPI_Datatype base_datatype,
         size_t count);
 void omb_ddt_free(MPI_Datatype *datatype);
 size_t omb_ddt_get_size(size_t size);
-void append_stats_ddt(size_t omb_ddt_transmit_size);
+void omb_ddt_append_stats(size_t omb_ddt_transmit_size);

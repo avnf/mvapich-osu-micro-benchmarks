@@ -150,8 +150,7 @@ cpu, double comm, double wait, double init, int iterations);
 
 void allocate_host_arrays();
 
-void
-calculate_and_print_stats(int rank, int size, int numprocs,
+double calculate_and_print_stats(int rank, int size, int numprocs,
                           double timer, double latency,
                           double test_time, double cpu_time,
                           double wait_time, double init_time,
@@ -186,7 +185,7 @@ enum mpi_req{
 #define VALIDATION_SKIP_MAX 10
 #define OMB_DDT_STRIDE_DEFAULT 8
 #define OMB_DDT_BLOCK_LENGTH_DEFAULT 4
-#define OMB_DDT_FILE_PATH_MAX_LENGTH 40
+#define OMB_DDT_FILE_PATH_MAX_LENGTH 1024
 #define MAX_MESSAGE_SIZE (1 << 22)
 #define MAX_MSG_SIZE_PT2PT (1<<20)
 #define MAX_MSG_SIZE_COLL (1<<20)
@@ -241,6 +240,7 @@ enum test_subtype {
     LAT_MT,
     LAT_MP,
     NBC,
+    BARRIER,
     ALLTOALL,
     GATHER,
     REDUCE_SCATTER,
@@ -344,6 +344,10 @@ struct options_t {
     int pairs;
     int validate;
     enum buffer_num buf_num;
+    int graph;
+    int graph_output_term;
+    int graph_output_png;
+    int graph_output_pdf;
     int omb_enable_ddt;
     enum omb_ddt_types_t ddt_type;
     omb_ddt_type_parameters_t ddt_type_parameters;
@@ -366,8 +370,8 @@ extern struct bad_usage_t bad_usage;
  */
 extern int process_one_sided_options (int opt, char *arg);
 int process_options (int argc, char *argv[]);
+int omb_ddt_process_options(char *optarg, struct bad_usage_t *bad_usage);
 int setAccel(char);
-void omb_ddt_process_options(char *optarg);
 
 /*
  * Set Benchmark Properties

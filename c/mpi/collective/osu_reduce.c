@@ -20,6 +20,8 @@ int main(int argc, char *argv[])
     int po_ret;
     int errors = 0, local_errors = 0;
     size_t bufsize;
+    omb_graph_options_t omb_graph_options;
+    omb_graph_data_t *omb_graph_data = NULL;
 
     set_header(HEADER);
     set_benchmark_name("osu_reduce");
@@ -40,6 +42,7 @@ int main(int argc, char *argv[])
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
 
+    omb_graph_options_init(&omb_graph_options);
     switch (po_ret) {
         case PO_BAD_USAGE:
             print_bad_usage_message(rank);
@@ -65,17 +68,7 @@ int main(int argc, char *argv[])
         MPI_CHECK(MPI_Finalize());
         exit(EXIT_FAILURE);
     }
-
-    if (options.max_message_size > options.max_mem_limit) {
-        if (rank == 0) {
-            fprintf(stderr, "Warning! Increase the Max Memory Limit to be able"
-                    " to run up to %ld bytes.\n"
-                    " Continuing with max message size of %ld bytes\n",
-                    options.max_message_size, options.max_mem_limit);
-        }
-        options.max_message_size = options.max_mem_limit;
-    }
-
+    check_mem_limit(numprocs);
     options.min_message_size /= sizeof(float);
     if (options.min_message_size < MIN_MESSAGE_SIZE) {
         options.min_message_size = MIN_MESSAGE_SIZE;
@@ -106,6 +99,8 @@ int main(int argc, char *argv[])
             options.iterations = options.iterations_large;
         }
 
+        omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+                &omb_graph_options, size, options.iterations);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
         timer=0.0;
@@ -142,6 +137,10 @@ int main(int argc, char *argv[])
 
             if (i >= options.skip) {
                 timer += t_stop - t_start;
+                if (options.graph && 0 == rank) {
+                    omb_graph_data->data[i - options.skip] = (t_stop -
+                            t_start) * 1e6;
+                }
             }
         }
         latency = (double)(timer * 1e6) / options.iterations;
@@ -165,11 +164,19 @@ int main(int argc, char *argv[])
             print_stats(rank, size * sizeof(float), avg_time, min_time,
                     max_time);
         }
+        if (options.graph && 0 == rank) {
+            omb_graph_data->avg = avg_time;
+        }
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
         if (0 != errors) {
             break;
         }
     }
+    if (0 == rank && options.graph) {
+        omb_graph_plot(&omb_graph_options, benchmark_name);
+    }
+    omb_graph_combined_plot(&omb_graph_options, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_options);
 
     free_buffer(recvbuf, options.accel);
     free_buffer(sendbuf, options.accel);

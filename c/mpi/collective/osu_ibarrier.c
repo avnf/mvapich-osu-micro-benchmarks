@@ -21,7 +21,10 @@ int main(int argc, char *argv[])
     double wait_time = 0.0, init_time = 0.0;
     double init_total = 0.0, wait_total = 0.0;
     double timer = 0.0;
+    double avg_time = 0.0;
     int po_ret;
+    omb_graph_options_t omb_graph_options;
+    omb_graph_data_t *omb_graph_data = NULL;
 
     set_header(HEADER);
     set_benchmark_name("osu_ibarrier");
@@ -46,6 +49,7 @@ int main(int argc, char *argv[])
     MPI_Request request;
     MPI_Status status;
 
+    omb_graph_options_init(&omb_graph_options);
     switch (po_ret) {
         case PO_BAD_USAGE:
             print_bad_usage_message(rank);
@@ -81,6 +85,8 @@ int main(int argc, char *argv[])
 
     allocate_host_arrays();
 
+    omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+            &omb_graph_options, 1, options.iterations);
     for (i = 0; i < options.iterations + options.skip; i++) {
         t_start = MPI_Wtime();
         MPI_CHECK(MPI_Ibarrier(MPI_COMM_WORLD, &request));
@@ -130,16 +136,26 @@ int main(int argc, char *argv[])
                 test_total += test_time;
                 init_total += init_time;
                 wait_total += wait_time;
+                if (options.graph && 0 == rank) {
+                    omb_graph_data->data[i - options.skip] = (t_stop - t_start) *
+                        1e6;
+                }
             }
             MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
     }
 
     MPI_Barrier (MPI_COMM_WORLD);
 
-    calculate_and_print_stats(rank, size, numprocs,
+    avg_time = calculate_and_print_stats(rank, size, numprocs,
                                   timer, latency,
                                   test_total, tcomp_total,
                                   wait_total, init_total, 0);
+    if (0 == rank && options.graph) {
+            omb_graph_data->avg = avg_time;
+        omb_graph_plot(&omb_graph_options, benchmark_name);
+    }
+    omb_graph_combined_plot(&omb_graph_options, benchmark_name);
+    omb_graph_free_data_buffers(&omb_graph_options);
 
     free_host_arrays();
 #ifdef _ENABLE_CUDA_KERNEL_

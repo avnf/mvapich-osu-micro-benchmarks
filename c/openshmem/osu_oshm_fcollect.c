@@ -98,8 +98,8 @@ int main(int argc, char *argv[])
             break;
     }
 
-    if(numprocs < 2) {
-        if(rank == 0) {
+    if (numprocs < 2) {
+        if (rank == 0) {
             fprintf(stderr, "This test requires at least two processes\n");
         }
         return -1;
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
     max_msg_size = options.max_message_size;
     full = options.show_full;
     requested_mem_limit = (uint64_t) (max_msg_size) * numprocs; 
-    if( requested_mem_limit > options.max_mem_limit) {
+    if ( requested_mem_limit > options.max_mem_limit) {
         max_msg_size = options.max_mem_limit/numprocs;
     } 
 
@@ -141,9 +141,9 @@ int main(int argc, char *argv[])
     memset(recvbuff, 1, max_msg_size*numprocs);
     memset(sendbuff, 0, max_msg_size);
 
-    for(size=1; size <= max_msg_size/sizeof(uint32_t); size *= 2) {
+    for (size=1; size <= max_msg_size/sizeof(uint32_t); size *= 2) {
 
-        if(size > LARGE_MESSAGE_SIZE) {
+        if (size > LARGE_MESSAGE_SIZE) {
             skip = options.skip_large;
             iterations = options.iterations_large;
         } else {
@@ -154,15 +154,15 @@ int main(int argc, char *argv[])
         shmem_barrier_all();
 
         timer=0;
-        for(i=0; i < iterations + skip ; i++) {
+        for (i=0; i < iterations + skip ; i++) {
             t_start = TIME();
-            if(i%2)
+            if (i%2)
                 shmem_fcollect32(recvbuff, sendbuff, size, 0, 0, numprocs, pSyncCollect1);
             else
                 shmem_fcollect32(recvbuff, sendbuff, size, 0, 0, numprocs, pSyncCollect2);
             t_stop = TIME();
 
-            if(i >= skip) {
+            if (i >= skip) {
                 timer+= t_stop-t_start;
             }
             shmem_barrier_all();

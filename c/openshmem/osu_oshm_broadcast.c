@@ -68,8 +68,8 @@ int main(int argc, char *argv[])
             break;
     }
     
-    if(numprocs < 2) {
-        if(rank == 0) {
+    if (numprocs < 2) {
+        if (rank == 0) {
             fprintf(stderr, "This test requires at least two processes\n");
         }
         return -1;
@@ -87,15 +87,15 @@ int main(int argc, char *argv[])
 	 buffer = (char *)shmalloc(max_msg_size * sizeof(char));
 #endif
 
-    if(NULL == buffer) {
+    if (NULL == buffer) {
         fprintf(stderr, "malloc failed.\n");
         exit(1);
     }
     
     memset(buffer,1, max_msg_size);
 
-    for(size=1; size <=max_msg_size/sizeof(uint32_t); size *= 2) {
-        if(size > LARGE_MESSAGE_SIZE) {
+    for (size=1; size <=max_msg_size/sizeof(uint32_t); size *= 2) {
+        if (size > LARGE_MESSAGE_SIZE) {
             skip = options.skip_large;
             iterations = options.iterations_large;
         }
@@ -105,15 +105,15 @@ int main(int argc, char *argv[])
         }
 
         timer=0;        
-        for(i=0; i < iterations + skip ; i++) {
+        for (i=0; i < iterations + skip ; i++) {
             t_start = TIME();
-            if(i%2)
+            if (i%2)
                 shmem_broadcast32(buffer, buffer, size, 0, 0, 0, numprocs, pSyncBcast1);
             else
                 shmem_broadcast32(buffer, buffer, size, 0, 0, 0, numprocs, pSyncBcast2);
             t_stop = TIME();
 
-            if(i>=skip){
+            if (i>=skip) {
                 timer+=t_stop-t_start;
             } 
             shmem_barrier_all();

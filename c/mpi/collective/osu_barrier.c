@@ -18,8 +18,10 @@ int main(int argc, char *argv[])
     double latency = 0.0, t_start = 0.0, t_stop = 0.0;
     double timer=0.0;
     int po_ret;
+    omb_graph_options_t omb_graph_options;
+    omb_graph_data_t *omb_graph_data = NULL;
     options.bench = COLLECTIVE;
-    options.subtype = LAT;
+    options.subtype = BARRIER;
 
     set_header(HEADER);
     set_benchmark_name("osu_barrier");
@@ -38,6 +40,7 @@ int main(int argc, char *argv[])
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
 
+    omb_graph_options_init(&omb_graph_options);
     switch (po_ret) {
         case PO_BAD_USAGE:
             print_bad_usage_message(rank);
@@ -65,6 +68,9 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    omb_graph_options.number_of_graphs = 0;
+    omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+            &omb_graph_options, 1, options.iterations);
     print_preamble(rank);
 
     timer = 0.0;
@@ -74,8 +80,12 @@ int main(int argc, char *argv[])
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
         t_stop = MPI_Wtime();
 
-        if (i>=options.skip){
+        if (i>=options.skip) {
             timer+=t_stop-t_start;
+            if (options.graph && 0 == rank) {
+                omb_graph_data->data[i - options.skip] = (t_stop - t_start) *
+                    1e6;
+            }
         }
     }
 
@@ -92,6 +102,12 @@ int main(int argc, char *argv[])
     avg_time = avg_time/numprocs;
 
     print_stats(rank, 0, avg_time, min_time, max_time);
+    if (0 == rank && options.graph) {
+        omb_graph_data->avg = avg_time;
+        omb_graph_plot(&omb_graph_options, benchmark_name);
+        omb_graph_combined_plot(&omb_graph_options, benchmark_name);
+        omb_graph_free_data_buffers(&omb_graph_options);
+    }
     MPI_CHECK(MPI_Finalize());
 
     return EXIT_SUCCESS;

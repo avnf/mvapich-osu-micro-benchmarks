@@ -62,8 +62,8 @@ main (int argc, char **argv)
             break;
     }
 
-    if(ranks() < 2) {
-        if(myrank() == 0) {
+    if (ranks() < 2) {
+        if (myrank() == 0) {
             fprintf(stderr, "This test requires at least two processes\n");
         }
         return -1;
@@ -97,7 +97,7 @@ main (int argc, char **argv)
         }
 
         timer=0;
-        for(i=0; i < iterations + skip ; i++) {
+        for (i=0; i < iterations + skip ; i++) {
             t_start = getMicrosecondTimeStamp();
             upcxx_gather((char *)src, (char *)dst, size*sizeof(char), root);
             t_stop = getMicrosecondTimeStamp();

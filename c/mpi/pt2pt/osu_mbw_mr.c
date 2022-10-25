@@ -32,6 +32,7 @@ double calculate_total(double, double, double, int);
 
 int errors_reduced = 0;
 size_t omb_ddt_transmit_size = 0;
+omb_graph_options_t omb_graph_op;
 
 int main(int argc, char *argv[])
 {
@@ -64,6 +65,7 @@ int main(int argc, char *argv[])
         po_ret = PO_BAD_USAGE;
     }
 
+    omb_graph_options_init(&omb_graph_op);
     if (0 == rank) {
         switch (po_ret) {
             case PO_CUDA_NOT_AVAIL:
@@ -325,7 +327,7 @@ int main(int argc, char *argv[])
                    }
                }
                if (options.omb_enable_ddt) {
-                   fprintf(stdout, "%*d", FIELD_WIDTH, omb_ddt_transmit_size);
+                   fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);
                }
                fprintf(stdout, "\n");
            }
@@ -344,6 +346,11 @@ int main(int argc, char *argv[])
        }
    }
 
+   if (options.graph) {
+       omb_graph_plot(&omb_graph_op, benchmark_name);
+   }
+   omb_graph_combined_plot(&omb_graph_op, benchmark_name);
+   omb_graph_free_data_buffers(&omb_graph_op);
    if (options.buf_num == SINGLE) {
        free_memory_pt2pt_mul(s_buf[0], r_buf[0], rank, options.pairs);
        free(s_buf);
@@ -373,6 +380,7 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
     int i, j, k, target;
     MPI_Datatype omb_ddt_datatype = MPI_CHAR;
     size_t omb_ddt_size = 0;
+    omb_graph_data_t *omb_graph_data = NULL;
 
     omb_ddt_size = omb_ddt_get_size(size);
     omb_ddt_transmit_size = omb_ddt_assign(&omb_ddt_datatype, MPI_CHAR, size);
@@ -402,6 +410,8 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
         }
     }
 
+    omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
+            &omb_graph_op, size, options.iterations);
     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
     for (i = 0; i <  options.iterations +  options.skip; i++) {
@@ -456,6 +466,16 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
                 if (i >= options.skip && k == options.warmup_validation) {
                     t_end = MPI_Wtime();
                     t += calculate_total(t_start, t_end, t_lo, window_size);
+                    if (options.graph) {
+                        if (options.omb_enable_ddt) {
+                            tmp_total = omb_ddt_transmit_size / 1e6 * num_pairs;
+                        } else {
+                            tmp_total = size / 1e6 * num_pairs;
+                        }
+                        tmp_total = tmp_total * window_size;
+                        omb_graph_data->data[i - options.skip] = tmp_total /
+                            calculate_total(t_start, t_end, t_lo, window_size);
+                    }
                 }
             }
         if (options.validate) {
@@ -518,8 +538,8 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
         }
     }
 
+    omb_ddt_free(&omb_ddt_datatype);
     if (rank == 0) {
-        omb_ddt_free(&omb_ddt_datatype);
         if (options.omb_enable_ddt) {
             tmp_total = omb_ddt_transmit_size / 1e6 * num_pairs;
         } else {
@@ -527,7 +547,9 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
         }
         tmp_total = tmp_total *  options.iterations * window_size;
         bw = tmp_total / t;
-
+        if (options.graph && 0 == rank) {
+            omb_graph_data->avg = bw;
+        }
         return bw;
     }
 

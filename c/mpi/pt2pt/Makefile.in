@@ -101,11 +101,13 @@ am__installdirs = "$(DESTDIR)$(pt2ptdir)"
 PROGRAMS = $(pt2pt_PROGRAMS)
 am__osu_bibw_SOURCES_DIST = osu_bibw.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
-	../../util/osu_util_mpi.h ../../util/kernel.cu
+	../../util/osu_util_mpi.h ../../util/osu_util_graph.c \
+	../../util/osu_util_graph.h ../../util/kernel.cu
 am__dirstamp = $(am__leading_dot)dirstamp
 @CUDA_KERNELS_TRUE@am__objects_1 = ../../util/kernel.$(OBJEXT)
 am__objects_2 = ../../util/osu_util.$(OBJEXT) \
-	../../util/osu_util_mpi.$(OBJEXT) $(am__objects_1)
+	../../util/osu_util_mpi.$(OBJEXT) \
+	../../util/osu_util_graph.$(OBJEXT) $(am__objects_1)
 am_osu_bibw_OBJECTS = osu_bibw.$(OBJEXT) $(am__objects_2)
 osu_bibw_OBJECTS = $(am_osu_bibw_OBJECTS)
 osu_bibw_LDADD = $(LDADD)
@@ -115,19 +117,22 @@ am__v_lt_0 = --silent
 am__v_lt_1 = 
 am__osu_bw_SOURCES_DIST = osu_bw.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
-	../../util/osu_util_mpi.h ../../util/kernel.cu
+	../../util/osu_util_mpi.h ../../util/osu_util_graph.c \
+	../../util/osu_util_graph.h ../../util/kernel.cu
 am_osu_bw_OBJECTS = osu_bw.$(OBJEXT) $(am__objects_2)
 osu_bw_OBJECTS = $(am_osu_bw_OBJECTS)
 osu_bw_LDADD = $(LDADD)
 am__osu_latency_SOURCES_DIST = osu_latency.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
-	../../util/osu_util_mpi.h ../../util/kernel.cu
+	../../util/osu_util_mpi.h ../../util/osu_util_graph.c \
+	../../util/osu_util_graph.h ../../util/kernel.cu
 am_osu_latency_OBJECTS = osu_latency.$(OBJEXT) $(am__objects_2)
 osu_latency_OBJECTS = $(am_osu_latency_OBJECTS)
 osu_latency_LDADD = $(LDADD)
 am__osu_latency_mp_SOURCES_DIST = osu_latency_mp.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
+	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
 	../../util/kernel.cu
 am_osu_latency_mp_OBJECTS = osu_latency_mp.$(OBJEXT) $(am__objects_2)
 osu_latency_mp_OBJECTS = $(am_osu_latency_mp_OBJECTS)
@@ -135,19 +140,22 @@ osu_latency_mp_LDADD = $(LDADD)
 am__osu_latency_mt_SOURCES_DIST = osu_latency_mt.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
+	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
 	../../util/kernel.cu
 am_osu_latency_mt_OBJECTS = osu_latency_mt.$(OBJEXT) $(am__objects_2)
 osu_latency_mt_OBJECTS = $(am_osu_latency_mt_OBJECTS)
 osu_latency_mt_LDADD = $(LDADD)
 am__osu_mbw_mr_SOURCES_DIST = osu_mbw_mr.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
-	../../util/osu_util_mpi.h ../../util/kernel.cu
+	../../util/osu_util_mpi.h ../../util/osu_util_graph.c \
+	../../util/osu_util_graph.h ../../util/kernel.cu
 am_osu_mbw_mr_OBJECTS = osu_mbw_mr.$(OBJEXT) $(am__objects_2)
 osu_mbw_mr_OBJECTS = $(am_osu_mbw_mr_OBJECTS)
 osu_mbw_mr_LDADD = $(LDADD)
 am__osu_multi_lat_SOURCES_DIST = osu_multi_lat.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
-	../../util/osu_util_mpi.h ../../util/kernel.cu
+	../../util/osu_util_mpi.h ../../util/osu_util_graph.c \
+	../../util/osu_util_graph.h ../../util/kernel.cu
 am_osu_multi_lat_OBJECTS = osu_multi_lat.$(OBJEXT) $(am__objects_2)
 osu_multi_lat_OBJECTS = $(am_osu_multi_lat_OBJECTS)
 osu_multi_lat_LDADD = $(LDADD)
@@ -248,6 +256,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CONVERT_CHECK_PATH = @CONVERT_CHECK_PATH@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
@@ -266,6 +275,7 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+GNUPLOT_CHECK_PATH = @GNUPLOT_CHECK_PATH@
 GREP = @GREP@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -367,6 +377,7 @@ pt2ptdir = $(pkglibexecdir)/mpi/pt2pt
 AM_CFLAGS = -I${top_srcdir}/c/util $(am__append_4)
 UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
+	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
 	$(am__append_1)
 @CUDA_KERNELS_TRUE@CLEANFILES = ../../util/kernel.cpp
 @BUILD_USE_PGI_TRUE@@CUDA_KERNELS_TRUE@AM_CXXFLAGS = --nvcchost --no_preincludes
@@ -477,6 +488,8 @@ clean-pt2ptPROGRAMS:
 	../../util/$(DEPDIR)/$(am__dirstamp)
 ../../util/osu_util_mpi.$(OBJEXT): ../../util/$(am__dirstamp) \
 	../../util/$(DEPDIR)/$(am__dirstamp)
+../../util/osu_util_graph.$(OBJEXT): ../../util/$(am__dirstamp) \
+	../../util/$(DEPDIR)/$(am__dirstamp)
 ../../util/kernel.$(OBJEXT): ../../util/$(am__dirstamp) \
 	../../util/$(DEPDIR)/$(am__dirstamp)
 
@@ -517,6 +530,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/kernel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_graph.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_mpi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_bibw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_bw.Po@am__quote@

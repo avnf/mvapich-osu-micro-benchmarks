@@ -51,8 +51,8 @@ int main(int argc, char *argv[])
     }
 
     
-    if(THREADS < 2) {
-        if(MYTHREAD == 0) {
+    if (THREADS < 2) {
+        if (MYTHREAD == 0) {
             fprintf(stderr, "This test requires at least two processes\n");
         }
         return -1;
@@ -63,12 +63,12 @@ int main(int argc, char *argv[])
     upc_barrier;
 
     timer=0;        
-    for(i=0; i < iterations + skip ; i++) {        
+    for (i=0; i < iterations + skip ; i++) {        
         t_start = TIME();
         upc_barrier;
         t_stop = TIME();
 
-        if(i>=skip){
+        if (i>=skip) {
             timer+=t_stop-t_start;
         } 
     }
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     upc_all_reduceD(&min_time, latency, UPC_MIN, THREADS, 1, NULL, SYNC_MODE);
     upc_all_reduceD(&max_time, latency, UPC_MAX, THREADS, 1, NULL, SYNC_MODE);
     upc_all_reduceD(&avg_time, latency, UPC_ADD, THREADS, 1, NULL, SYNC_MODE);
-    if(!MYTHREAD)
+    if (!MYTHREAD)
         avg_time = avg_time/THREADS;
     
     print_data_pgas(MYTHREAD, full, 0, avg_time, min_time, max_time, iterations);

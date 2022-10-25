@@ -92,8 +92,8 @@ int main(int argc, char *argv[])
             break;
     }
 
-    if(numprocs < 2) {
-        if(rank == 0) {
+    if (numprocs < 2) {
+        if (rank == 0) {
             fprintf(stderr, "This test requires at least two processes\n");
         }
         return EXIT_FAILURE;
@@ -137,9 +137,9 @@ int main(int argc, char *argv[])
     memset(sendbuf, 1, max_msg_size);
     memset(recvbuf, 0, max_msg_size);
 
-    for(size=1; size*sizeof(float)<= max_msg_size; size *= 2) {
+    for (size=1; size*sizeof(float)<= max_msg_size; size *= 2) {
 
-        if(size > LARGE_MESSAGE_SIZE) {
+        if (size > LARGE_MESSAGE_SIZE) {
             skip = options.skip_large;
             iterations = options.iterations_large;
         } else {
@@ -150,17 +150,17 @@ int main(int argc, char *argv[])
         shmem_barrier_all();
         
         timer=0;
-        for(i=0; i < iterations + skip ; i++) {
+        for (i=0; i < iterations + skip ; i++) {
             t_start = TIME();
 
-            if(i%2)
+            if (i%2)
                 shmem_float_sum_to_all(recvbuf, sendbuf, size, 0, 0, numprocs, pWrkF1, pSyncRed1);
             else
                 shmem_float_sum_to_all(recvbuf, sendbuf, size, 0, 0, numprocs, pWrkF2, pSyncRed2);
 
             t_stop=TIME();
 
-            if(i>=skip){
+            if (i>=skip) {
                 timer+=t_stop-t_start;
             }
             shmem_barrier_all();

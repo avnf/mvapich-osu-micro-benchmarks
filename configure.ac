@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [6.1], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [6.2], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([c/mpi/pt2pt/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -105,7 +105,28 @@ AC_ARG_WITH([rocm],
                      [CPPFLAGS="-I$with_rocm/include $CPPFLAGS"
                       LDFLAGS="-L$with_rocm/lib64 -Wl,-rpath=$with_rocm/lib64 -L$with_rocm/lib -Wl,-rpath=$with_rocm/lib -lamdhip64 $LDFLAGS"])
             ])
-
+AC_ARG_WITH([gnuplot],
+            [AS_HELP_STRING([--with-gnuplot=@<:@gnuplot installation path@:>@],
+                            [Provide path to gnuplot installation])
+            ],
+            [AS_IF([test -d $withval],
+             [AC_CHECK_PROG(GNUPLOT_CHECK_PATH,gnuplot,yes,no,$with_gnuplot)],
+             [AC_MSG_ERROR([Unable to find gnuplot build path. Please check the path.])])])
+AS_IF([test x$GNUPLOT_CHECK_PATH = x"yes"],
+      [AC_DEFINE_UNQUOTED([_GNUPLOT_BUILD_PATH_],["$with_gnuplot/gnuplot"])],[])
+AS_IF([test x$GNUPLOT_CHECK_PATH = x"no"],
+      [AC_MSG_ERROR([gnuplot executable not found in the given path.])])
+AC_ARG_WITH([convert],
+            [AS_HELP_STRING([--with-convert=@<:@ImageMagick installation path@:>@],
+                            [Provide path to ImageMagick installation])
+            ],
+            [AS_IF([test -d $withval],
+             [AC_CHECK_PROG(CONVERT_CHECK_PATH,convert,yes,no,$with_convert)],
+             [AC_MSG_ERROR([Unable to find ImageMagick build path. Please check the path.])])])
+AS_IF([test x$CONVERT_CHECK_PATH = x"yes"],
+      [AC_DEFINE_UNQUOTED([_CONVERT_BUILD_PATH_],["$with_convert/convert"])])
+AS_IF([test x$CONVERT_CHECK_PATH = x"no"],
+      [AC_MSG_ERROR([convert executable not found in the given path.])])
 # Checks for programs.
 AC_PROG_CC([mpicc oshcc upcc upc++])
 
@@ -119,7 +140,7 @@ AC_SEARCH_LIBS([pthread_join], [pthread])
 AC_SEARCH_LIBS([clock_gettime], [rt])
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdlib.h string.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([stdlib.h string.h sys/time.h unistd.h math.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
