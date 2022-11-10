@@ -200,6 +200,11 @@ void usage_one_sided (char const * name)
 
     fprintf(stdout, "  -G, --graph tty,png,pdf    graph output of per"
             " iteration values.\n");
+#ifdef _ENABLE_PAPI_
+    fprintf(stdout, "  -P, --papi [EVENTS]:[PATH]     Enable PAPI support\n");
+    fprintf(stdout, "                                 [EVENTS]       //Comma seperated list of PAPI events\n");
+    fprintf(stdout, "                                 [PATH]         //PAPI output file path\n");
+#endif
     fprintf(stdout, "  -i, --iterations ITER       number of iterations for timing (default 10000)\n");
 
     fprintf(stdout, "  -h, --help                  print this help message\n");
@@ -291,6 +296,11 @@ void usage_mbw_mr()
     }
     fprintf(stdout, "  -G, --graph tty,png,pdf        graph output of per"
             " iteration values.\n");
+#ifdef _ENABLE_PAPI_
+    fprintf(stdout, "  -P, --papi [EVENTS]:[PATH]     Enable PAPI support\n");
+    fprintf(stdout, "                                 [EVENTS]       //Comma seperated list of PAPI events\n");
+    fprintf(stdout, "                                 [PATH]         //PAPI output file path\n");
+#endif
     fprintf(stdout, "  -c, --validation               Enable or disable validation. Disabled by default. \n");
     fprintf(stdout, "  -h, --help                     Print this help\n");
     fprintf(stdout, "\n");
@@ -434,6 +444,11 @@ void print_help_message (int rank)
     }
     fprintf(stdout, "  -G, --graph tty,png,pdf    graph output of per"
                         " iteration values.\n");
+#ifdef _ENABLE_PAPI_
+    fprintf(stdout, "  -P, --papi [EVENTS]:[PATH]     Enable PAPI support\n");
+    fprintf(stdout, "                                 [EVENTS]       //Comma seperated list of PAPI events\n");
+    fprintf(stdout, "                                 [PATH]         //PAPI output file path\n");
+#endif
     fprintf(stdout, "  -h, --help                  print this help\n");
     fprintf(stdout, "  -v, --version               print version info\n");
     fprintf(stdout, "\n");
@@ -680,12 +695,12 @@ void print_preamble (int rank)
     fflush(stdout);
 }
 
-void check_mem_limit(int numprocs) 
+void check_mem_limit(int numprocs)
 {
     int rank = 0;
 
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
-    if (options.subtype == GATHER || 
+    if (options.subtype == GATHER ||
             options.subtype == ALLTOALL ||
             options.subtype == SCATTER ||
             options.subtype == NBC_GATHER ||
@@ -694,21 +709,22 @@ void check_mem_limit(int numprocs)
         if ((options.max_message_size * numprocs) > options.max_mem_limit) {
             options.max_message_size = options.max_mem_limit / numprocs;
             if (0 == rank) {
-                fprintf(stderr, "Warning! Limiting max message size. Increase"
-                        " -M, --mem-limit for higher message sizes.",
-                        options.max_message_size); 
+                fprintf(stderr, "Warning! Limiting max message size to: %zu. "
+                        "Increase -M, --mem-limit for higher message sizes.",
+                        options.max_message_size);
             }
         }
-    } else if (options.subtype == REDUCE || 
+    } else if (options.subtype == REDUCE ||
             options.subtype == BCAST ||
             options.subtype == NBC_REDUCE ||
             options.subtype == NBC_BCAST  ||
-            options.subtype == REDUCE_SCATTER) {
+            options.subtype == REDUCE_SCATTER ||
+            options.subtype == NBC_REDUCE_SCATTER) {
         if (options.max_message_size > options.max_mem_limit) {
             if (0 == rank) {
-                fprintf(stderr, "Warning! Limiting max message size. Increase"
-                        " -M, --mem-limit for higher message sizes.",
-                        options.max_message_size); 
+                fprintf(stderr, "Warning! Limiting max message size to: %zu"
+                        "Increase -M, --mem-limit for higher message sizes.",
+                        options.max_message_size);
             }
             options.max_message_size = options.max_mem_limit;
         }
@@ -1117,6 +1133,7 @@ void set_buffer_validation(void* s_buf, void* r_buf, size_t size,
                         }
                         break;
                     case REDUCE_SCATTER:
+                    case NBC_REDUCE_SCATTER:
                         {
                             int rank, numprocs;
                             MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1343,6 +1360,7 @@ uint8_t validate_data(void* r_buf, size_t size, int num_procs,
                 }
                 break;
             case REDUCE_SCATTER:
+            case NBC_REDUCE_SCATTER:
                 {
                     int numprocs;
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));

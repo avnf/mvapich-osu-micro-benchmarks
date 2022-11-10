@@ -438,7 +438,8 @@ int process_options (int argc, char *argv[])
             {"validation",          no_argument,        0,  'c'},
             {"buffer-num",          required_argument,  0,  'b'},
             {"validation-warmup",   required_argument,  0,  'u'},
-            {"graph",               required_argument,  0,  'G'}
+            {"graph",               required_argument,  0,  'G'},
+            {"papi",                required_argument,  0,  'P'}
     };
 
     enable_accel_support();
@@ -454,11 +455,11 @@ int process_options (int argc, char *argv[])
             if (options.subtype == LAT_MT) {
                 optstring = "+:hvm:x:i:t:cu:G:D:";
             } else if (options.subtype == LAT_MP) {
-                optstring = "+:hvm:x:i:t:cu:G:D:";
+                optstring = "+:hvm:x:i:t:cu:G:D:P:";
             } else if (options.subtype == BW) {
-                optstring = "+:hvm:x:i:t:W:b:cu:G:D:";
+                optstring = "+:hvm:x:i:t:W:b:cu:G:D:P:";
             } else {
-                optstring = "+:hvm:x:i:b:cu:G:D:";
+                optstring = "+:hvm:x:i:b:cu:G:D:P:";
             }
         }
         long_options[omb_long_options_itr].name = "ddt";
@@ -467,7 +468,7 @@ int process_options (int argc, char *argv[])
         long_options[omb_long_options_itr].val = 'D';
     } else if (options.bench == COLLECTIVE) {
         if (options.subtype == LAT ||
-                options.subtype == BARRIER || 
+                options.subtype == BARRIER ||
                 options.subtype == ALLTOALL ||
                 options.subtype == GATHER ||
                 options.subtype == REDUCE ||
@@ -478,9 +479,9 @@ int process_options (int argc, char *argv[])
                     options.subtype == SCATTER ||
                     options.subtype == ALLTOALL ||
                     options.subtype == BCAST ) {
-                optstring = "+:hvfm:i:x:M:a:cu:G:D:";
+                optstring = "+:hvfm:i:x:M:a:cu:G:D:P:";
                 if (accel_enabled) {
-                    optstring = (CUDA_KERNEL_ENABLED) ? 
+                    optstring = (CUDA_KERNEL_ENABLED) ?
                         "+:d:hvfm:i:x:M:r:a:cu:G:D:" :
                         "+:d:hvfm:i:x:M:a:cu:G:D:";
                 }
@@ -490,14 +491,14 @@ int process_options (int argc, char *argv[])
                 long_options[omb_long_options_itr].val = 'D';
             } else {
                 if (options.subtype == BARRIER) {
-                    optstring = "+:hvfm:i:x:M:a:u:G:";
+                    optstring = "+:hvfm:i:x:M:a:u:G:P:";
                     if (accel_enabled) {
                         optstring = (CUDA_KERNEL_ENABLED) ?
                             "+:d:hvfm:i:x:M:r:a:u:G:" :
                             "+:d:hvfm:i:x:M:a:u:G:";
                     }
                 } else {
-                    optstring = "+:hvfm:i:x:M:a:cu:G:";
+                    optstring = "+:hvfm:i:x:M:a:cu:G:P:";
                     if (accel_enabled) {
                         optstring = (CUDA_KERNEL_ENABLED) ?
                             "+:d:hvfm:i:x:M:r:a:cu:G:" :
@@ -506,19 +507,19 @@ int process_options (int argc, char *argv[])
                 }
             }
         } else if (options.subtype == NBC) {
-            optstring = "+:hvfm:i:x:M:t:a:G:";
+            optstring = "+:hvfm:i:x:M:t:a:G:P:";
             if (accel_enabled) {
                 optstring = (CUDA_KERNEL_ENABLED) ? "+:d:hvfm:i:x:M:t:r:a:G:" :
                     "+:d:hvfm:i:x:M:t:a:G:";
             }
         } else { /* Non-Blocking */
             if (options.subtype == NBC_GATHER ||
-                    options.subtype == NBC_ALLTOALL || 
-                    options.subtype == NBC_SCATTER ||  
+                    options.subtype == NBC_ALLTOALL ||
+                    options.subtype == NBC_SCATTER ||
                     options.subtype == NBC_BCAST) {
-                optstring = "+:hvfm:i:x:M:t:a:cu:G:D:";
+                optstring = "+:hvfm:i:x:M:t:a:cu:G:D:P:";
                 if (accel_enabled) {
-                    optstring = (CUDA_KERNEL_ENABLED) ? 
+                    optstring = (CUDA_KERNEL_ENABLED) ?
                         "+:d:hvfm:i:x:M:t:r:a:cu:G:D:" :
                         "+:d:hvfm:i:x:M:t:a:cu:G:D:";
                 }
@@ -527,7 +528,7 @@ int process_options (int argc, char *argv[])
                 long_options[omb_long_options_itr].flag = 0;
                 long_options[omb_long_options_itr].val = 'D';
             } else {
-                optstring = "+:hvfm:i:x:M:t:a:cu:G:";
+                optstring = "+:hvfm:i:x:M:t:a:cu:G:P:";
                 if (accel_enabled) {
                     optstring = (CUDA_KERNEL_ENABLED) ? "+:d:hvfm:i:x:M:t:r:a:cu:G:"
                         : "+:d:hvfm:i:x:M:t:a:cu:G:";
@@ -537,15 +538,14 @@ int process_options (int argc, char *argv[])
     } else if (options.bench == ONE_SIDED) {
         if(options.subtype == BW) {
             optstring = (accel_enabled) ? "+:w:s:hvm:d:x:i:W:G:" :
-                "+:w:s:hvm:x:i:W:G:";
+                "+:w:s:hvm:x:i:W:G:P:";
         } else {
             optstring = (accel_enabled) ? "+:w:s:hvm:d:x:i:G:" :
-                "+:w:s:hvm:x:i:G:";
+                "+:w:s:hvm:x:i:G:P:";
         }
-
     } else if (options.bench == MBW_MR) {
         optstring = (accel_enabled) ? "p:W:R:x:i:m:d:Vhvb:cu:G:D:" :
-            "p:W:R:x:i:m:Vhvb:cu:G:D:";
+            "p:W:R:x:i:m:Vhvb:cu:G:D:P:";
         long_options[omb_long_options_itr].name = "ddt";
         long_options[omb_long_options_itr].has_arg = required_argument;
         long_options[omb_long_options_itr].flag = 0;
@@ -576,6 +576,7 @@ int process_options (int argc, char *argv[])
     options.window_varied = 0;
     options.print_rate = 1;
     options.validate = 0;
+    options.papi_enabled = 0;
     options.buf_num = SINGLE;
     options.omb_enable_ddt = 0;
     options.ddt_type_parameters.block_length = OMB_DDT_BLOCK_LENGTH_DEFAULT;
@@ -619,6 +620,7 @@ int process_options (int argc, char *argv[])
         case SCATTER:
         case BCAST:
         case REDUCE_SCATTER:
+        case NBC_REDUCE_SCATTER:
         case NBC:
             if (options.bench == COLLECTIVE) {
                 options.iterations = COLL_LOOP_SMALL;
@@ -847,6 +849,17 @@ int process_options (int argc, char *argv[])
                     bad_usage.optarg = optarg;
                     return PO_BAD_USAGE;
                 }
+                break;
+            case 'P':
+#ifdef _ENABLE_PAPI_
+                options.papi_enabled = 1;
+                omb_papi_parse_event_options(optarg);
+#else
+                bad_usage.message = "Invalid option. Please reconfigure with"
+                    " PAPI.";
+                bad_usage.opt = optopt;
+                return PO_BAD_USAGE;
+#endif
                 break;
             case 'u':
                 if (set_num_warmup_validation(atoi(optarg))) {
@@ -1095,6 +1108,5 @@ void wtime(double *t)
     if (sec < 0) sec = tv.tv_sec;
     *t = (tv.tv_sec - sec)*1.0e+6 + tv.tv_usec;
 }
-
 
 /* vi:set sw=4 sts=4 tw=80: */

@@ -134,10 +134,11 @@ static int multi_latency(int rank, int pairs)
     size_t omb_ddt_transmit_size = 0;
     omb_graph_options_t omb_graph_options;
     omb_graph_data_t *omb_graph_data = NULL;
-
+    int papi_eventset = OMB_PAPI_NULL;
     MPI_Status reqstat;
 
     omb_graph_options_init(&omb_graph_options);
+    omb_papi_init(&papi_eventset);
     for (size = options.min_message_size; size <= options.max_message_size;
             size = (size ? size * 2 : 1)) {
 
@@ -173,6 +174,9 @@ static int multi_latency(int rank, int pairs)
         t_total = 0.0;
 
         for (i = 0; i < options.iterations + options.skip; i++) {
+            if (i == options.skip) {
+                omb_papi_start(&papi_eventset);
+            }
             if (options.validate) {
                 set_buffer_validation(s_buf, r_buf, size, options.accel, i);
             }
@@ -238,6 +242,7 @@ static int multi_latency(int rank, int pairs)
                 errors_reduced += error_temp;
             }
         }
+        omb_papi_stop_and_print(&papi_eventset, size);
 
         if (0 == rank) {
             double latency = (t_total * 1e6) / (2.0 * options.iterations);
@@ -276,6 +281,7 @@ static int multi_latency(int rank, int pairs)
     }
     omb_graph_combined_plot(&omb_graph_options, benchmark_name);
     omb_graph_free_data_buffers(&omb_graph_options);
+    omb_papi_free(&papi_eventset);
     return size;
 }
 

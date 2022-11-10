@@ -26,6 +26,7 @@ main (int argc, char *argv[])
     size_t omb_ddt_transmit_size = 0;
     omb_graph_options_t omb_graph_options;
     omb_graph_data_t *omb_graph_data = NULL;
+    int papi_eventset = OMB_PAPI_NULL;
 
     set_header(HEADER);
     set_benchmark_name("osu_scatter");
@@ -90,6 +91,7 @@ main (int argc, char *argv[])
     set_buffer(recvbuf, options.accel, 0, options.max_message_size);
 
     print_preamble(rank);
+    omb_papi_init(&papi_eventset);
 
     for (size = options.min_message_size; size <= options.max_message_size;
             size *= 2) {
@@ -107,6 +109,9 @@ main (int argc, char *argv[])
                 size);
 
         for (i = 0; i < options.iterations + options.skip; i++) {
+            if (i == options.skip) {
+                omb_papi_start(&papi_eventset);
+            }
             if (options.validate) {
                 set_buffer_validation(sendbuf, recvbuf, size, options.accel, i);
                 for (j = 0; j < options.warmup_validation; j++) {
@@ -138,6 +143,7 @@ main (int argc, char *argv[])
                         options.accel, i);
             }
         }
+        omb_papi_stop_and_print(&papi_eventset, size);
         latency = (double)(timer * 1e6) / options.iterations;
 
         MPI_CHECK(MPI_Reduce(&latency, &min_time, 1, MPI_DOUBLE, MPI_MIN, 0,
@@ -175,6 +181,7 @@ main (int argc, char *argv[])
     }
     omb_graph_combined_plot(&omb_graph_options, benchmark_name);
     omb_graph_free_data_buffers(&omb_graph_options);
+    omb_papi_free(&papi_eventset);
 
     if (0 == rank) {
         free_buffer(sendbuf, options.accel);

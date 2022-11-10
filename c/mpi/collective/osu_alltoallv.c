@@ -26,6 +26,7 @@ int main (int argc, char *argv[])
     size_t omb_ddt_transmit_size = 0;
     omb_graph_options_t omb_graph_options;
     omb_graph_data_t *omb_graph_data = NULL;
+    int papi_eventset = OMB_PAPI_NULL;
     options.bench = COLLECTIVE;
     options.subtype = ALLTOALL;
 
@@ -103,6 +104,7 @@ int main (int argc, char *argv[])
     set_buffer(recvbuf, options.accel, 0, bufsize);
 
     print_preamble(rank);
+    omb_papi_init(&papi_eventset);
 
     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
@@ -131,6 +133,9 @@ int main (int argc, char *argv[])
                 size);
 
         for (i = 0; i < options.iterations + options.skip; i++) {
+            if (i == options.skip) {
+                omb_papi_start(&papi_eventset);
+            }
             if (options.validate) {
                 set_buffer_validation(sendbuf, recvbuf, size, options.accel, i);
                 for (j = 0; j < options.warmup_validation; j++) {
@@ -165,6 +170,7 @@ int main (int argc, char *argv[])
                 }
             }
         }
+        omb_papi_stop_and_print(&papi_eventset, size);
 
         latency = (double)(timer * 1e6) / options.iterations;
 
@@ -203,6 +209,7 @@ int main (int argc, char *argv[])
     }
     omb_graph_combined_plot(&omb_graph_options, benchmark_name);
     omb_graph_free_data_buffers(&omb_graph_options);
+    omb_papi_free(&papi_eventset);
 
     free_buffer(rdispls, NONE);
     free_buffer(sdispls, NONE);

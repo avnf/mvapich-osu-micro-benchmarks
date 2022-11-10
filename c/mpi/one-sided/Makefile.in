@@ -104,12 +104,14 @@ am__osu_acc_latency_SOURCES_DIST = osu_acc_latency.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am__dirstamp = $(am__leading_dot)dirstamp
 @CUDA_KERNELS_TRUE@am__objects_1 = ../../util/kernel.$(OBJEXT)
 am__objects_2 = ../../util/osu_util.$(OBJEXT) \
 	../../util/osu_util_mpi.$(OBJEXT) \
-	../../util/osu_util_graph.$(OBJEXT) $(am__objects_1)
+	../../util/osu_util_graph.$(OBJEXT) \
+	../../util/osu_util_papi.$(OBJEXT) $(am__objects_1)
 am_osu_acc_latency_OBJECTS = osu_acc_latency.$(OBJEXT) \
 	$(am__objects_2)
 osu_acc_latency_OBJECTS = $(am_osu_acc_latency_OBJECTS)
@@ -122,6 +124,7 @@ am__osu_cas_latency_SOURCES_DIST = osu_cas_latency.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_cas_latency_OBJECTS = osu_cas_latency.$(OBJEXT) \
 	$(am__objects_2)
@@ -131,6 +134,7 @@ am__osu_fop_latency_SOURCES_DIST = osu_fop_latency.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_fop_latency_OBJECTS = osu_fop_latency.$(OBJEXT) \
 	$(am__objects_2)
@@ -140,6 +144,7 @@ am__osu_get_acc_latency_SOURCES_DIST = osu_get_acc_latency.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_get_acc_latency_OBJECTS = osu_get_acc_latency.$(OBJEXT) \
 	$(am__objects_2)
@@ -148,7 +153,8 @@ osu_get_acc_latency_LDADD = $(LDADD)
 am__osu_get_bw_SOURCES_DIST = osu_get_bw.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
 	../../util/osu_util_mpi.h ../../util/osu_util_graph.c \
-	../../util/osu_util_graph.h ../../util/kernel.cu
+	../../util/osu_util_graph.h ../../util/osu_util_papi.c \
+	../../util/osu_util_papi.h ../../util/kernel.cu
 am_osu_get_bw_OBJECTS = osu_get_bw.$(OBJEXT) $(am__objects_2)
 osu_get_bw_OBJECTS = $(am_osu_get_bw_OBJECTS)
 osu_get_bw_LDADD = $(LDADD)
@@ -156,6 +162,7 @@ am__osu_get_latency_SOURCES_DIST = osu_get_latency.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_get_latency_OBJECTS = osu_get_latency.$(OBJEXT) \
 	$(am__objects_2)
@@ -164,14 +171,16 @@ osu_get_latency_LDADD = $(LDADD)
 am__osu_put_bibw_SOURCES_DIST = osu_put_bibw.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
 	../../util/osu_util_mpi.h ../../util/osu_util_graph.c \
-	../../util/osu_util_graph.h ../../util/kernel.cu
+	../../util/osu_util_graph.h ../../util/osu_util_papi.c \
+	../../util/osu_util_papi.h ../../util/kernel.cu
 am_osu_put_bibw_OBJECTS = osu_put_bibw.$(OBJEXT) $(am__objects_2)
 osu_put_bibw_OBJECTS = $(am_osu_put_bibw_OBJECTS)
 osu_put_bibw_LDADD = $(LDADD)
 am__osu_put_bw_SOURCES_DIST = osu_put_bw.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
 	../../util/osu_util_mpi.h ../../util/osu_util_graph.c \
-	../../util/osu_util_graph.h ../../util/kernel.cu
+	../../util/osu_util_graph.h ../../util/osu_util_papi.c \
+	../../util/osu_util_papi.h ../../util/kernel.cu
 am_osu_put_bw_OBJECTS = osu_put_bw.$(OBJEXT) $(am__objects_2)
 osu_put_bw_OBJECTS = $(am_osu_put_bw_OBJECTS)
 osu_put_bw_LDADD = $(LDADD)
@@ -179,6 +188,7 @@ am__osu_put_latency_SOURCES_DIST = osu_put_latency.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_put_latency_OBJECTS = osu_put_latency.$(OBJEXT) \
 	$(am__objects_2)
@@ -408,6 +418,7 @@ AM_CFLAGS = -I${top_srcdir}/c/util $(am__append_4)
 UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_graph.c ../../util/osu_util_graph.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	$(am__append_2)
 @BUILD_USE_PGI_TRUE@@CUDA_KERNELS_TRUE@AM_CXXFLAGS = --nvcchost --no_preincludes
 @OPENACC_TRUE@AM_CXXFLAGS = -acc -ta=tesla:nordc
@@ -521,6 +532,8 @@ clean-one_sidedPROGRAMS:
 	../../util/$(DEPDIR)/$(am__dirstamp)
 ../../util/osu_util_graph.$(OBJEXT): ../../util/$(am__dirstamp) \
 	../../util/$(DEPDIR)/$(am__dirstamp)
+../../util/osu_util_papi.$(OBJEXT): ../../util/$(am__dirstamp) \
+	../../util/$(DEPDIR)/$(am__dirstamp)
 ../../util/kernel.$(OBJEXT): ../../util/$(am__dirstamp) \
 	../../util/$(DEPDIR)/$(am__dirstamp)
 
@@ -571,6 +584,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_graph.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_mpi.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_papi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_acc_latency.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_cas_latency.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_fop_latency.Po@am__quote@

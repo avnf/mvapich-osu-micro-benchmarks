@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [6.2], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [7.0], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([c/mpi/pt2pt/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -65,6 +65,23 @@ AC_ARG_WITH([cuda-libpath],
             [AS_CASE([$with_cuda_libpath],
                      [yes|no], [],
                      [LDFLAGS="-L$with_cuda_libpath -Wl,-rpath=$with_cuda_libpath $LDFLAGS"])
+            ])
+
+AC_ARG_ENABLE([papi],
+              [AS_HELP_STRING([--enable-papi],
+			      [Enable PAPI support for benchmarks (default is no)])
+              ],
+              [enable_papi=yes],
+              [enable_papi=no])
+
+AC_ARG_WITH([papi],
+            [AS_HELP_STRING([--with-papi=@<:@PAPI installation path@:>@],
+                            [Provide path to PAPI installation])
+            ],
+            [AS_CASE([$with_papi],
+                     [yes|no], [],
+                     [CPPFLAGS="-I$with_papi/include $CPPFLAGS"
+                      LDFLAGS="-L$with_papi/lib -Wl,-rpath=$with_papi/lib $LDFLAGS -lpapi"])
             ])
 
 
@@ -216,6 +233,20 @@ AS_IF([test "x$build_cuda_kernels" = xyes], [
        AC_DEFINE([_ENABLE_CUDA_KERNEL_], [1], [Enable CUDA Kernel])
        ])
 
+AS_CASE([$enable_papi],
+        [yes], [build_papi=yes])
+
+AS_IF([test "x$build_papi" = xyes], [
+       AC_SEARCH_LIBS([PAPI_library_init], [papi], [],
+                      [AC_MSG_ERROR([cannot link with -lpapi. Check provided
+                       PAPI installation path in --with-papi])])
+       AC_CHECK_HEADERS([papi.h], [],
+                        [AC_MSG_ERROR([cannot include papi.h. Check provided
+                         PAPI installation path in --with-papi])])
+       AC_DEFINE([_ENABLE_PAPI_], [1], [Enable PAPI])
+       ])
+
+
 AS_IF([test "x$oshm_13_library" = xtrue], [
        AC_DEFINE([OSHM_1_3], [1], [Enable OpenSHMEM 1.3 features])
        ])
@@ -232,6 +263,7 @@ AM_CONDITIONAL([OSHM], [test x$oshm_library = xtrue])
 AM_CONDITIONAL([MPI], [test x$mpi_library = xtrue])
 AM_CONDITIONAL([UPC], [test x$upc_compiler = xtrue])
 AM_CONDITIONAL([UPCXX], [test x$upcxx_compiler = xtrue])
+AM_CONDITIONAL([PAPI], [test x$enable_papi = xyes])
 AM_CONDITIONAL([BUILD_USE_PGI], [`$CXX -V 2>&1 | grep pgc++ > /dev/null 2>&1`])
 
 AC_DEFINE([FIELD_WIDTH], [18], [Width of field used to report numbers])

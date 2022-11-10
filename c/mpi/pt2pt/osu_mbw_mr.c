@@ -33,6 +33,7 @@ double calculate_total(double, double, double, int);
 int errors_reduced = 0;
 size_t omb_ddt_transmit_size = 0;
 omb_graph_options_t omb_graph_op;
+int papi_eventset = OMB_PAPI_NULL;
 
 int main(int argc, char *argv[])
 {
@@ -66,6 +67,7 @@ int main(int argc, char *argv[])
     }
 
     omb_graph_options_init(&omb_graph_op);
+    omb_papi_init(&papi_eventset);
     if (0 == rank) {
         switch (po_ret) {
             case PO_CUDA_NOT_AVAIL:
@@ -351,6 +353,7 @@ int main(int argc, char *argv[])
    }
    omb_graph_combined_plot(&omb_graph_op, benchmark_name);
    omb_graph_free_data_buffers(&omb_graph_op);
+   omb_papi_free(&papi_eventset);
    if (options.buf_num == SINGLE) {
        free_memory_pt2pt_mul(s_buf[0], r_buf[0], rank, options.pairs);
        free(s_buf);
@@ -415,6 +418,9 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
     for (i = 0; i <  options.iterations +  options.skip; i++) {
+        if (i == options.skip) {
+            omb_papi_start(&papi_eventset);
+        }
         if (options.validate) {
             if (options.buf_num == SINGLE) {
                 set_buffer_validation(s_buf[0], r_buf[0], size, options.accel,
@@ -532,6 +538,7 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
             }
         }
     }
+    omb_papi_stop_and_print(&papi_eventset, size);
     if (options.buf_num == MULTIPLE) {
         for (i = 0; i < window_size; i++) {
             free_memory_pt2pt_mul(s_buf[i], r_buf[i], rank, num_pairs);

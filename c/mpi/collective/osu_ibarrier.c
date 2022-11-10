@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
     int po_ret;
     omb_graph_options_t omb_graph_options;
     omb_graph_data_t *omb_graph_data = NULL;
+    int papi_eventset = OMB_PAPI_NULL;
 
     set_header(HEADER);
     set_benchmark_name("osu_ibarrier");
@@ -78,6 +79,7 @@ int main(int argc, char *argv[])
     }
 
     print_preamble_nbc(rank);
+    omb_papi_init(&papi_eventset);
 
     options.skip = options.skip_large;
     options.iterations = options.iterations_large;
@@ -88,6 +90,9 @@ int main(int argc, char *argv[])
     omb_graph_allocate_and_get_data_buffer(&omb_graph_data,
             &omb_graph_options, 1, options.iterations);
     for (i = 0; i < options.iterations + options.skip; i++) {
+        if (i == options.skip) {
+            omb_papi_start(&papi_eventset);
+        }
         t_start = MPI_Wtime();
         MPI_CHECK(MPI_Ibarrier(MPI_COMM_WORLD, &request));
         MPI_CHECK(MPI_Wait(&request,&status));
@@ -99,6 +104,7 @@ int main(int argc, char *argv[])
     }
 
     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+    omb_papi_stop_and_print(&papi_eventset, 0);
 
     latency = (timer * 1e6) / options.iterations;
 
@@ -156,6 +162,7 @@ int main(int argc, char *argv[])
     }
     omb_graph_combined_plot(&omb_graph_options, benchmark_name);
     omb_graph_free_data_buffers(&omb_graph_options);
+    omb_papi_free(&papi_eventset);
 
     free_host_arrays();
 #ifdef _ENABLE_CUDA_KERNEL_

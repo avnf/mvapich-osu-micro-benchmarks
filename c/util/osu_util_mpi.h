@@ -11,6 +11,7 @@
 #include <mpi.h>
 #include "osu_util.h"
 #include "osu_util_graph.h"
+#include "osu_util_papi.h"
 
 #define MPI_CHECK(stmt)                                          \
 do {                                                             \

@@ -1,3 +1,36 @@
+OSU Micro Benchmarks v7.0 (11/10/2022)
+
+* New Features & Enhancements
+    - Add PAPI support for mpi pt2pt benchmarks
+        * Enabled with the `-P` option
+        * Benchmarks supported
+            * osu_bibw, osu_bw, osu_mbw_mr, osu_latency, osu_multi_lat,
+            * osu_latency_mp
+    - Add PAPI support for mpi blocking and non-blocking collective
+      benchmarks
+        * Enabled with the `-P` option
+        * Blocking benchmarks supported
+            * osu_allgather, osu_allgatherv, osu_alltoall, osu_allreduce,
+            * osu_alltoallv, osu_alltoallw, osu_bcast, osu_barrier, osu_gather,
+            * osu_gatherv, osu_reduce, osu_reduce_scatter, osu_scatter,
+            * osu_scatterv
+        * Non-Blocking benchmarks supported
+            * osu_iallgather, osu_iallgatherv, osu_iallreduce, osu_ialltoall,
+            * osu_ialltoallv, osu_ialltoallw, osu_ibcast, osu_ibarrier,
+            * osu_igather, osu_igatherv, osu_ireduce, osu_iscatter,
+            * osu_iscatterv, osu_ireduce_scatter
+    - Add PAPI support for mpi one-sided benchmarks
+        * Enabled with the `-P` option
+        * Benchmarks supported
+            * osu_acc_latency, osu_cas_latency, osu_fop_latency,
+            * osu_get_acc_latency, osu_get_bw, osu_get_latency, osu_put_bibw,
+            * osu_put_bw, osu_put_latency
+    - Add support for benchmarking non-blocking Reduce-Scatter.
+        * osu_ireduce_scatter
+
+* Bug Fixes (since v6.2)
+    - Fixed a bug causing incorrect value for size in graph titles.
+
 OSU Micro Benchmarks v6.2 (10/25/2022)
 
 * New Features & Enhancements
@@ -123,7 +156,7 @@ OSU Micro Benchmarks v6.0 (08/16/2022)
         * osu_reduce_scatter - MPI_Reduce_scatter Latency Test
         * osu_scatter - MPI_Scatter Latency Test
         * osu_scatterv - MPI_Scatterv Latency Test
- 
+
 * Bug Fixes (since v5.9)
     - Fix bug in data validation support for CUDA managed memory benchmarks
         - Thanks to Chris Chambreau @LLNL for the report

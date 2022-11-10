@@ -29,6 +29,10 @@
 #include <limits.h>
 #include <sys/types.h>
 
+#ifdef _ENABLE_PAPI_
+#include <papi.h>
+#endif
+
 #ifdef _ENABLE_CUDA_
 #include "cuda.h"
 #include "cuda_runtime.h"
@@ -99,7 +103,7 @@ do {                                                            \
          __FILE__, __LINE__, msg);                              \
         exit(EXIT_FAILURE);                                     \
     }                                                           \
-} while (0)                                                     
+} while (0)
 
 #define CHECK(stmt)                                              \
 do {                                                             \
@@ -161,7 +165,7 @@ enum mpi_req{
     MAX_REQ_NUM = 1000
 };
 
-#define OMB_LONG_OPTIONS_ARRAY_SIZE 22
+#define OMB_LONG_OPTIONS_ARRAY_SIZE 23
 #define BW_LOOP_SMALL 100
 #define BW_SKIP_SMALL 10
 #define BW_LOOP_LARGE 20
@@ -185,7 +189,8 @@ enum mpi_req{
 #define VALIDATION_SKIP_MAX 10
 #define OMB_DDT_STRIDE_DEFAULT 8
 #define OMB_DDT_BLOCK_LENGTH_DEFAULT 4
-#define OMB_DDT_FILE_PATH_MAX_LENGTH 1024
+#define OMB_FILE_PATH_MAX_LENGTH 1024
+#define OMB_DDT_FILE_PATH_MAX_LENGTH OMB_FILE_PATH_MAX_LENGTH
 #define MAX_MESSAGE_SIZE (1 << 22)
 #define MAX_MSG_SIZE_PT2PT (1<<20)
 #define MAX_MSG_SIZE_COLL (1<<20)
@@ -244,6 +249,7 @@ enum test_subtype {
     ALLTOALL,
     GATHER,
     REDUCE_SCATTER,
+    NBC_REDUCE_SCATTER,
     NBC_ALLTOALL,
     NBC_GATHER,
     NBC_REDUCE,
@@ -351,6 +357,7 @@ struct options_t {
     int omb_enable_ddt;
     enum omb_ddt_types_t ddt_type;
     omb_ddt_type_parameters_t ddt_type_parameters;
+    int papi_enabled;
 };
 
 struct bad_usage_t{
