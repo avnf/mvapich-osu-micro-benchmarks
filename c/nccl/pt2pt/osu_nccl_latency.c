@@ -1,7 +1,7 @@
 #define BENCHMARK "OSU NCCL%s Latency Test"
 /*
- * Copyright (C) 2002-2022 the Network-Based Computing Laboratory
- * (NBCL), The Ohio State University. 
+ * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
  *
@@ -10,8 +10,7 @@
  */
 #include <osu_util_nccl.h>
 
-int
-main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     int myid, numprocs, i;
     int size;
@@ -26,16 +25,18 @@ main (int argc, char *argv[])
     set_benchmark_name("osu_nccl_latency");
 
     po_ret = process_options(argc, argv);
-    
+
     if (options.accel != CUDA || options.src != 'D' || options.dst != 'D') {
-        fprintf(stderr, "Warning: Host buffer was set for one of the processes. NCCL "
-                        "does not support host buffers. Implicitly converting to device "
-                        "buffer (D D).\n\n");
+        fprintf(
+            stderr,
+            "Warning: Host buffer was set for one of the processes. NCCL "
+            "does not support host buffers. Implicitly converting to device "
+            "buffer (D D).\n\n");
         options.accel = CUDA;
         options.src = 'D';
         options.dst = 'D';
     }
-    
+
     if (init_accel()) {
         fprintf(stderr, "Error initializing device\n");
         exit(EXIT_FAILURE);
@@ -44,16 +45,16 @@ main (int argc, char *argv[])
     MPI_CHECK(MPI_Init(&argc, &argv));
     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myid));
-    
+
     if (0 == myid) {
         switch (po_ret) {
             case PO_CUDA_NOT_AVAIL:
                 fprintf(stderr, "CUDA support not enabled.  Please recompile "
-                        "benchmark with CUDA support.\n");
+                                "benchmark with CUDA support.\n");
                 break;
             case PO_OPENACC_NOT_AVAIL:
                 fprintf(stderr, "OPENACC support not enabled.  Please "
-                        "recompile benchmark with OPENACC support.\n");
+                                "recompile benchmark with OPENACC support.\n");
                 break;
             case PO_BAD_USAGE:
                 print_bad_usage_message(myid);
@@ -104,9 +105,9 @@ main (int argc, char *argv[])
 
     print_header(myid, LAT);
 
-    
     /* Latency test */
-    for (size = options.min_message_size; size <= options.max_message_size; size = (size ? size * 2 : 1)) {
+    for (size = options.min_message_size; size <= options.max_message_size;
+         size = (size ? size * 2 : 1)) {
         set_buffer_pt2pt(send_buf, myid, options.accel, 'a', size);
         set_buffer_pt2pt(recv_buf, myid, options.accel, 'b', size);
 
@@ -123,9 +124,11 @@ main (int argc, char *argv[])
                     t_start = MPI_Wtime();
                 }
 
-                NCCL_CHECK(ncclSend(send_buf, size, ncclChar, 1, nccl_comm, nccl_stream));
+                NCCL_CHECK(ncclSend(send_buf, size, ncclChar, 1, nccl_comm,
+                                    nccl_stream));
                 CUDA_STREAM_SYNCHRONIZE(nccl_stream);
-                NCCL_CHECK(ncclRecv(recv_buf, size, ncclChar, 1, nccl_comm, nccl_stream));
+                NCCL_CHECK(ncclRecv(recv_buf, size, ncclChar, 1, nccl_comm,
+                                    nccl_stream));
                 CUDA_STREAM_SYNCHRONIZE(nccl_stream);
             }
 
@@ -134,15 +137,18 @@ main (int argc, char *argv[])
 
         else if (myid == 1) {
             for (i = 0; i < options.iterations + options.skip; i++) {
-                NCCL_CHECK(ncclRecv(recv_buf, size, ncclChar, 0, nccl_comm, nccl_stream));
+                NCCL_CHECK(ncclRecv(recv_buf, size, ncclChar, 0, nccl_comm,
+                                    nccl_stream));
                 CUDA_STREAM_SYNCHRONIZE(nccl_stream);
-                NCCL_CHECK(ncclSend(send_buf, size, ncclChar, 0, nccl_comm, nccl_stream));
+                NCCL_CHECK(ncclSend(send_buf, size, ncclChar, 0, nccl_comm,
+                                    nccl_stream));
                 CUDA_STREAM_SYNCHRONIZE(nccl_stream);
             }
         }
 
         if (myid == 0) {
-            double latency = (t_end - t_start) * 1e6 / (2.0 * options.iterations);
+            double latency =
+                (t_end - t_start) * 1e6 / (2.0 * options.iterations);
 
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
                     FLOAT_PRECISION, latency);
@@ -164,4 +170,3 @@ main (int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
-

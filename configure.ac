@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [7.0], [mvapich-discuss@cse.ohio-state.edu])
-AC_CONFIG_SRCDIR([c/mpi/pt2pt/osu_latency.c])
+AC_INIT([OSU-Micro-Benchmarks], [7.1], [mvapich-discuss@cse.ohio-state.edu])
+AC_CONFIG_SRCDIR([c/mpi/pt2pt/standard/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
 LT_INIT
@@ -195,7 +195,7 @@ AS_IF([test "x$enable_ncclomb" = xyes], [
                       [AC_MSG_ERROR([cannot include nccl.h])])
        AC_SEARCH_LIBS([ncclGetUniqueId], [nccl], [],
                       [AC_MSG_ERROR([cannot link with -lnccl])])
-       AC_CHECK_FUNC([ncclSend], [nccl_pt2pt=true], 
+       AC_CHECK_FUNC([ncclSend], [nccl_pt2pt=true],
                      [AC_MSG_WARN([NCCL version >= 2.7 required for point-to-point support. Disabling building NCCL point-to-point benchmarks.])])
        AC_DEFINE([_ENABLE_NCCL_], [1], [Enable NCCL])
       ])
@@ -269,11 +269,15 @@ AM_CONDITIONAL([BUILD_USE_PGI], [`$CXX -V 2>&1 | grep pgc++ > /dev/null 2>&1`])
 AC_DEFINE([FIELD_WIDTH], [18], [Width of field used to report numbers])
 AC_DEFINE([FLOAT_PRECISION], [2], [Precision of reported numbers])
 
-AC_CONFIG_FILES([Makefile c/Makefile c/mpi/Makefile c/mpi/pt2pt/Makefile 
-                 c/mpi/startup/Makefile c/mpi/one-sided/Makefile 
-                 c/mpi/collective/Makefile c/openshmem/Makefile 
+AC_CONFIG_FILES([Makefile c/Makefile c/mpi/Makefile c/mpi/pt2pt/Makefile
+                 c/mpi/startup/Makefile c/mpi/one-sided/Makefile
+                 c/mpi/collective/Makefile c/openshmem/Makefile
                  c/upc/Makefile c/upcxx/Makefile c/nccl/Makefile
                  c/nccl/collective/Makefile c/nccl/pt2pt/Makefile
+                 c/mpi/pt2pt/standard/Makefile c/mpi/pt2pt/persistent/Makefile
+                 c/mpi/collective/blocking/Makefile
+                 c/mpi/collective/non_blocking/Makefile
+                 c/mpi/collective/neighborhood/Makefile
                ])
 
 AC_OUTPUT

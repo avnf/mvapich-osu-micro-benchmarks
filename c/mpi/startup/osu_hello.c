@@ -1,11 +1,11 @@
 #define BENCHMARK "OSU MPI Hello World Test"
 #ifdef PACKAGE_VERSION
-#   define HEADER "# " BENCHMARK " v" PACKAGE_VERSION "\n"
+#define HEADER "# " BENCHMARK " v" PACKAGE_VERSION "\n"
 #else
-#   define HEADER "# " BENCHMARK "\n"
+#define HEADER "# " BENCHMARK "\n"
 #endif
 /*
- * Copyright (C) 2002-2022 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -33,4 +33,3 @@ int main(int argc, char **argv)
     MPI_Finalize();
     return 0;
 }
-

@@ -1,7 +1,7 @@
 #define BENCHMARK "OSU NCCL%s Bi-Directional Bandwidth Test"
 /*
- * Copyright (C) 2002-2022 the Network-Based Computing Laboratory
- * (NBCL), The Ohio State University. 
+ * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
  *
@@ -24,14 +24,16 @@ int main(int argc, char *argv[])
 
     set_header(HEADER);
     set_benchmark_name("osu_nccl_bibw");
-    
+
     po_ret = process_options(argc, argv);
     window_size = options.window_size;
 
     if (options.accel != CUDA || options.src != 'D' || options.dst != 'D') {
-        fprintf(stderr, "Warning: Host buffer was set for one of the processes. NCCL "
-                        "does not support host buffers. Implicitly converting to device "
-                        "buffer (D D).\n\n");
+        fprintf(
+            stderr,
+            "Warning: Host buffer was set for one of the processes. NCCL "
+            "does not support host buffers. Implicitly converting to device "
+            "buffer (D D).\n\n");
         options.accel = CUDA;
         options.src = 'D';
         options.dst = 'D';
@@ -52,11 +54,11 @@ int main(int argc, char *argv[])
         switch (po_ret) {
             case PO_CUDA_NOT_AVAIL:
                 fprintf(stderr, "CUDA support not enabled.  Please recompile "
-                        "benchmark with CUDA support.\n");
+                                "benchmark with CUDA support.\n");
                 break;
             case PO_OPENACC_NOT_AVAIL:
                 fprintf(stderr, "OPENACC support not enabled.  Please "
-                        "recompile benchmark with OPENACC support.\n");
+                                "recompile benchmark with OPENACC support.\n");
                 break;
             case PO_BAD_USAGE:
                 print_bad_usage_message(myid);
@@ -108,7 +110,8 @@ int main(int argc, char *argv[])
     print_header(myid, BW);
 
     /* Bi-Directional Bandwidth test */
-    for (size = options.min_message_size; size <= options.max_message_size; size *= 2) {
+    for (size = options.min_message_size; size <= options.max_message_size;
+         size *= 2) {
         /* touch the data */
         set_buffer_pt2pt(s_buf, myid, options.accel, 'a', size);
         set_buffer_pt2pt(r_buf, myid, options.accel, 'b', size);
@@ -126,8 +129,10 @@ int main(int argc, char *argv[])
             }
             ncclGroupStart();
             for (j = 0; j < window_size; j++) {
-                NCCL_CHECK(ncclSend(s_buf, size, ncclChar, peer, nccl_comm, nccl_stream));
-                NCCL_CHECK(ncclRecv(r_buf, size, ncclChar, peer, nccl_comm, nccl_stream));
+                NCCL_CHECK(ncclSend(s_buf, size, ncclChar, peer, nccl_comm,
+                                    nccl_stream));
+                NCCL_CHECK(ncclRecv(r_buf, size, ncclChar, peer, nccl_comm,
+                                    nccl_stream));
             }
             ncclGroupEnd();
             CUDA_STREAM_SYNCHRONIZE(nccl_stream);
@@ -158,5 +163,3 @@ int main(int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
-
-

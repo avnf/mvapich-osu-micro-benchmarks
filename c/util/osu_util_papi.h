@@ -1,13 +1,12 @@
 /*
-  *Copyright (C) 2002-2022 the Network-Based Computing Laboratory
-  *(NBCL), The Ohio State University.
+ *Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ *(NBCL), The Ohio State University.
  *
-  *Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
+ *Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
  *
-  *For detailed copyright and licensing information, please refer to the
-  *copyright file COPYRIGHT in the top level OMB directory.
+ *For detailed copyright and licensing information, please refer to the
+ *copyright file COPYRIGHT in the top level OMB directory.
  */
-
 
 /*
  * PAPI uses -1 as a nonexistent hardware event placeholder
@@ -20,9 +19,7 @@
 #endif
 
 #define OMB_PAPI_FILE_PATH_MAX_LENGTH OMB_FILE_PATH_MAX_LENGTH
-#define OMB_PAPI_NUMBER_OF_EVENTS 100
-
-char omb_papi_output_filename[OMB_PAPI_FILE_PATH_MAX_LENGTH];
+#define OMB_PAPI_NUMBER_OF_EVENTS     100
 
 void omb_papi_init(int *papi_eventset);
 void omb_papi_start(int *papi_eventset);

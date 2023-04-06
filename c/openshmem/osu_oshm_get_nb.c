@@ -1,7 +1,7 @@
 #define BENCHMARK "OSU OpenSHMEM Get Test"
 /*
- * Copyright (C) 2002-2022 the Network-Based Computing Laboratory
- * (NBCL), The Ohio State University. 
+ * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
  *
@@ -29,19 +29,18 @@ int main(int argc, char *argv[])
     char *s_buf_heap, *r_buf_heap;
     int align_size;
     double t_start = 0, t_end = 0;
-    int use_heap = 0;   //default uses global
-
+    int use_heap = 0; // default uses global
 
 #ifdef OSHM_1_3
     shmem_init();
     myid = shmem_my_pe();
     numprocs = shmem_n_pes();
 #else
-	start_pes(0);
+    start_pes(0);
     myid = _my_pe();
     numprocs = _num_pes();
 #endif
-    
+
     if (numprocs != 2) {
         if (myid == 0) {
             fprintf(stderr, "This test requires exactly two processes\n");
@@ -70,30 +69,25 @@ int main(int argc, char *argv[])
     /**************Allocating Memory*********************/
 
     if (use_heap) {
-#ifdef OSHM_1_3        
+#ifdef OSHM_1_3
         s_buf_heap = (char *)shmem_malloc(MYBUFSIZE);
         r_buf_heap = (char *)shmem_malloc(MYBUFSIZE);
 #else
-	    s_buf_heap = (char *)shmalloc(MYBUFSIZE);
+        s_buf_heap = (char *)shmalloc(MYBUFSIZE);
         r_buf_heap = (char *)shmalloc(MYBUFSIZE);
 #endif
 
-        s_buf =
-            (char *) (((unsigned long) s_buf_heap + (align_size - 1)) /
-                      align_size * align_size);
+        s_buf = (char *)(((unsigned long)s_buf_heap + (align_size - 1)) /
+                         align_size * align_size);
 
-        r_buf =
-            (char *) (((unsigned long) r_buf_heap + (align_size - 1)) /
-                      align_size * align_size);
+        r_buf = (char *)(((unsigned long)r_buf_heap + (align_size - 1)) /
+                         align_size * align_size);
     } else {
+        s_buf = (char *)(((unsigned long)s_buf_original + (align_size - 1)) /
+                         align_size * align_size);
 
-        s_buf =
-            (char *) (((unsigned long) s_buf_original + (align_size - 1)) /
-                      align_size * align_size);
-
-        r_buf =
-            (char *) (((unsigned long) r_buf_original + (align_size - 1)) /
-                      align_size * align_size);
+        r_buf = (char *)(((unsigned long)r_buf_original + (align_size - 1)) /
+                         align_size * align_size);
     }
 
     /**************Memory Allocation Done*********************/
@@ -105,7 +99,6 @@ int main(int argc, char *argv[])
     }
 
     for (size = 1; size <= MAX_MSG_SIZE_PT2PT; size = (size ? size * 2 : 1)) {
-        
         /* touch the data */
         for (i = 0; i < size; i++) {
             s_buf[i] = 'a';
@@ -119,23 +112,23 @@ int main(int argc, char *argv[])
 
         shmem_barrier_all();
 
-        if (myid == 0) 
-            {
-                shmem_fence();
+        if (myid == 0) {
+            shmem_fence();
 
-                for (i = 0; i < loop + skip; i++) {
-                    if (i == skip) t_start = TIME();
+            for (i = 0; i < loop + skip; i++) {
+                if (i == skip)
+                    t_start = TIME();
 
-                    shmem_getmem_nbi(r_buf, s_buf, size, 1);
-                    shmem_quiet();
-                }
-
-                t_end = TIME();
+                shmem_getmem_nbi(r_buf, s_buf, size, 1);
+                shmem_quiet();
             }
+
+            t_end = TIME();
+        }
         shmem_barrier_all();
 
         if (myid == 0) {
-            double latency = (1.0 * (t_end-t_start)) / loop;
+            double latency = (1.0 * (t_end - t_start)) / loop;
 
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
                     FLOAT_PRECISION, latency);
@@ -147,21 +140,21 @@ int main(int argc, char *argv[])
 
     if (use_heap) {
 #ifdef OSHM_1_3
-		shmem_free (s_buf_heap);
-		shmem_free (r_buf_heap);
+        shmem_free(s_buf_heap);
+        shmem_free(r_buf_heap);
 #else
         shfree(s_buf_heap);
         shfree(r_buf_heap);
-#endif    
-	}
+#endif
+    }
 
     shmem_barrier_all();
-	
+
 #ifdef OSHM_1_3
-    shmem_finalize ();
-#endif   
-	
-	return EXIT_SUCCESS;
+    shmem_finalize();
+#endif
+
+    return EXIT_SUCCESS;
 }
 
 /* vi: set sw=4 sts=4 tw=80: */

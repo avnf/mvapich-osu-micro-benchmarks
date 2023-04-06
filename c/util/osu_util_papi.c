@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2022 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -10,9 +10,12 @@
 
 #include <osu_util_mpi.h>
 
+#ifdef _ENABLE_PAPI_
 static char **PAPI_values = NULL;
 static int omb_papi_noe = 0;
 static FILE *omb_papi_output = NULL;
+char omb_papi_output_filename[OMB_PAPI_FILE_PATH_MAX_LENGTH];
+#endif /*#ifdef _ENABLE_PAPI_*/
 
 void omb_papi_init(int *papi_eventset)
 {
@@ -55,13 +58,13 @@ void omb_papi_init(int *papi_eventset)
     for (i = 0; i < omb_papi_noe; i++) {
         papi_retval = PAPI_add_named_event(*papi_eventset, PAPI_values[i]);
         if (papi_retval != PAPI_OK) {
-            fprintf(stderr,"Error adding %s: %s\n", PAPI_values[i],
+            fprintf(stderr, "Error adding %s: %s\n", PAPI_values[i],
                     PAPI_strerror(papi_retval));
             exit(EXIT_FAILURE);
         }
     }
     PAPI_reset(*papi_eventset);
-#endif
+#endif /*#ifdef _ENABLE_PAPI_*/
 }
 
 void omb_papi_start(int *papi_eventset)
@@ -78,7 +81,7 @@ void omb_papi_start(int *papi_eventset)
                 PAPI_strerror(papi_retval));
         exit(EXIT_FAILURE);
     }
-#endif
+#endif /*#ifdef _ENABLE_PAPI_*/
 }
 
 void omb_papi_stop_and_print(int *papi_eventset, int size)
@@ -106,7 +109,7 @@ void omb_papi_stop_and_print(int *papi_eventset, int size)
     if (myid == 0) {
         fprintf(omb_papi_output, "Size: %d\n", size);
         fprintf(omb_papi_output, ">>========================================"
-                "=======================>>\n");
+                                 "=======================>>\n");
         fprintf(omb_papi_output, "%-*s", FIELD_WIDTH, "PAPI Event Name");
         for (j = 0; j < numprocs; j++) {
             fprintf(omb_papi_output, "%*s:%d", FIELD_WIDTH - 2, "Rank", j);
@@ -114,8 +117,8 @@ void omb_papi_stop_and_print(int *papi_eventset, int size)
         fprintf(omb_papi_output, "\n");
     }
     for (i = 0; i < omb_papi_noe; i++) {
-        MPI_CHECK(MPI_Gather((void*) &count[i], 1, MPI_LONG_LONG, recvbuf, 1,
-                    MPI_LONG_LONG, 0, MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Gather((void *)&count[i], 1, MPI_LONG_LONG, recvbuf, 1,
+                             MPI_LONG_LONG, 0, MPI_COMM_WORLD));
         if (myid == 0) {
             fprintf(omb_papi_output, "%-*s", FIELD_WIDTH, PAPI_values[i]);
             for (j = 0; j < numprocs; j++) {
@@ -126,13 +129,13 @@ void omb_papi_stop_and_print(int *papi_eventset, int size)
     }
     if (myid == 0) {
         fprintf(omb_papi_output, "##=========================================="
-                "=====================##\n\n");
+                                 "=====================##\n\n");
         fflush(omb_papi_output);
     }
     PAPI_reset(*papi_eventset);
     free(count);
     free(recvbuf);
-#endif
+#endif /*#ifdef _ENABLE_PAPI_*/
 }
 
 void omb_papi_free(int *papi_eventset)
@@ -144,14 +147,14 @@ void omb_papi_free(int *papi_eventset)
     PAPI_cleanup_eventset(*papi_eventset);
     PAPI_destroy_eventset(papi_eventset);
     free(PAPI_values);
-#endif
+#endif /*#ifdef _ENABLE_PAPI_*/
 }
 
 void omb_papi_parse_event_options(char *opt_arr)
 {
 #ifdef _ENABLE_PAPI_
     char *token, *opt_token, *file_name;
-    PAPI_values = malloc(sizeof(char*) * OMB_PAPI_NUMBER_OF_EVENTS);
+    PAPI_values = malloc(sizeof(char *) * OMB_PAPI_NUMBER_OF_EVENTS);
     opt_token = strtok(opt_arr, ":");
     file_name = strtok(NULL, ":");
     token = strtok(opt_token, ",");
@@ -163,7 +166,8 @@ void omb_papi_parse_event_options(char *opt_arr)
     }
     if (NULL != file_name) {
         if (OMB_PAPI_FILE_PATH_MAX_LENGTH < strlen(file_name)) {
-            fprintf(stderr, "ERROR: Max allowed size for filepath is:%d\n"
+            fprintf(stderr,
+                    "ERROR: Max allowed size for filepath is:%d\n"
                     "To increase the max allowed filepath limit, update"
                     " OMB_PAPI_FILE_PATH_MAX_LENGTH in c/util/osu_util.h.\n",
                     OMB_PAPI_FILE_PATH_MAX_LENGTH);
@@ -172,10 +176,10 @@ void omb_papi_parse_event_options(char *opt_arr)
         strcpy(omb_papi_output_filename, file_name);
     } else {
         fprintf(stderr, "Warning! Using"
-                " \'papi_output.out for papi results\n");
+                        " \'papi_output.out for papi results\n");
         fflush(stderr);
         strcpy(omb_papi_output_filename, "papi_output.out");
     }
-#endif
+#endif /*#ifdef _ENABLE_PAPI_*/
 }
 /* vi:set sw=4 sts=4 tw=80: */

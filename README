@@ -1186,3 +1186,102 @@ passing PAPI installation path during configure time using
     *      "[EVENTS]" Comma seperated list of PAPI events
     *      "[PATH]" PAPI output file path
     * E.g: -PPAPI_L1_DCM,PAPI_VEC_DP,PAPI_VEC_SP:papi_output.out
+
+Point-to-Point Persistent Benchmarks
+------------------------------
+osu_latency_p - Persistent Latency Test
+    * Similar to osu_latency test using persistent point-to-point communication
+    * requests.
+
+osu_bw_p - Persistent Bandwidth Test
+    * Similar to osu_bw test using persistent point-to-point communication
+    * requests.
+
+osu_bibw_p - Persistent Bidirectional Bandwidth Test
+    * Similar to osu_bibw test using persistent point-to-point communication
+    * requests.
+
+Neighbor Collective MPI Benchmarks
+--------------------------------------
+osu_neighbor_allgather  - MPI_Neighbor_allgather Latency Test
+osu_neighbor_allgatherv - MPI_Neighbor_allgatherv Latency Test
+osu_neighbor_alltoall   - MPI_Neighbor_alltoall Latency Test
+osu_neighbor_alltoallv  - MPI_Neighbor_alltoallv Latency Test
+osu_neighbor_alltoallw  - MPI_Neighbor_alltoallw Latency Test
+osu_ineighbor_allgather - MPI_Ineighbor_allgather Latency Test
+osu_ineighbor_allgatherv- MPI_Ineighbor_allgatherv Latency Test
+osu_ineighbor_alltoall  - MPI_Ineighbor_alltoall Latency Test
+osu_ineighbor_alltoallv - MPI_Ineighbor_alltoallv Latency Test
+osu_ineighbor_alltoallw - MPI_Ineighbor_alltoallw Latency Test
+
+Neighbor Collective Latency Tests
+    * In addition to the blocking and non-blocking collective latency tests,
+    * we provide several neighbor collectives as mentioned above.
+    * Additionally, the benchmarks offer following options:
+    * "-N [TYPE]:[ARGS]    Configure neighbor collectives. (default:- cart:1:1)
+    *                       -N cart:<num of dimentions:radius>   //Cartesian
+    *                       -N graph:<adjacency graph file>      //Graph
+    * Sample adjacency graph file found in utils.
+
+Support for multiple MPI types
+--------------------------------------
+The following benchmarks have been extended to support multiple MPI types.
+    osu_bibw                - Bidirectional Bandwidth Test
+    osu_bw                  - Bandwidth Test
+    osu_latency             - Latency Test
+    osu_mbw_mr              - Multiple Bandwidth / Message Rate Test
+    osu_multi_lat           - Multi-pair Latency Test
+    osu_latency_mp          - Multi-process Latency Test
+    osu_allgather           - MPI_Allgather Latency Test
+    osu_allgatherv          - MPI_Allgatherv Latency Test
+    osu_alltoall            - MPI_Alltoall Latency Test
+    osu_alltoallv           - MPI_Alltoallv Latency Test
+    osu_alltoallw           - MPI_Alltoallw Latency Test
+    osu_allreduce           - MPI_Allreduce Latency Test
+    osu_bcast               - MPI_Bcast Latency Test
+    osu_gather              - MPI_Gather Latency Test
+    osu_gatherv             - MPI_Gatherv Latency Test
+    osu_barrier             - MPI_Barrier Latency Test
+    osu_reduce              - MPI_Reduce Latency Test
+    osu_reduce_scatter      - MPI_Reduce_scatter Latency Test
+    osu_ireduce_scatter     - MPI_Ireduce_scatter Latency Test
+    osu_scatter             - MPI_Scatter Latency Test
+    osu_scatterv            - MPI_Scatterv Latency Test
+    osu_iallgather          - MPI_Iallgather Latency Test
+    osu_iallgatherv         - MPI_Iallgatherv Latency Test
+    osu_iallreduce          - MPI_Iallreduce Latency Test
+    osu_ialltoall           - MPI_Ialltoall Latency Test
+    osu_ialltoallv          - MPI_Ialltoallv Latency Test
+    osu_ialltoallw          - MPI_Ialltoallw Latency Test
+    osu_ibarrier            - MPI_Ibarrier Latency Test
+    osu_ibcast              - MPI_Ibcast Latency Test
+    osu_igather             - MPI_Igather Latency Test
+    osu_igatherv            - MPI_Igatherv Latency Test
+    osu_ireduce             - MPI_Ireduce Latency Test
+    osu_iscatter            - MPI_Iscatter Latency Test
+    osu_iscatterv           - MPI_Iscatterv Latency Test
+    osu_put_latency         - Latency Test for Put
+    osu_get_latency         - Latency Test for Get
+    osu_put_bw              - Bandwidth Test for Put
+    osu_get_bw              - Bandwidth Test for Get
+    osu_put_bibw            - Bidirectional Bandwidth Test for Put
+    osu_acc_latency         - Latency Test for Accumulate
+    osu_cas_latency         - Latency Test for Compare and Swap
+    osu_fop_latency         - Latency Test for Fetch and Op
+    osu_get_acc_latency     - Latency Test for Get_accumulate with Active/Passive
+    osu_neighbor_allgather  - MPI_Neighbor_allgather Latency Test
+    osu_neighbor_allgatherv - MPI_Neighbor_allgatherv Latency Test
+    osu_neighbor_alltoall   - MPI_Neighbor_alltoall Latency Test
+    osu_neighbor_alltoallv  - MPI_Neighbor_alltoallv Latency Test
+    osu_neighbor_alltoallw  - MPI_Neighbor_alltoallw Latency Test
+    osu_ineighbor_allgather - MPI_Ineighbor_allgather Latency Test
+    osu_ineighbor_allgatherv- MPI_Ineighbor_allgatherv Latency Test
+    osu_ineighbor_alltoall  - MPI_Ineighbor_alltoall Latency Test
+    osu_ineighbor_alltoallv - MPI_Ineighbor_alltoallv Latency Test
+    osu_ineighbor_alltoallw - MPI_Ineighbor_alltoallw Latency Test
+
+    * Additionally, the benchmarks offer following options:
+    * "-T" option can be used to pass required MPI type.
+    *      "-T mpi_int" for running benchmark using MPI_INT.
+    *      "-T all" for running benchmark using supported MPI types.
+

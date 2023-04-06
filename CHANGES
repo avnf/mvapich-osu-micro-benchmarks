@@ -1,3 +1,32 @@
+OSU Micro Benchmarks v7.1 (04/06/2023)
+
+* New Features & Enhancements
+    - Add new blocking and non-blocking neighbor collective benchmarks with
+      support for CPU buffers.
+        * Blocking benchmarks
+          - osu_neighbor_allgather, osu_neighbor_allgatherv,
+          - osu_neighbor_alltoall,osu_neighbor_alltoallv,
+          - osu_neighbor_alltoallw
+        * Non-Blocking benchmarks
+          - osu_ineighbor_allgatherv, osu_ineighbor_allgatherv,
+          - osu_ineighbor_alltoall, osu_ineighbor_alltoallv,
+          - osu_ineighbor_alltoallw
+    - Add new benchmarks for point-to-point persistent communication primitives.
+        * osu_bw_persistent, osu_bibw_persistent, osu_latency_persistent
+    - Extend collective and point-to-point benchmarks to support different MPI
+      datatypes.
+        * New data types supported - MPI_INT, MPI_FLOAT, MPI_CHAR
+    - Add validation and MPI types support to one-sided benchmarks.
+        * osu_acc_latency, osu_cas_latency, osu_fop_latency
+
+* Bug Fixes (since v7.0)
+    - Reverse order of calling MPI_Reduce to find out MIN and MAX comm times
+        * Thanks to Devendar Bureddy @NVIDIA for the report and patch
+    - Fix data validation issue when running wiht ROCm support on AMD GPUs
+        * Thanks to Damon McDougall @AMD for the report and patch
+    - Thanks to Luke Robison @Amazon for initial patch for one sided
+      validation and MPI_TYPEs support.
+
 OSU Micro Benchmarks v7.0 (11/10/2022)
 
 * New Features & Enhancements

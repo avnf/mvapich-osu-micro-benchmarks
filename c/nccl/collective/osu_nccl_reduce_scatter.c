@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU NCCL%s Reduce_scatter Latency Test"
 /*
- * Copyright (C) 2002-2022 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 {
     int i, numprocs, rank, size;
     double latency = 0.0, t_start = 0.0, t_stop = 0.0;
-    double timer=0.0;
+    double timer = 0.0;
     double avg_time = 0.0, max_time = 0.0, min_time = 0.0;
     float *sendbuf, *recvbuf;
     int recvcount;
@@ -66,9 +66,11 @@ int main(int argc, char *argv[])
 
     if (options.max_message_size > options.max_mem_limit) {
         if (rank == 0) {
-            fprintf(stderr, "Warning! Increase the Max Memory Limit to be able to run up to %ld bytes.\n"
-                            "Continuing with max message size of %ld bytes\n", 
-                            options.max_message_size, options.max_mem_limit);
+            fprintf(stderr,
+                    "Warning! Increase the Max Memory Limit to be able to run "
+                    "up to %ld bytes.\n"
+                    "Continuing with max message size of %ld bytes\n",
+                    options.max_message_size, options.max_mem_limit);
         }
         options.max_message_size = options.max_mem_limit;
     }
@@ -81,17 +83,16 @@ int main(int argc, char *argv[])
     allocate_nccl_stream();
     create_nccl_comm(numprocs, rank);
 
-    
-    bufsize = sizeof(float)*(options.max_message_size/sizeof(float));
-    if (allocate_memory_coll((void**)&sendbuf, bufsize, options.accel)) {
+    bufsize = sizeof(float) * (options.max_message_size / sizeof(float));
+    if (allocate_memory_coll((void **)&sendbuf, bufsize, options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
         MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
     }
     set_buffer(sendbuf, options.accel, 1, bufsize);
 
-    bufsize = sizeof(float)*(options.max_message_size/numprocs/sizeof(float)+1);
-    if (allocate_memory_coll((void**)&recvbuf, bufsize,
-                options.accel)) {
+    bufsize = sizeof(float) *
+              (options.max_message_size / numprocs / sizeof(float) + 1);
+    if (allocate_memory_coll((void **)&recvbuf, bufsize, options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
         MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
     }
@@ -99,38 +100,38 @@ int main(int argc, char *argv[])
 
     print_preamble(rank);
 
-    for (size=options.min_message_size; size*sizeof(float) <= options.max_message_size; size *= 2) {
-
+    for (size = options.min_message_size;
+         size * sizeof(float) <= options.max_message_size; size *= 2) {
         if (size > LARGE_MESSAGE_SIZE) {
             options.skip = options.skip_large;
             options.iterations = options.iterations_large;
         }
-        recvcount=size/numprocs;
+        recvcount = size / numprocs;
 
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
-        timer=0.0;
-        for (i=0; i < options.iterations + options.skip ; i++) {
+        timer = 0.0;
+        for (i = 0; i < options.iterations + options.skip; i++) {
             t_start = MPI_Wtime();
-            NCCL_CHECK(ncclReduceScatter( sendbuf, recvbuf, recvcount, ncclFloat,
-                    ncclSum, nccl_comm, nccl_stream));
+            NCCL_CHECK(ncclReduceScatter(sendbuf, recvbuf, recvcount, ncclFloat,
+                                         ncclSum, nccl_comm, nccl_stream));
             CUDA_STREAM_SYNCHRONIZE(nccl_stream);
-            t_stop=MPI_Wtime();
-            
-            if (i>=options.skip) {
-                timer+=t_stop-t_start;
+            t_stop = MPI_Wtime();
+
+            if (i >= options.skip) {
+                timer += t_stop - t_start;
             }
             MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
         }
         latency = (double)(timer * 1e6) / options.iterations;
 
         MPI_CHECK(MPI_Reduce(&latency, &min_time, 1, MPI_DOUBLE, MPI_MIN, 0,
-                MPI_COMM_WORLD));
+                             MPI_COMM_WORLD));
         MPI_CHECK(MPI_Reduce(&latency, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0,
-                MPI_COMM_WORLD));
+                             MPI_COMM_WORLD));
         MPI_CHECK(MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0,
-                MPI_COMM_WORLD));
-        avg_time = avg_time/numprocs;
+                             MPI_COMM_WORLD));
+        avg_time = avg_time / numprocs;
 
         print_stats(rank, size * sizeof(float), avg_time, min_time, max_time);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));

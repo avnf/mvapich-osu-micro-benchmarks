@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU NCCL%s All-to-All Personalized Exchange Latency Test"
 /*
- * Copyright (C) 2002-2022 the Network-Based Computing Laboratory
+ * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -10,11 +10,11 @@
  */
 #include <osu_util_nccl.h>
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     int i, j, numprocs, rank, size;
     double latency = 0.0, t_start = 0.0, t_stop = 0.0;
-    double timer=0.0;
+    double timer = 0.0;
     int errors = 0, local_errors = 0;
     double avg_time = 0.0, max_time = 0.0, min_time = 0.0;
     char *sendbuf = NULL, *recvbuf = NULL;
@@ -75,15 +75,16 @@ int main (int argc, char *argv[])
 
     bufsize = options.max_message_size * numprocs;
 
-    if (allocate_memory_coll((void**)&sendbuf, bufsize, options.accel)) {
+    if (allocate_memory_coll((void **)&sendbuf, bufsize, options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
         MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
     }
 
     set_buffer(sendbuf, options.accel, 1, bufsize);
 
-    if (allocate_memory_coll((void**)&recvbuf, options.max_message_size *
-                numprocs, options.accel)) {
+    if (allocate_memory_coll((void **)&recvbuf,
+                             options.max_message_size * numprocs,
+                             options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
         MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
     }
@@ -92,7 +93,7 @@ int main (int argc, char *argv[])
     print_preamble(rank);
 
     for (size = options.min_message_size; size <= options.max_message_size;
-            size *= 2) {
+         size *= 2) {
         if (size > LARGE_MESSAGE_SIZE) {
             options.skip = options.skip_large;
             options.iterations = options.iterations_large;
@@ -109,10 +110,12 @@ int main (int argc, char *argv[])
                     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
                     NCCL_CHECK(ncclGroupStart());
                     for (proc = 0; proc < numprocs; proc++) {
-                        NCCL_CHECK(ncclSend((char*)sendbuf + proc * rank_offset, size, ncclChar, proc,
-                                       nccl_comm, nccl_stream));
-                        NCCL_CHECK(ncclRecv((char*)recvbuf + proc * rank_offset, size, ncclChar, proc,
-                                       nccl_comm, nccl_stream));
+                        NCCL_CHECK(
+                            ncclSend((char *)sendbuf + proc * rank_offset, size,
+                                     ncclChar, proc, nccl_comm, nccl_stream));
+                        NCCL_CHECK(
+                            ncclRecv((char *)recvbuf + proc * rank_offset, size,
+                                     ncclChar, proc, nccl_comm, nccl_stream));
                     }
                     NCCL_CHECK(ncclGroupEnd());
                     CUDA_STREAM_SYNCHRONIZE(nccl_stream);
@@ -123,10 +126,10 @@ int main (int argc, char *argv[])
             t_start = MPI_Wtime();
             NCCL_CHECK(ncclGroupStart());
             for (proc = 0; proc < numprocs; proc++) {
-                NCCL_CHECK(ncclSend((char*)sendbuf + proc * rank_offset, size, ncclChar, proc,
-                               nccl_comm, nccl_stream));
-                NCCL_CHECK(ncclRecv((char*)recvbuf + proc * rank_offset, size, ncclChar, proc,
-                               nccl_comm, nccl_stream));
+                NCCL_CHECK(ncclSend((char *)sendbuf + proc * rank_offset, size,
+                                    ncclChar, proc, nccl_comm, nccl_stream));
+                NCCL_CHECK(ncclRecv((char *)recvbuf + proc * rank_offset, size,
+                                    ncclChar, proc, nccl_comm, nccl_stream));
             }
             NCCL_CHECK(ncclGroupEnd());
             CUDA_STREAM_SYNCHRONIZE(nccl_stream);
@@ -134,8 +137,8 @@ int main (int argc, char *argv[])
             MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
             if (options.validate) {
-                local_errors += validate_data(recvbuf, size, numprocs,
-                        options.accel, i);
+                local_errors +=
+                    validate_data(recvbuf, size, numprocs, options.accel, i);
             }
 
             if (i >= options.skip) {
@@ -145,21 +148,21 @@ int main (int argc, char *argv[])
         latency = (double)(timer * 1e6) / options.iterations;
 
         MPI_CHECK(MPI_Reduce(&latency, &min_time, 1, MPI_DOUBLE, MPI_MIN, 0,
-                MPI_COMM_WORLD));
+                             MPI_COMM_WORLD));
         MPI_CHECK(MPI_Reduce(&latency, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0,
-                MPI_COMM_WORLD));
+                             MPI_COMM_WORLD));
         MPI_CHECK(MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0,
-                MPI_COMM_WORLD));
+                             MPI_COMM_WORLD));
         avg_time = avg_time / numprocs;
 
         if (options.validate) {
             MPI_CHECK(MPI_Allreduce(&local_errors, &errors, 1, MPI_INT, MPI_SUM,
-                        MPI_COMM_WORLD));
+                                    MPI_COMM_WORLD));
         }
 
         if (options.validate) {
             print_stats_validate(rank, size * sizeof(char), avg_time, min_time,
-                                max_time, errors);
+                                 max_time, errors);
         } else {
             print_stats(rank, size, avg_time, min_time, max_time);
         }
@@ -184,9 +187,11 @@ int main (int argc, char *argv[])
         }
     }
 
-    if (0 != errors && options.validate && 0 == rank ) {
-        fprintf(stdout, "DATA VALIDATION ERROR: %s exited with status %d on"
-                " message size %d.\n", argv[0], EXIT_FAILURE, size);
+    if (0 != errors && options.validate && 0 == rank) {
+        fprintf(stdout,
+                "DATA VALIDATION ERROR: %s exited with status %d on"
+                " message size %d.\n",
+                argv[0], EXIT_FAILURE, size);
         exit(EXIT_FAILURE);
     }
 
