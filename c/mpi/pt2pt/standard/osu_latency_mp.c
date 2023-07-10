@@ -14,6 +14,8 @@
 void communicate(int myid);
 
 int errors = 0;
+MPI_Comm omb_comm = MPI_COMM_NULL;
+omb_mpi_init_data omb_init_h;
 
 int main(int argc, char *argv[])
 {
@@ -40,9 +42,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    MPI_CHECK(MPI_Init(&argc, &argv));
-    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myid));
+    omb_init_h = omb_mpi_init(&argc, &argv);
+    omb_comm = omb_init_h.omb_comm;
+    if (MPI_COMM_NULL == omb_comm) {
+        OMB_ERROR_EXIT("Cant create communicator");
+    }
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &myid));
+    MPI_CHECK(MPI_Comm_size(omb_comm, &numprocs));
 
     if (0 == myid) {
         switch (po_ret) {
@@ -60,7 +66,7 @@ int main(int argc, char *argv[])
                 break;
             case PO_VERSION_MESSAGE:
                 print_version_message(myid);
-                MPI_CHECK(MPI_Finalize());
+                omb_mpi_finalize(omb_init_h);
                 exit(EXIT_SUCCESS);
             case PO_OKAY:
                 break;
@@ -71,11 +77,11 @@ int main(int argc, char *argv[])
         case PO_CUDA_NOT_AVAIL:
         case PO_OPENACC_NOT_AVAIL:
         case PO_BAD_USAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_FAILURE);
         case PO_HELP_MESSAGE:
         case PO_VERSION_MESSAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_OKAY:
             break;
@@ -86,7 +92,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
-        MPI_CHECK(MPI_Finalize());
+        omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
 
@@ -131,7 +137,7 @@ int main(int argc, char *argv[])
     }
 
     if (is_child == 0) {
-        MPI_CHECK(MPI_Finalize());
+        omb_mpi_finalize(omb_init_h);
         if (NONE != options.accel) {
             if (cleanup_accel()) {
                 fprintf(stderr, "Error cleaning up device\n");
@@ -160,11 +166,12 @@ void communicate(int myid)
     char mpi_type_name_str[OMB_DATATYPE_STR_MAX_LEN];
     MPI_Datatype mpi_type_list[OMB_NUM_DATATYPES];
     int papi_eventset = OMB_PAPI_NULL;
+    struct omb_buffer_sizes_t omb_buffer_sizes;
 
     omb_populate_mpi_type_list(mpi_type_list);
     if (allocate_memory_pt2pt(&s_buf, &r_buf, myid)) {
         /* Error allocating memory */
-        MPI_CHECK(MPI_Finalize());
+        omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
     omb_graph_options_init(&omb_graph_options);
@@ -203,7 +210,7 @@ void communicate(int myid)
 
             omb_graph_allocate_and_get_data_buffer(
                 &omb_graph_data, &omb_graph_options, size, options.iterations);
-            MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+            MPI_CHECK(MPI_Barrier(omb_comm));
             if (myid == 0) {
                 t_total = 0.0;
                 for (i = 0; i < options.iterations + options.skip; i++) {
@@ -212,20 +219,20 @@ void communicate(int myid)
                     }
                     if (options.validate) {
                         set_buffer_validation(s_buf, r_buf, size, options.accel,
-                                              i, omb_curr_datatype);
+                                              i, omb_curr_datatype,
+                                              omb_buffer_sizes);
                     }
                     for (j = 0; j <= options.warmup_validation; j++) {
-                        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+                        MPI_CHECK(MPI_Barrier(omb_comm));
                         if (i >= options.skip &&
                             j == options.warmup_validation) {
                             t_start = MPI_Wtime();
                         }
                         MPI_CHECK(MPI_Send(s_buf, num_elements,
-                                           omb_curr_datatype, 1, 1,
-                                           MPI_COMM_WORLD));
+                                           omb_curr_datatype, 1, 1, omb_comm));
                         MPI_CHECK(MPI_Recv(r_buf, num_elements,
-                                           omb_curr_datatype, 1, 1,
-                                           MPI_COMM_WORLD, &reqstat));
+                                           omb_curr_datatype, 1, 1, omb_comm,
+                                           &reqstat));
                         if (i >= options.skip &&
                             j == options.warmup_validation) {
                             t_end = MPI_Wtime();
@@ -250,16 +257,16 @@ void communicate(int myid)
                     }
                     if (options.validate) {
                         set_buffer_validation(s_buf, r_buf, size, options.accel,
-                                              i, omb_curr_datatype);
+                                              i, omb_curr_datatype,
+                                              omb_buffer_sizes);
                     }
                     for (j = 0; j <= options.warmup_validation; j++) {
-                        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+                        MPI_CHECK(MPI_Barrier(omb_comm));
                         MPI_CHECK(MPI_Recv(r_buf, num_elements,
-                                           omb_curr_datatype, 0, 1,
-                                           MPI_COMM_WORLD, &reqstat));
+                                           omb_curr_datatype, 0, 1, omb_comm,
+                                           &reqstat));
                         MPI_CHECK(MPI_Send(s_buf, num_elements,
-                                           omb_curr_datatype, 0, 1,
-                                           MPI_COMM_WORLD));
+                                           omb_curr_datatype, 0, 1, omb_comm));
                     }
                     if (options.validate) {
                         local_errors +=
@@ -271,7 +278,7 @@ void communicate(int myid)
 
             if (options.validate) {
                 MPI_CHECK(MPI_Allreduce(&local_errors, &errors, 1, MPI_INT,
-                                        MPI_SUM, MPI_COMM_WORLD));
+                                        MPI_SUM, omb_comm));
             }
 
             omb_papi_stop_and_print(&papi_eventset, size);

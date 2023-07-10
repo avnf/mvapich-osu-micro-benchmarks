@@ -39,6 +39,9 @@ int main(int argc, char *argv[])
     int papi_eventset = OMB_PAPI_NULL;
     options.bench = PT2PT;
     options.subtype = BW;
+    MPI_Comm omb_comm = MPI_COMM_NULL;
+    omb_mpi_init_data omb_init_h;
+    struct omb_buffer_sizes_t omb_buffer_sizes;
 
     set_header(HEADER);
     set_benchmark_name("osu_bw");
@@ -61,9 +64,13 @@ int main(int argc, char *argv[])
         r_buf = malloc(sizeof(char *) * 1);
     }
 
-    MPI_CHECK(MPI_Init(&argc, &argv));
-    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myid));
+    omb_init_h = omb_mpi_init(&argc, &argv);
+    omb_comm = omb_init_h.omb_comm;
+    if (MPI_COMM_NULL == omb_comm) {
+        OMB_ERROR_EXIT("Cant create communicator");
+    }
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &myid));
+    MPI_CHECK(MPI_Comm_size(omb_comm, &numprocs));
 
     omb_graph_options_init(&omb_graph_options);
     if (0 == myid) {
@@ -84,7 +91,7 @@ int main(int argc, char *argv[])
                 break;
             case PO_VERSION_MESSAGE:
                 print_version_message(myid);
-                MPI_CHECK(MPI_Finalize());
+                omb_mpi_finalize(omb_init_h);
                 exit(EXIT_SUCCESS);
             case PO_OKAY:
                 break;
@@ -95,11 +102,11 @@ int main(int argc, char *argv[])
         case PO_CUDA_NOT_AVAIL:
         case PO_OPENACC_NOT_AVAIL:
         case PO_BAD_USAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_FAILURE);
         case PO_HELP_MESSAGE:
         case PO_VERSION_MESSAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_OKAY:
             break;
@@ -110,7 +117,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
-        MPI_CHECK(MPI_Finalize());
+        omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
 
@@ -127,7 +134,7 @@ int main(int argc, char *argv[])
     if (options.buf_num == SINGLE) {
         if (allocate_memory_pt2pt(&s_buf[0], &r_buf[0], myid)) {
             /* Error allocating memory */
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_FAILURE);
         }
     }
@@ -165,7 +172,7 @@ int main(int argc, char *argv[])
                     if (allocate_memory_pt2pt_size(&s_buf[i], &r_buf[i], myid,
                                                    size)) {
                         /* Error allocating memory */
-                        MPI_CHECK(MPI_Finalize());
+                        omb_mpi_finalize(omb_init_h);
                         exit(EXIT_FAILURE);
                     }
                 }
@@ -192,7 +199,7 @@ int main(int argc, char *argv[])
 
         omb_graph_allocate_and_get_data_buffer(
             &omb_graph_data, &omb_graph_options, size, options.iterations);
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
         t_total = 0.0;
 
         for (i = 0; i < options.iterations + options.skip; i++) {
@@ -202,15 +209,16 @@ int main(int argc, char *argv[])
             if (options.validate) {
                 if (options.buf_num == MULTIPLE) {
                     for (i = 0; i < window_size; i++) {
-                        set_buffer_validation(s_buf[i], r_buf[i], size,
-                                              options.accel, i,
-                                              omb_curr_datatype);
+                        set_buffer_validation(
+                            s_buf[i], r_buf[i], size, options.accel, i,
+                            omb_curr_datatype, omb_buffer_sizes);
                     }
                 } else {
                     set_buffer_validation(s_buf[0], r_buf[0], size,
-                                          options.accel, i, omb_curr_datatype);
+                                          options.accel, i, omb_curr_datatype,
+                                          omb_buffer_sizes);
                 }
-                MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+                MPI_CHECK(MPI_Barrier(omb_comm));
             }
             if (myid == 0) {
                 for (k = 0; k <= options.warmup_validation; k++) {
@@ -228,17 +236,17 @@ int main(int argc, char *argv[])
                         if (options.buf_num == SINGLE) {
                             MPI_CHECK(MPI_Isend(s_buf[0], num_elements,
                                                 omb_curr_datatype, 1, 100,
-                                                MPI_COMM_WORLD, request + j));
+                                                omb_comm, request + j));
                         } else {
                             MPI_CHECK(MPI_Isend(s_buf[j], num_elements,
                                                 omb_curr_datatype, 1, 100,
-                                                MPI_COMM_WORLD, request + j));
+                                                omb_comm, request + j));
                         }
                     }
                     MPI_CHECK(MPI_Waitall(window_size, request, reqstat));
 
-                    MPI_CHECK(MPI_Recv(r_buf[0], 4, MPI_CHAR, 1, 101,
-                                       MPI_COMM_WORLD, &reqstat[0]));
+                    MPI_CHECK(MPI_Recv(r_buf[0], 4, MPI_CHAR, 1, 101, omb_comm,
+                                       &reqstat[0]));
 
 #ifdef _ENABLE_CUDA_KERNEL_
                     if (options.src == 'M') {
@@ -264,8 +272,8 @@ int main(int argc, char *argv[])
                 }
                 if (options.validate) {
                     int error_rec = 0;
-                    MPI_CHECK(MPI_Recv(&error_rec, 1, MPI_INT, 1, 102,
-                                       MPI_COMM_WORLD, &reqstat[0]));
+                    MPI_CHECK(MPI_Recv(&error_rec, 1, MPI_INT, 1, 102, omb_comm,
+                                       &reqstat[0]));
                     errors += error_rec;
                 }
             } else if (myid == 1) {
@@ -279,11 +287,11 @@ int main(int argc, char *argv[])
                         if (options.buf_num == SINGLE) {
                             MPI_CHECK(MPI_Irecv(r_buf[0], num_elements,
                                                 omb_curr_datatype, 0, 100,
-                                                MPI_COMM_WORLD, request + j));
+                                                omb_comm, request + j));
                         } else {
                             MPI_CHECK(MPI_Irecv(r_buf[j], num_elements,
                                                 omb_curr_datatype, 0, 100,
-                                                MPI_COMM_WORLD, request + j));
+                                                omb_comm, request + j));
                         }
                     }
                     MPI_CHECK(MPI_Waitall(window_size, request, reqstat));
@@ -294,8 +302,8 @@ int main(int argc, char *argv[])
                     }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
-                    MPI_CHECK(MPI_Send(s_buf[0], 4, MPI_CHAR, 0, 101,
-                                       MPI_COMM_WORLD));
+                    MPI_CHECK(
+                        MPI_Send(s_buf[0], 4, MPI_CHAR, 0, 101, omb_comm));
                 }
                 if (options.validate) {
                     if (options.buf_num == SINGLE) {
@@ -309,8 +317,7 @@ int main(int argc, char *argv[])
                                               j, omb_curr_datatype);
                         }
                     }
-                    MPI_CHECK(
-                        MPI_Send(&errors, 1, MPI_INT, 0, 102, MPI_COMM_WORLD));
+                    MPI_CHECK(MPI_Send(&errors, 1, MPI_INT, 0, 102, omb_comm));
                 }
             }
         }
@@ -349,7 +356,7 @@ int main(int argc, char *argv[])
         }
 
         if (options.validate) {
-            MPI_CHECK(MPI_Bcast(&errors, 1, MPI_INT, 0, MPI_COMM_WORLD));
+            MPI_CHECK(MPI_Bcast(&errors, 1, MPI_INT, 0, omb_comm));
             if (0 != errors) {
                 break;
             }
@@ -368,8 +375,7 @@ int main(int argc, char *argv[])
     }
     free(s_buf);
     free(r_buf);
-
-    MPI_CHECK(MPI_Finalize());
+    omb_mpi_finalize(omb_init_h);
 
     if (NONE != options.accel) {
         if (cleanup_accel()) {

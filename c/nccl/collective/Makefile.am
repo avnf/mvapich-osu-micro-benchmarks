@@ -7,12 +7,16 @@ SUFFIXES = .cu .cpp
 	$(NVCC) $(NVCFLAGS) $(INCLUDES) $(CPPFLAGS) --output-file $@.ii $<
 	mv $@.ii $@
 
-ncclcollectivedir = $(pkglibexecdir)/c/nccl/collective
+ncclcollectivedir = $(pkglibexecdir)/nccl/collective
 ncclcollective_PROGRAMS = osu_nccl_allgather osu_nccl_allreduce osu_nccl_bcast osu_nccl_reduce osu_nccl_reduce_scatter osu_nccl_alltoall
 
 AM_CFLAGS = -I${top_srcdir}/c/util
 
-UTILITIES = ../../util/osu_util.c ../../util/osu_util.h ../../util/osu_util_mpi.c ../../util/osu_util_mpi.h ../../util/osu_util_nccl.c ../../util/osu_util_nccl.h
+UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
+    ../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
+    ../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+    ../../util/osu_util_papi.c ../../util/osu_util_papi.h
+
 if CUDA_KERNELS
 UTILITIES += ../../util/kernel.cu
 if BUILD_USE_PGI
@@ -28,10 +32,11 @@ osu_nccl_reduce_scatter_SOURCES = osu_nccl_reduce_scatter.c $(UTILITIES)
 osu_nccl_alltoall_SOURCES = osu_nccl_alltoall.c $(UTILITIES)
 
 if EMBEDDED_BUILD
-    AM_LDFLAGS =
+    AM_LDFLAGS = -I$(top_builddir)/../modules/nccl/build/lib -lnccl
     AM_CPPFLAGS = -I$(top_builddir)/../src/include \
           -I${top_srcdir}/util \
-		  -I${top_srcdir}/../src/include
+		  -I${top_srcdir}/../src/include \
+		  -I${top_srcdir}/../modules/nccl/build/include
 if BUILD_PROFILING_LIB
     AM_LDFLAGS += $(top_builddir)/../lib/lib@PMPILIBNAME@.la
 endif

@@ -225,9 +225,9 @@ void usage_one_sided(char const *name)
                         "to send before synchronization (default 64)\n");
     }
 
-    fprintf(stdout, "  -G, --graph tty,png,pdf    graph output of per"
+    fprintf(stdout, "  -G, --graph tty,png,pdf     graph output of per"
                     " iteration values.\n");
-    fprintf(stdout, "  -T, --type [TYPE]          Set MPI_TYPE "
+    fprintf(stdout, "  -T, --type [TYPE]           Set MPI_TYPE "
                     "<all,mpi_char,mpi_int,mpi_float>. Default:MPI_CHAR.\n");
 #ifdef _ENABLE_PAPI_
     fprintf(stdout, "  -P, --papi [EVENTS]:[PATH]     Enable PAPI support\n");
@@ -242,6 +242,10 @@ void usage_one_sided(char const *name)
         fprintf(stdout, "  -c, --validation            Enable or disable "
                         "validation. Disabled by default. \n");
     }
+#ifdef _ENABLE_MPI4_
+    fprintf(stdout, "  -I, --session               Enable session based MPI "
+                    "initialization.\n");
+#endif
     fprintf(stdout, "  -h, --help                  print this help message\n");
     fflush(stdout);
 }
@@ -332,20 +336,23 @@ void usage_mbw_mr()
             "                                 Options: single, multiple\n");
     if (options.show_size) {
         fprintf(stdout,
-                "  -m, --message-size          [MIN:]MAX  set the minimum "
+                "  -m, --message-size             [MIN:]MAX  set the minimum "
                 "and/or the maximum message size to MIN and/or MAX\n");
         fprintf(
             stdout,
-            "                              bytes respectively. Examples:\n");
-        fprintf(stdout, "                              -m 128      // min = "
+            "                                 bytes respectively. Examples:\n");
+        fprintf(stdout, "                                 -m 128      // min = "
                         "default, max = 128\n");
-        fprintf(stdout, "                              -m 2:128    // min = 2, "
-                        "max = 128\n");
-        fprintf(stdout, "                              -m 2:       // min = 2, "
-                        "max = default\n");
-        fprintf(stdout, "  -M, --mem-limit SIZE        set per process maximum "
-                        "memory consumption to SIZE bytes\n");
-        fprintf(stdout, "                              (default %d)\n",
+        fprintf(stdout,
+                "                                 -m 2:128    // min = 2, "
+                "max = 128\n");
+        fprintf(stdout,
+                "                                 -m 2:       // min = 2, "
+                "max = default\n");
+        fprintf(stdout,
+                "  -M, --mem-limit SIZE           set per process maximum "
+                "memory consumption to SIZE bytes\n");
+        fprintf(stdout, "                                 (default %d)\n",
                 MAX_MEM_LIMIT);
     }
     if (accel_enabled) {
@@ -357,7 +364,7 @@ void usage_mbw_mr()
     }
     fprintf(stdout, "  -G, --graph tty,png,pdf        graph output of per"
                     " iteration values.\n");
-    fprintf(stdout, "  -T, --type [TYPE]          Set MPI_TYPE "
+    fprintf(stdout, "  -T, --type [TYPE]              Set MPI_TYPE "
                     "<all,mpi_char,mpi_int,mpi_float>. Default:MPI_CHAR.\n");
 #ifdef _ENABLE_PAPI_
     fprintf(stdout, "  -P, --papi [EVENTS]:[PATH]     Enable PAPI support\n");
@@ -368,6 +375,10 @@ void usage_mbw_mr()
 #endif
     fprintf(stdout, "  -c, --validation               Enable or disable "
                     "validation. Disabled by default. \n");
+#ifdef _ENABLE_MPI4_
+    fprintf(stdout, "  -I, --session                  Enable session based MPI "
+                    "initialization.\n");
+#endif
     fprintf(stdout, "  -h, --help                     Print this help\n");
     fprintf(stdout, "\n");
     fprintf(stdout, "  Note: This benchmark relies on block ordering of the "
@@ -473,6 +484,8 @@ void print_help_message(int rank)
                 "  -u, --validation-warmup ITR Set number of warmup"
                 " iterations to skip before timing when validation is enabled"
                 " (default 5)\n");
+        fprintf(stdout, "  -G, --graph tty,png,pdf     graph output of per"
+                        " iteration values.\n");
     }
 
     if (options.bench == COLLECTIVE) {
@@ -480,7 +493,8 @@ void print_help_message(int rank)
                         "listing (MIN/MAX latency and ITERATIONS\n");
         fprintf(stdout, "                              displayed in addition "
                         "to AVERAGE latency)\n");
-        if (options.subtype != NBC) {
+        if (options.subtype != NBC_BARRIER &&
+            (options.bench == COLLECTIVE && options.subtype != LAT)) {
             fprintf(stdout, "  -c, --validation            Enable or disable"
                             " validation. Disabled by default. \n");
             fprintf(
@@ -490,9 +504,11 @@ void print_help_message(int rank)
                 " (default 5)\n");
         }
 
-        if (options.subtype == NBC || options.subtype == NBC_ALLTOALL ||
+        if (options.subtype == NBC_ALLTOALL ||
             options.subtype == NBC_BCAST || options.subtype == NBC_GATHER ||
-            options.subtype == NBC_REDUCE || options.subtype == NBC_SCATTER) {
+            options.subtype == NBC_ALL_GATHER ||
+            options.subtype == NBC_REDUCE || options.subtype == NBC_SCATTER ||
+            options.subtype == NBC_ALL_REDUCE || options.subtype == NBC_BARRIER) {
             fprintf(stdout,
                     "  -t, --num_test_calls CALLS  set the number of "
                     "MPI_Test() calls during the dummy computation, \n");
@@ -554,7 +570,8 @@ void print_help_message(int rank)
         options.bench == PT2PT || options.subtype == NHBR_ALLTOALL ||
         options.subtype == NHBR_GATHER ||
         options.subtype == NBC_NHBR_ALLTOALL ||
-        options.subtype == NBC_NHBR_GATHER) {
+        options.subtype == NBC_NHBR_GATHER || options.subtype == ALL_GATHER ||
+        options.subtype == NBC_ALL_GATHER) {
         fprintf(stdout, "  -D, --ddt [TYPE]:[ARGS]     Enable DDT support\n");
         fprintf(stdout,
                 "                              -D cont                   "
@@ -568,7 +585,7 @@ void print_help_message(int rank)
     if (options.subtype == NHBR_ALLTOALL || options.subtype == NHBR_GATHER ||
         options.subtype == NBC_NHBR_ALLTOALL ||
         options.subtype == NBC_NHBR_GATHER) {
-        fprintf(stdout, "  -N, --nhbr [TYPE]:[ARGS]    Configure neighbor "
+        fprintf(stdout, "  -N, --nhbr [TYPE]:[ARGS]    Configure neighborhood "
                         "collectives. (default:- cart:1:1)\n");
         fprintf(stdout, "                              -N cart:<num of "
                         "dimentions:radius>   //Cartesian\n");
@@ -576,10 +593,14 @@ void print_help_message(int rank)
                 "                              -N graph:<adjacency graph "
                 "file>      //Graph\n");
     }
-    fprintf(stdout, "  -G, --graph tty,png,pdf    graph output of per"
-                    " iteration values.\n");
-    fprintf(stdout, "  -T, --type [TYPE]          Set MPI_TYPE "
+    if (options.bench == COLLECTIVE && options.subtype != LAT) {
+        fprintf(stdout, "  -G, --graph tty,png,pdf     graph output of per"
+                        " iteration values.\n");
+        if (options.subtype != BARRIER && options.subtype != NBC_BARRIER) {
+            fprintf(stdout,
+                    "  -T, --type [TYPE]           Set MPI_TYPE "
                     "<all,mpi_char,mpi_int,mpi_float>. Default:MPI_CHAR.\n");
+        }
 #ifdef _ENABLE_PAPI_
     fprintf(stdout, "  -P, --papi [EVENTS]:[PATH]     Enable PAPI support\n");
     fprintf(stdout, "                                 [EVENTS]       //Comma "
@@ -587,6 +608,30 @@ void print_help_message(int rank)
     fprintf(stdout, "                                 [PATH]         //PAPI "
                     "output file path\n");
 #endif
+#ifdef _ENABLE_MPI4_
+    fprintf(stdout, "  -I, --session               Enable session based MPI "
+                    "initialization.\n");
+#endif
+    }
+    if (options.subtype == GATHER || options.subtype == SCATTER ||
+        options.subtype == ALLTOALL || options.subtype == NBC_GATHER ||
+        options.subtype == NBC_SCATTER || options.subtype == NBC_ALLTOALL ||
+        options.subtype == ALL_GATHER || options.subtype == NBC_ALL_GATHER) {
+        fprintf(stdout, "  -l, --in-place              Run benchmark with "
+                        "MPI_IN_PLACE support.\n");
+    }
+    if (options.subtype == GATHER || options.subtype == REDUCE ||
+        options.subtype == SCATTER || options.subtype == NBC_GATHER ||
+        options.subtype == NBC_REDUCE || options.subtype == NBC_SCATTER) {
+        fprintf(
+            stdout,
+            "  -k, --root-rank             Set root rank. Default: fixed:0\n");
+        fprintf(stdout, "                              -k fixed:[RANK] //Fixed "
+                        "root rank.\n");
+        fprintf(stdout, "                              -k rotate       "
+                        "//Rotate root rank for"
+                        " each iteration.\n");
+    }
     fprintf(stdout, "  -h, --help                  print this help\n");
     fprintf(stdout, "  -v, --version               print version info\n");
     fprintf(stdout, "\n");
@@ -786,7 +831,7 @@ void print_only_header_nbc(int rank)
         fprintf(stdout, "%-*s", 10, "# Size");
         fprintf(stdout, "%*s", FIELD_WIDTH, "Overall(us)");
     } else {
-        fprintf(stdout, "%*s", FIELD_WIDTH, "Overall(us)");
+        fprintf(stdout, "%s", "# Overall(us)");
     }
 
     if (options.show_full) {
@@ -885,6 +930,49 @@ void print_only_header(int rank)
     fflush(stdout);
 }
 
+omb_mpi_init_data omb_mpi_init(int *argc, char ***argv)
+{
+    omb_mpi_init_data init_struct;
+#ifdef _ENABLE_MPI4_
+    init_struct.omb_shandle = MPI_SESSION_NULL;
+    MPI_Group wgroup = MPI_GROUP_NULL;
+#endif
+    init_struct.omb_comm = MPI_COMM_NULL;
+
+    if (1 == options.omb_enable_session) {
+#ifdef _ENABLE_MPI4_
+        {
+            MPI_CHECK(MPI_Session_init(MPI_INFO_NULL, MPI_ERRORS_RETURN,
+                                       &init_struct.omb_shandle));
+            MPI_CHECK(MPI_Group_from_session_pset(
+                init_struct.omb_shandle, OMB_MPI_SESSION_PSET_NAME, &wgroup));
+            MPI_CHECK(MPI_Comm_create_from_group(
+                wgroup, OMB_MPI_SESSION_GROUP_NAME, MPI_INFO_NULL,
+                MPI_ERRORS_RETURN, &init_struct.omb_comm));
+            MPI_CHECK(MPI_Group_free(&wgroup));
+            return init_struct;
+        }
+#endif
+    } else {
+        MPI_CHECK(MPI_Init(argc, argv));
+        init_struct.omb_comm = MPI_COMM_WORLD;
+        return init_struct;
+    }
+    return init_struct;
+}
+
+void omb_mpi_finalize(omb_mpi_init_data mpi_init)
+{
+    if (1 == options.omb_enable_session) {
+#ifdef _ENABLE_MPI4_
+        MPI_CHECK(MPI_Comm_free(&mpi_init.omb_comm));
+        MPI_CHECK(MPI_Session_finalize(&mpi_init.omb_shandle));
+#endif
+    } else {
+        MPI_CHECK(MPI_Finalize());
+    }
+}
+
 void check_mem_limit(int numprocs)
 {
     int rank = 0;
@@ -895,7 +983,8 @@ void check_mem_limit(int numprocs)
         options.subtype == NHBR_ALLTOALL || options.subtype == NBC_GATHER ||
         options.subtype == NBC_ALLTOALL || options.subtype == NBC_NHBR_GATHER ||
         options.subtype == NBC_NHBR_ALLTOALL ||
-        options.subtype == NBC_SCATTER) {
+        options.subtype == NBC_SCATTER || options.subtype == ALL_GATHER ||
+        options.subtype == NBC_ALL_GATHER) {
         if ((options.max_message_size * numprocs) > options.max_mem_limit) {
             options.max_message_size = options.max_mem_limit / numprocs;
             if (0 == rank) {
@@ -908,7 +997,9 @@ void check_mem_limit(int numprocs)
     } else if (options.subtype == REDUCE || options.subtype == BCAST ||
                options.subtype == NBC_REDUCE || options.subtype == NBC_BCAST ||
                options.subtype == REDUCE_SCATTER ||
-               options.subtype == NBC_REDUCE_SCATTER) {
+               options.subtype == NBC_REDUCE_SCATTER ||
+               options.subtype == ALL_REDUCE ||
+               options.subtype == NBC_ALL_REDUCE) {
         if (options.max_message_size > options.max_mem_limit) {
             if (0 == rank) {
                 fprintf(stderr,
@@ -1018,7 +1109,7 @@ void print_stats_nbc(int rank, int size, double overall_time, double cpu_time,
         fprintf(stdout, "%-*d", 10, size);
         fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, overall_time);
     } else {
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, overall_time);
+        fprintf(stdout, "%*.*f", 13, FLOAT_PRECISION, overall_time);
     }
 
     if (options.show_full) {
@@ -1095,6 +1186,18 @@ void print_stats_validate(int rank, int size, double avg_time, double min_time,
         fprintf(stdout, "\n");
     }
     fflush(stdout);
+}
+
+int omb_get_root_rank(int itr, size_t comm_size)
+{
+    if (OMB_ROOT_ROTATE_VAL != options.omb_root_rank) {
+        if (options.omb_root_rank >= comm_size) {
+            OMB_ERROR_EXIT(
+                "Root rank(\'-k\') cannot be more than number of processes");
+        }
+        return options.omb_root_rank;
+    }
+    return itr % comm_size;
 }
 
 void omb_populate_mpi_type_list(MPI_Datatype *mpi_type_list)
@@ -1210,7 +1313,8 @@ void set_buffer(void *buffer, enum accel_type type, int data, size_t size)
 }
 
 void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
-                           enum accel_type type, int iter, MPI_Datatype dtype)
+                           enum accel_type type, int iter, MPI_Datatype dtype,
+                           struct omb_buffer_sizes_t omb_buffer_sizes)
 {
     void *temp_r_buffer = NULL;
     void *temp_s_buffer = NULL;
@@ -1294,32 +1398,76 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
-                    set_buffer_dtype(s_buf, 1, size, rank, numprocs, type, iter,
-                                     dtype);
-                    set_buffer_dtype(r_buf, 0, size, rank, numprocs, type, iter,
-                                     dtype);
+                    if (0 == options.omb_enable_mpi_in_place) {
+                        set_buffer_dtype(s_buf, 1, size, rank, numprocs, type,
+                                         iter, dtype,
+                                         omb_buffer_sizes.sendbuf_size);
+                        set_buffer_dtype(r_buf, 0, size, rank, numprocs, type,
+                                         iter, dtype,
+                                         omb_buffer_sizes.recvbuf_size);
+                    } else {
+                        set_buffer_dtype(r_buf, 1, size, rank, numprocs, type,
+                                         iter, dtype,
+                                         omb_buffer_sizes.recvbuf_size);
+                    }
                 } break;
                 case GATHER:
                 case NBC_GATHER: {
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
-                    set_buffer_dtype(s_buf, 1, size, rank * numprocs, 1, type,
-                                     iter, dtype);
-                    if (0 == rank) {
-                        set_buffer_dtype(r_buf, 0, size, rank, numprocs, type,
-                                         iter, dtype);
+                    if (0 == options.omb_enable_mpi_in_place) {
+                        set_buffer_dtype(s_buf, 1, size, rank * numprocs, 1,
+                                         type, iter, dtype,
+                                         omb_buffer_sizes.sendbuf_size);
+                            set_buffer_dtype(r_buf, 0, size, rank, numprocs,
+                                             type, iter, dtype,
+                                             omb_buffer_sizes.recvbuf_size);
+                    } else {
+                        set_buffer_dtype(s_buf, 1, size, rank * numprocs, 1,
+                                         type, iter, dtype,
+                                         omb_buffer_sizes.sendbuf_size);
+                            set_buffer_dtype(r_buf, 0, size, rank * numprocs, 1,
+                                             type, iter, dtype,
+                                             omb_buffer_sizes.recvbuf_size);
                     }
                 } break;
-                case REDUCE:
-                case NBC_REDUCE: {
+                case ALL_GATHER:
+                case NBC_ALL_GATHER: {
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
-                    set_buffer_dtype_reduce(s_buf, 1, size, iter, options.accel,
-                                            dtype);
-                    set_buffer_dtype_reduce(r_buf, 0, size, iter, options.accel,
-                                            dtype);
+                    if (0 == options.omb_enable_mpi_in_place) {
+                        set_buffer_dtype(s_buf, 1, size, rank * numprocs, 1,
+                                         type, iter, dtype,
+                                         omb_buffer_sizes.sendbuf_size);
+                        if (0 == rank) {
+                            set_buffer_dtype(r_buf, 0, size, rank, numprocs,
+                                             type, iter, dtype,
+                                             omb_buffer_sizes.recvbuf_size);
+                        }
+                    } else {
+                        set_buffer_dtype(
+                            r_buf, 1, size, rank * numprocs, 1, type, iter,
+                            dtype, omb_buffer_sizes.recvbuf_size);
+                    }
+                } break;
+                case REDUCE:
+                case ALL_REDUCE:
+                case NBC_REDUCE:
+                case NBC_ALL_REDUCE: {
+                    int rank, numprocs;
+                    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+                    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
+                    if (0 == options.omb_enable_mpi_in_place) {
+                        set_buffer_dtype_reduce(s_buf, 1, size, iter,
+                                                options.accel, dtype);
+                        set_buffer_dtype_reduce(r_buf, 0, size, iter,
+                                                options.accel, dtype);
+                    } else {
+                        set_buffer_dtype_reduce(r_buf, 1, size, iter,
+                                                options.accel, dtype);
+                    }
                     break;
                 }
                 case SCATTER:
@@ -1327,22 +1475,33 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
-                    if (0 == rank) {
-                        set_buffer_dtype(s_buf, 1, size, rank, numprocs, type,
-                                         iter, dtype);
+                    if (0 == options.omb_enable_mpi_in_place) {
+                        set_buffer_dtype(s_buf, 1, size, 0, numprocs, type,
+                                         iter, dtype,
+                                         omb_buffer_sizes.sendbuf_size);
+                        set_buffer_dtype(r_buf, 0, size, rank * numprocs, 1,
+                                         type, iter, dtype,
+                                         omb_buffer_sizes.recvbuf_size);
+                    } else {
+                        set_buffer_dtype(r_buf, 1, size, 0, numprocs, type,
+                                         iter, dtype,
+                                         omb_buffer_sizes.recvbuf_size);
                     }
-                    set_buffer_dtype(r_buf, 0, size, rank * numprocs, 1, type,
-                                     iter, dtype);
                 } break;
                 case REDUCE_SCATTER:
                 case NBC_REDUCE_SCATTER: {
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
-                    set_buffer_dtype_reduce(s_buf, 1, size, iter, options.accel,
-                                            dtype);
-                    set_buffer_dtype_reduce(r_buf, 0, size / numprocs + 1, iter,
-                                            options.accel, dtype);
+                    if (0 == options.omb_enable_mpi_in_place) {
+                        set_buffer_dtype_reduce(s_buf, 1, size, iter,
+                                                options.accel, dtype);
+                        set_buffer_dtype_reduce(r_buf, 0, size / numprocs + 1,
+                                                iter, options.accel, dtype);
+                    } else {
+                        set_buffer_dtype_reduce(r_buf, 1, size, iter,
+                                                options.accel, dtype);
+                    }
                 } break;
                 case BCAST:
                 case NBC_BCAST: {
@@ -1351,10 +1510,10 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     if (0 == rank) {
                         set_buffer_dtype(s_buf, 1, size, 1, 1, type, iter,
-                                         dtype);
+                                         dtype, omb_buffer_sizes.sendbuf_size);
                     } else {
                         set_buffer_dtype(s_buf, 0, size, 1, 1, type, iter,
-                                         dtype);
+                                         dtype, omb_buffer_sizes.recvbuf_size);
                     }
                 } break;
                 default:
@@ -1408,45 +1567,35 @@ void set_buffer_dtype_reduce(void *buffer, int is_send_buf, size_t size,
 
 void omb_assign_to_type(void *buf, int pos, int val, MPI_Datatype dtype)
 {
-    switch (dtype) {
-        case MPI_CHAR:
-            ((char *)buf)[pos] =
-                (CHAR_VALIDATION_MULTIPLIER * (char)(val)) % CHAR_RANGE;
-            break;
-        case MPI_INT:
-            ((int *)buf)[pos] = (int)val * INT_VALIDATION_MULTIPLIER;
-            break;
-        case MPI_FLOAT:
-            ((float *)buf)[pos] = (float)val * FLOAT_VALIDATION_MULTIPLIER;
-            break;
-        default:
-            OMB_ERROR_EXIT("Invalid data type passed");
-            break;
-    }
+  if (MPI_CHAR == dtype) {
+    ((char *)buf)[pos] =
+        (CHAR_VALIDATION_MULTIPLIER * (char)(val)) % CHAR_RANGE;
+  } else if (MPI_INT == dtype) {
+    ((int *)buf)[pos] = (int)val * INT_VALIDATION_MULTIPLIER;
+  } else if (MPI_FLOAT == dtype) {
+    ((float *)buf)[pos] = (float)val * FLOAT_VALIDATION_MULTIPLIER;
+  } else {
+    OMB_ERROR_EXIT("Invalid data type passed");
+  }
 }
 
 int omb_get_num_elements(size_t size, MPI_Datatype dtype)
 {
-    switch (dtype) {
-        case MPI_CHAR:
-            return size / sizeof(ATOM_CTYPE_FOR_DMPI_CHAR);
-            break;
-        case MPI_FLOAT:
-            return size / sizeof(ATOM_CTYPE_FOR_DMPI_FLOAT);
-            break;
-        case MPI_INT:
-            return size / sizeof(ATOM_CTYPE_FOR_DMPI_INT);
-            break;
-        default:
-            OMB_ERROR_EXIT("Invalid datatype passed");
-            break;
-    }
+  if (MPI_CHAR == dtype) {
+    return size / sizeof(ATOM_CTYPE_FOR_DMPI_CHAR);
+  } else if (MPI_FLOAT == dtype) {
+    return size / sizeof(ATOM_CTYPE_FOR_DMPI_FLOAT);
+  } else if (MPI_INT == dtype) {
+    return size / sizeof(ATOM_CTYPE_FOR_DMPI_INT);
+  } else {
+    OMB_ERROR_EXIT("Invalid datatype passed");
+  }
     return -1;
 }
 
 void set_buffer_dtype(void *buffer, int is_send_buf, size_t size, int rank,
                       int num_procs, enum accel_type type, int iter,
-                      MPI_Datatype dtype)
+                      MPI_Datatype dtype, size_t buffer_size)
 {
     if (NULL == buffer) {
         return;
@@ -1455,15 +1604,33 @@ void set_buffer_dtype(void *buffer, int is_send_buf, size_t size, int rank,
     int num_elements = omb_get_num_elements(size, dtype);
     int i, j;
     int val = 0;
-    void *temp_buffer = malloc(size * num_procs);
+    void *temp_buffer = NULL;
+    int id = 0, com_size = 0;
 
-    if (is_send_buf) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &id);
+    MPI_Comm_size(MPI_COMM_WORLD, &com_size);
+    temp_buffer = malloc(buffer_size);
+    OMB_CHECK_NULL_AND_EXIT(temp_buffer, "Unable to allocate memory");
+
+    if (is_send_buf || GATHER == options.subtype ||
+        NBC_GATHER == options.subtype) {
         for (i = 0; i < num_procs; i++) {
             for (j = 0; j < num_elements; j++) {
                 val = (rank * num_procs + i +
                        ((iter + 1) * (rank * num_procs + 1) * (i + 1)));
-                omb_assign_to_type(temp_buffer, i * num_elements + j, val,
-                                   dtype);
+                if (1 == options.omb_enable_mpi_in_place &&
+                    (ALL_GATHER == options.subtype ||
+                     NBC_ALL_GATHER == options.subtype ||
+                     (GATHER == options.subtype && 0 == is_send_buf) ||
+                     (NBC_GATHER == options.subtype && 0 == is_send_buf))) {
+                    omb_assign_to_type(temp_buffer,
+                                       (id % com_size) * num_elements +
+                                           (i * num_elements + j),
+                                       val, dtype);
+                } else {
+                    omb_assign_to_type(temp_buffer, i * num_elements + j, val,
+                                       dtype);
+                }
             }
         }
     } else {
@@ -1473,20 +1640,20 @@ void set_buffer_dtype(void *buffer, int is_send_buf, size_t size, int rank,
     }
     switch (type) {
         case NONE:
-            memcpy((void *)buffer, (void *)temp_buffer, size * num_procs);
+            memcpy((void *)buffer, (void *)temp_buffer, buffer_size);
             break;
         case CUDA:
         case MANAGED:
 #ifdef _ENABLE_CUDA_
             CUDA_CHECK(cudaMemcpy((void *)buffer, (void *)temp_buffer,
-                                  size * num_procs, cudaMemcpyHostToDevice));
+                                  buffer_size, cudaMemcpyHostToDevice));
             CUDA_CHECK(cudaDeviceSynchronize());
 #endif
             break;
         case ROCM:
 #ifdef _ENABLE_ROCM_
             ROCM_CHECK(hipMemcpy((void *)buffer, (void *)temp_buffer,
-                                 size * num_procs, hipMemcpyHostToDevice));
+                                 buffer_size, hipMemcpyHostToDevice));
             ROCM_CHECK(hipDeviceSynchronize());
 #endif
             break;
@@ -1709,6 +1876,7 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
                       enum accel_type type, int iter, MPI_Datatype dtype)
 {
     void *temp_r_buf = NULL;
+    int numprocs = 0;
     int rank = 0;
 
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1769,29 +1937,32 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
                     j = (i % 100);
                     if (abs(((float *)temp_r_buf)[i] -
                             ((float *)expected_buffer)[i]) > ERROR_DELTA) {
+                        free(expected_buffer);
                         free(temp_r_buf);
                         return 1;
                     }
                 }
             } else if (memcmp(temp_r_buf, expected_buffer, num_elements)) {
+                free(expected_buffer);
                 free(temp_r_buf);
                 return 1;
             }
+            free(expected_buffer);
             free(temp_r_buf);
             return 0;
         } break;
         case COLLECTIVE:
             switch (options.subtype) {
                 case REDUCE:
-                case NBC_REDUCE: {
-                    int numprocs;
+                case ALL_REDUCE:
+                case NBC_REDUCE:
+                case NBC_ALL_REDUCE: {
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     return validate_reduction(r_buf, size, iter, numprocs,
                                               options.accel, dtype);
                 } break;
                 case ALLTOALL:
                 case NBC_ALLTOALL: {
-                    int numprocs, rank;
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
                     return validate_collective(r_buf, size, rank, numprocs,
@@ -1799,14 +1970,18 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
                 } break;
                 case GATHER:
                 case NBC_GATHER: {
-                    int numprocs;
+                    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
+                    return validate_collective(r_buf, size, 0, numprocs, type,
+                                               iter, dtype);
+                } break;
+                case ALL_GATHER:
+                case NBC_ALL_GATHER: {
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     return validate_collective(r_buf, size, 0, numprocs, type,
                                                iter, dtype);
                 } break;
                 case SCATTER:
                 case NBC_SCATTER: {
-                    int numprocs, rank;
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
                     return validate_collective(r_buf, size, rank, 1, type, iter,
@@ -1814,7 +1989,6 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
                 } break;
                 case REDUCE_SCATTER:
                 case NBC_REDUCE_SCATTER: {
-                    int numprocs;
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     return validate_reduction(r_buf, size, iter, numprocs,
                                               options.accel, dtype);
@@ -1904,14 +2078,14 @@ void set_buffer_nhbr_validation(void *s_buf, void *r_buf, int indegree,
         case OPENACC:
         case ROCM:
             OMB_ERROR_EXIT(
-                "Accelerators not yet supported for neighbor benchmarks.");
+                "Accelerators not yet supported for neighborhood benchmarks.");
             break;
     }
     free(temp_r_buf);
     free(temp_s_buf);
 }
 
-int omb_validate_neighbour_col(MPI_Comm comm, char *buffer, int indegree,
+int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
                                int outdegree, size_t size, enum accel_type type,
                                int iter, MPI_Datatype dtype)
 {
@@ -1961,38 +2135,31 @@ int omb_validate_neighbour_col(MPI_Comm comm, char *buffer, int indegree,
         case OPENACC:
         case ROCM:
             OMB_ERROR_EXIT(
-                "Accelerators not yet supported for neighbor benchmarks.");
+                "Accelerators not yet supported for neighborhood benchmarks.");
             break;
     }
     for (s = 0; s < omb_get_num_elements(size, dtype); s++) {
         for (l = 0; l < recv_numprocs; l++) {
             expected_value = (sources[l] + value1 + s + iter + 1);
-            switch (dtype) {
-                case MPI_CHAR:
-                    if (((char *)
-                             temp_r_buf)[l * omb_get_num_elements(size, dtype) +
-                                         s] !=
-                        (char)(CHAR_VALIDATION_MULTIPLIER * expected_value) %
-                            CHAR_RANGE) {
-                        errors = 1;
-                    }
-                    break;
-                case MPI_INT:
-                    if (((int *)
-                             temp_r_buf)[l * omb_get_num_elements(size, dtype) +
-                                         s] !=
-                        (int)expected_value * INT_VALIDATION_MULTIPLIER) {
-                        errors = 1;
-                    }
-                    break;
-                case MPI_FLOAT:
-                    if (((float *)
-                             temp_r_buf)[l * omb_get_num_elements(size, dtype) +
-                                         s] !=
-                        (float)expected_value * FLOAT_VALIDATION_MULTIPLIER) {
-                        errors = 1;
-                    }
-                    break;
+            if (MPI_CHAR == dtype) {
+              if (((char *)
+                       temp_r_buf)[l * omb_get_num_elements(size, dtype) + s] !=
+                  (char)(CHAR_VALIDATION_MULTIPLIER * expected_value) %
+                      CHAR_RANGE) {
+                errors = 1;
+              }
+            } else if (MPI_INT == dtype) {
+              if (((int *)
+                       temp_r_buf)[l * omb_get_num_elements(size, dtype) + s] !=
+                  (int)expected_value * INT_VALIDATION_MULTIPLIER) {
+                errors = 1;
+              }
+            } else if (MPI_FLOAT == dtype) {
+              if (((float *)
+                       temp_r_buf)[l * omb_get_num_elements(size, dtype) + s] !=
+                  (float)expected_value * FLOAT_VALIDATION_MULTIPLIER) {
+                errors = 1;
+              }
             }
         }
     }
@@ -2036,25 +2203,20 @@ int validate_reduce_scatter(void *buffer, size_t size, int *recvcounts,
     for (i = i; i < recvcounts[k]; i++) {
         j = (i % 100);
         val = (j + 1) * (iter + 1) * num_procs;
-        switch (dtype) {
-            case MPI_CHAR:
-                if (((char *)temp_buffer)[i] !=
-                    (char)(CHAR_VALIDATION_MULTIPLIER * val) % CHAR_RANGE) {
-                    errors = 1;
-                }
-                break;
-            case MPI_INT:
-                if (((int *)temp_buffer)[i] !=
-                    (int)val * INT_VALIDATION_MULTIPLIER) {
-                    errors = 1;
-                }
-                break;
-            case MPI_FLOAT:
-                if (((float *)temp_buffer)[i] !=
-                    (float)val * FLOAT_VALIDATION_MULTIPLIER) {
-                    errors = 1;
-                }
-                break;
+        if (MPI_CHAR == dtype) {
+          if (((char *)temp_buffer)[i] !=
+              (char)(CHAR_VALIDATION_MULTIPLIER * val) % CHAR_RANGE) {
+            errors = 1;
+          }
+        } else if (MPI_INT == dtype) {
+          if (((int *)temp_buffer)[i] != (int)val * INT_VALIDATION_MULTIPLIER) {
+            errors = 1;
+          }
+        } else if (MPI_FLOAT == dtype) {
+          if (((float *)temp_buffer)[i] !=
+              (float)val * FLOAT_VALIDATION_MULTIPLIER) {
+            errors = 1;
+          }
         }
     }
     free(expected_buffer);
@@ -2819,6 +2981,8 @@ int omb_get_local_rank()
 
     if ((str = getenv("MV2_COMM_WORLD_LOCAL_RANK")) != NULL) {
         local_rank = atoi(str);
+    } else if ((str = getenv("MVP_COMM_WORLD_LOCAL_RANK")) != NULL) {
+        local_rank = atoi(str);
     } else if ((str = getenv("OMPI_COMM_WORLD_LOCAL_RANK")) != NULL) {
         local_rank = atoi(str);
     } else if ((str = getenv("MPI_LOCALRANKID")) != NULL) {
@@ -3043,6 +3207,35 @@ double dummy_compute(double seconds, MPI_Request *request)
     test_time = do_compute_and_probe(seconds, request);
 
     return test_time;
+}
+
+void omb_scatter_offset_copy(void *buf, int root_rank, size_t size)
+{
+    switch (options.accel) {
+        case NONE:
+            memcpy(buf, buf + root_rank * size, size);
+            break;
+        case CUDA:
+        case MANAGED:
+#ifdef _ENABLE_CUDA_
+        {
+            CUDA_CHECK(cudaMemcpy((void *)buf, (void *)buf + root_rank * size,
+                                  size, cudaMemcpyDeviceToDevice));
+            CUDA_CHECK(cudaDeviceSynchronize());
+        }
+#endif
+        case ROCM:
+#ifdef _ENABLE_ROCM_
+        {
+            ROCM_CHECK(hipMemcpy((void *)buf, (void *)buf + root_rank * size,
+                                 size, hipMemcpyDeviceToDevice));
+            ROCM_CHECK(hipDeviceSynchronize());
+        }
+#endif
+        break;
+        default:
+            break;
+    }
 }
 
 #ifdef _ENABLE_CUDA_KERNEL_

@@ -1,7 +1,58 @@
+OSU Micro Benchmarks v7.2 (07/10/2023)
+
+* New Features & Enhancements
+    - Add MPI-4 session based initialization support to following benchmarks
+        * Point-to-point benchmarks supported
+            * osu_bibw, osu_bw, osu_mbw_mr, osu_latency, osu_multi_lat,
+            * osu_latency_mp, osu_latency_mt, osu_bw_persistent,
+            * osu_bibw_persistent, osu_latency_persistent
+        * Blocking benchmarks supported
+            * osu_allgather, osu_allgatherv, osu_alltoall, osu_allreduce,
+            * osu_alltoallv, osu_alltoallw, osu_bcast, osu_barrier, osu_gather,
+            * osu_gatherv, osu_reduce, osu_reduce_scatter, osu_scatter,
+            * osu_scatterv
+        * Non-Blocking benchmarks supported
+            * osu_iallgather, osu_iallgatherv, osu_iallreduce, osu_ialltoall,
+            * osu_ialltoallv, osu_ialltoallw, osu_ibcast, osu_ibarrier,
+            * osu_igather, osu_igatherv, osu_ireduce, osu_iscatter,
+            * osu_iscatterv, osu_ireduce_scatter
+        * Neighborhood benchmarks
+            * osu_neighbor_allgather, osu_neighbor_allgatherv,
+            * osu_neighbor_alltoall,osu_neighbor_alltoallv,
+            * osu_neighbor_alltoallw, osu_ineighbor_allgatherv,
+            * osu_ineighbor_allgatherv, osu_ineighbor_alltoall,
+            * osu_ineighbor_alltoallv, osu_ineighbor_alltoallw
+        * Startup benchmarks
+            * osu_init
+    - Add MPI_IN_PLACE support for following blocking and non-blocking
+      collectives
+        * Blocking benchmarks supported
+            * osu_allgather, osu_allgatherv, osu_alltoall, osu_allreduce,
+            * osu_alltoallv, osu_alltoallw, osu_gather, osu_gatherv, osu_reduce,
+            * osu_reduce_scatter, osu_scatter, osu_scatterv
+        * Non-Blocking benchmarks supported
+            * osu_iallgather, osu_iallgatherv, osu_iallreduce, osu_ialltoall,
+            * osu_ialltoallv, osu_ialltoallw, osu_igather, osu_igatherv,
+            * osu_ireduce, osu_iscatter, osu_iscatterv, osu_ireduce_scatter
+    - Add an option to set root rank for rooted blocking and non-blocking
+      collectives
+        * Blocking benchmarks supported
+            * osu_gather, osu_gatherv, osu_reduce, osu_scatter,
+            * osu_scatterv
+        * Non-Blocking benchmarks supported
+            * osu_igather, osu_igatherv, osu_ireduce, osu_iscatter,
+            * osu_iscatterv
+
+* Bug Fixes
+    - Fixed memory leak in point-to-point benchmarks when validation is enabled.
+        * Thanks to Shi Jin @Amazon for report and patch.
+    - Fixed missing '#' formatting bug in osu_ibarrier header.
+        * Thanks to Nick Hagerty @ORNL for report.
+
 OSU Micro Benchmarks v7.1 (04/06/2023)
 
 * New Features & Enhancements
-    - Add new blocking and non-blocking neighbor collective benchmarks with
+    - Add new blocking and non-blocking neighborhood collective benchmarks with
       support for CPU buffers.
         * Blocking benchmarks
           - osu_neighbor_allgather, osu_neighbor_allgatherv,

@@ -436,6 +436,7 @@ int process_options(int argc, char *argv[])
     int c, ret = PO_OKAY;
     int option_index = 0;
     char *graph_term_type = NULL;
+    char *root_rank_type = NULL;
     static struct option long_options[OMB_LONG_OPTIONS_ARRAY_SIZE];
 
     enable_accel_support();
@@ -465,6 +466,9 @@ int process_options(int argc, char *argv[])
             case GATHER:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, GATHER);
                 break;
+            case ALL_GATHER:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, ALL_GATHER);
+                break;
             case SCATTER:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, SCATTER);
                 break;
@@ -480,11 +484,14 @@ int process_options(int argc, char *argv[])
             case REDUCE:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, REDUCE);
                 break;
+            case ALL_REDUCE:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, ALL_REDUCE);
+                break;
             case REDUCE_SCATTER:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, REDUCE_SCATTER);
                 break;
-            case NBC:
-                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, NBC);
+            case NBC_BARRIER:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, NBC_BARRIER);
                 break;
             case NBC_ALLTOALL:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, NBC_ALLTOALL);
@@ -492,8 +499,14 @@ int process_options(int argc, char *argv[])
             case NBC_GATHER:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, NBC_GATHER);
                 break;
+            case NBC_ALL_GATHER:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, NBC_ALL_GATHER);
+                break;
             case NBC_REDUCE:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, NBC_REDUCE);
+                break;
+            case NBC_ALL_REDUCE:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, NBC_ALL_REDUCE);
                 break;
             case NBC_SCATTER:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, NBC_SCATTER);
@@ -528,10 +541,12 @@ int process_options(int argc, char *argv[])
         optstring = OMBOP__UPC;
     } else if (UPCXX == options.bench) {
         optstring = OMBOP__UPCXX;
+    } else if (STARTUP == options.bench && INIT == options.subtype) {
+        optstring = OMBOP__STARTUP__INIT;
     } else if (options.bench == ONE_SIDED) {
         int jchar = 0;
 
-        jchar = sprintf(&optstring_buf[jchar], "%s", "+:w:s:hvm:x:i:G:");
+        jchar = sprintf(&optstring_buf[jchar], "%s", "+:w:s:hvm:x:i:G:I");
         if (options.subtype == BW) {
             jchar += sprintf(&optstring_buf[jchar], "%s", "W:");
         }
@@ -585,6 +600,9 @@ int process_options(int argc, char *argv[])
     options.src = 'H';
     options.dst = 'H';
     options.omb_dtype_itr = 0;
+    options.omb_enable_session = 0;
+    options.omb_enable_mpi_in_place = 0;
+    options.omb_root_rank = 0;
 
     switch (options.subtype) {
         case BW:
@@ -605,22 +623,26 @@ int process_options(int argc, char *argv[])
         case LAT:
         case BARRIER:
         case GATHER:
+        case ALL_GATHER:
         case ALLTOALL:
         case NBC_ALLTOALL:
         case NBC_GATHER:
+        case NBC_ALL_GATHER:
         case NHBR_GATHER:
         case NHBR_ALLTOALL:
         case NBC_NHBR_GATHER:
         case NBC_NHBR_ALLTOALL:
         case NBC_REDUCE:
+        case NBC_ALL_REDUCE:
         case NBC_SCATTER:
         case NBC_BCAST:
         case REDUCE:
+        case ALL_REDUCE:
         case SCATTER:
         case BCAST:
         case REDUCE_SCATTER:
         case NBC_REDUCE_SCATTER:
-        case NBC:
+        case NBC_BARRIER:
             if (options.bench == COLLECTIVE) {
                 options.iterations = COLL_LOOP_SMALL;
                 options.skip = COLL_SKIP_SMALL;
@@ -953,6 +975,51 @@ int process_options(int argc, char *argv[])
                     options.omb_dtype_list[options.omb_dtype_itr++] = OMB_FLOAT;
                 }
                 break;
+            case 'I':
+#ifdef _ENABLE_MPI4_
+            {
+                options.omb_enable_session = 1;
+            }
+#else
+            {
+                bad_usage.message = "Pass \"--enable-mpi4\" while configuring "
+                                    "to enable MPI-4 support.";
+                bad_usage.opt = optopt;
+                return PO_BAD_USAGE;
+            }
+#endif
+            break;
+            case 'l':
+                options.omb_enable_mpi_in_place = 1;
+                break;
+            case 'k':
+                root_rank_type = strtok(optarg, ":");
+                if (NULL == root_rank_type) {
+                    bad_usage.message = "Please pass root rank rotate"
+                                        " types[fixed, rotate]\n";
+                    bad_usage.optarg = optarg;
+                    return PO_BAD_USAGE;
+                }
+                if (NULL != root_rank_type) {
+                    if (0 == strncasecmp(root_rank_type, "rotate", 6)) {
+                        options.omb_root_rank = OMB_ROOT_ROTATE_VAL;
+                    } else if (0 == strncasecmp(root_rank_type, "fixed", 5)) {
+                        root_rank_type = strtok(NULL, ":");
+                        if (NULL == root_rank_type) {
+                            bad_usage.message = "Please pass root node rank."
+                                                " E.g: -k fixed:1\n";
+                            bad_usage.optarg = optarg;
+                            return PO_BAD_USAGE;
+                        }
+                        options.omb_root_rank = atoi(root_rank_type);
+                    } else {
+                        bad_usage.message = "Invalid root rank rotate type."
+                                            " Valid types[fixed, rotate]\n";
+                        bad_usage.optarg = optarg;
+                        return PO_BAD_USAGE;
+                    }
+                }
+                break;
             case ':':
                 bad_usage.message = "Option Missing Required Argument";
                 bad_usage.opt = optopt;
@@ -979,8 +1046,9 @@ int process_options(int argc, char *argv[])
                 options.subtype == NHBR_GATHER ||
                 options.subtype == NBC_NHBR_ALLTOALL ||
                 options.subtype == NBC_NHBR_GATHER) {
-                fprintf(stderr, "Accelerators not yet supported for neighbour "
-                                "collective benchmarks.\n");
+                fprintf(stderr,
+                        "Accelerators not yet supported for neighborhood "
+                        "collective benchmarks.\n");
                 accel_enabled = 0;
                 return PO_BAD_USAGE;
             }

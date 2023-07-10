@@ -174,7 +174,7 @@ double calculate_and_print_stats(int rank, int size, int numprocs, double timer,
 
 enum mpi_req { MAX_REQ_NUM = 1000 };
 
-#define OMB_LONG_OPTIONS_ARRAY_SIZE     25
+#define OMB_LONG_OPTIONS_ARRAY_SIZE     28
 #define BW_LOOP_SMALL                   100
 #define BW_SKIP_SMALL                   10
 #define BW_LOOP_LARGE                   20
@@ -216,6 +216,7 @@ enum mpi_req { MAX_REQ_NUM = 1000 };
 #define MESSAGE_ALIGNMENT_MR            (1 << 12)
 #define OMB_NUM_DATATYPES               3
 #define OMB_DATATYPE_STR_MAX_LEN        128
+#define OMB_ROOT_ROTATE_VAL             -1
 
 enum po_ret_type {
     PO_CUDA_NOT_AVAIL,
@@ -230,30 +231,44 @@ enum accel_type { NONE, CUDA, OPENACC, MANAGED, ROCM };
 
 enum target_type { CPU, GPU, BOTH };
 
-enum benchmark_type { COLLECTIVE, PT2PT, ONE_SIDED, MBW_MR, OSHM, UPC, UPCXX };
+enum benchmark_type {
+    STARTUP,
+    COLLECTIVE,
+    PT2PT,
+    ONE_SIDED,
+    MBW_MR,
+    OSHM,
+    UPC,
+    UPCXX
+};
 
 enum test_subtype {
+    INIT,
     BW,
     LAT,
     LAT_MT,
     LAT_MP,
-    NBC,
     BARRIER,
     ALLTOALL,
     GATHER,
+    ALL_GATHER,
     REDUCE_SCATTER,
     NHBR_GATHER,
     NHBR_ALLTOALL,
+    NBC_BARRIER,
     NBC_REDUCE_SCATTER,
     NBC_ALLTOALL,
     NBC_GATHER,
+    NBC_ALL_GATHER,
     NBC_NHBR_GATHER,
     NBC_NHBR_ALLTOALL,
     NBC_REDUCE,
+    NBC_ALL_REDUCE,
     NBC_SCATTER,
     NBC_BCAST,
     SCATTER,
     REDUCE,
+    ALL_REDUCE,
     BCAST
 };
 
@@ -291,10 +306,10 @@ typedef struct omb_ddt_type_parameters {
     char filepath[OMB_DDT_FILE_PATH_MAX_LENGTH];
 } omb_ddt_type_parameters_t;
 
-/*Neighbourhood topology types*/
+/*Neighborhood topology types*/
 enum omb_nhbrhd_types_t { OMB_NHBRHD_TYPE_CART, OMB_NHBRHD_TYPE_GRAPH };
 
-/*Neighbourhood type parameters*/
+/*Neighborhood type parameters*/
 typedef struct omb_nhbrhd_type_parameters {
     int dim;
     int rad;
@@ -362,6 +377,9 @@ struct options_t {
     int omb_dtype_itr;
     enum omb_dtypes_t omb_dtype_list[OMB_NUM_DATATYPES];
     int papi_enabled;
+    int omb_enable_session;
+    int omb_enable_mpi_in_place;
+    int omb_root_rank;
 };
 
 struct bad_usage_t {

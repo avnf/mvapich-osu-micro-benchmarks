@@ -107,12 +107,14 @@ PROGRAMS = $(ncclpt2pt_PROGRAMS)
 am__osu_nccl_bibw_SOURCES_DIST = osu_nccl_bibw.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
 	../../util/osu_util_mpi.h ../../util/osu_util_nccl.c \
-	../../util/osu_util_nccl.h ../../util/kernel.cu
+	../../util/osu_util_nccl.h ../../util/osu_util_papi.c \
+	../../util/osu_util_papi.h ../../util/kernel.cu
 am__dirstamp = $(am__leading_dot)dirstamp
 @CUDA_KERNELS_TRUE@am__objects_1 = ../../util/kernel.$(OBJEXT)
 am__objects_2 = ../../util/osu_util.$(OBJEXT) \
 	../../util/osu_util_mpi.$(OBJEXT) \
-	../../util/osu_util_nccl.$(OBJEXT) $(am__objects_1)
+	../../util/osu_util_nccl.$(OBJEXT) \
+	../../util/osu_util_papi.$(OBJEXT) $(am__objects_1)
 am_osu_nccl_bibw_OBJECTS = osu_nccl_bibw.$(OBJEXT) $(am__objects_2)
 osu_nccl_bibw_OBJECTS = $(am_osu_nccl_bibw_OBJECTS)
 osu_nccl_bibw_LDADD = $(LDADD)
@@ -123,7 +125,8 @@ am__v_lt_1 =
 am__osu_nccl_bw_SOURCES_DIST = osu_nccl_bw.c ../../util/osu_util.c \
 	../../util/osu_util.h ../../util/osu_util_mpi.c \
 	../../util/osu_util_mpi.h ../../util/osu_util_nccl.c \
-	../../util/osu_util_nccl.h ../../util/kernel.cu
+	../../util/osu_util_nccl.h ../../util/osu_util_papi.c \
+	../../util/osu_util_papi.h ../../util/kernel.cu
 am_osu_nccl_bw_OBJECTS = osu_nccl_bw.$(OBJEXT) $(am__objects_2)
 osu_nccl_bw_OBJECTS = $(am_osu_nccl_bw_OBJECTS)
 osu_nccl_bw_LDADD = $(LDADD)
@@ -131,6 +134,7 @@ am__osu_nccl_latency_SOURCES_DIST = osu_nccl_latency.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_nccl_latency_OBJECTS = osu_nccl_latency.$(OBJEXT) \
 	$(am__objects_2)
@@ -155,6 +159,7 @@ am__depfiles_remade = ../../util/$(DEPDIR)/kernel.Po \
 	../../util/$(DEPDIR)/osu_util.Po \
 	../../util/$(DEPDIR)/osu_util_mpi.Po \
 	../../util/$(DEPDIR)/osu_util_nccl.Po \
+	../../util/$(DEPDIR)/osu_util_papi.Po \
 	./$(DEPDIR)/osu_nccl_bibw.Po ./$(DEPDIR)/osu_nccl_bw.Po \
 	./$(DEPDIR)/osu_nccl_latency.Po
 am__mv = mv -f
@@ -359,6 +364,7 @@ AM_CFLAGS = -I${top_srcdir}/c/util $(am__append_3)
 UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	$(am__append_1)
 @CUDA_KERNELS_TRUE@CLEANFILES = ../../util/kernel.cpp
 @BUILD_USE_PGI_TRUE@@CUDA_KERNELS_TRUE@AM_CXXFLAGS = --nvcchost --no_preincludes
@@ -366,11 +372,13 @@ UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
 osu_nccl_bw_SOURCES = osu_nccl_bw.c $(UTILITIES)
 osu_nccl_bibw_SOURCES = osu_nccl_bibw.c $(UTILITIES)
 osu_nccl_latency_SOURCES = osu_nccl_latency.c $(UTILITIES)
-@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_2) \
+@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = -I$(top_builddir)/../modules/nccl/build/lib \
+@EMBEDDED_BUILD_TRUE@	-lnccl $(am__append_2) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
 @EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/util \
-@EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include
+@EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include \
+@EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../modules/nccl/build/include
 
 all: all-am
 
@@ -466,6 +474,8 @@ clean-ncclpt2ptPROGRAMS:
 	../../util/$(DEPDIR)/$(am__dirstamp)
 ../../util/osu_util_nccl.$(OBJEXT): ../../util/$(am__dirstamp) \
 	../../util/$(DEPDIR)/$(am__dirstamp)
+../../util/osu_util_papi.$(OBJEXT): ../../util/$(am__dirstamp) \
+	../../util/$(DEPDIR)/$(am__dirstamp)
 ../../util/kernel.$(OBJEXT): ../../util/$(am__dirstamp) \
 	../../util/$(DEPDIR)/$(am__dirstamp)
 
@@ -492,6 +502,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_mpi.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_nccl.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_papi.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_bibw.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_bw.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_latency.Po@am__quote@ # am--include-marker
@@ -691,6 +702,7 @@ distclean: distclean-am
 	-rm -f ../../util/$(DEPDIR)/osu_util.Po
 	-rm -f ../../util/$(DEPDIR)/osu_util_mpi.Po
 	-rm -f ../../util/$(DEPDIR)/osu_util_nccl.Po
+	-rm -f ../../util/$(DEPDIR)/osu_util_papi.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_bibw.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_bw.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_latency.Po
@@ -743,6 +755,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ../../util/$(DEPDIR)/osu_util.Po
 	-rm -f ../../util/$(DEPDIR)/osu_util_mpi.Po
 	-rm -f ../../util/$(DEPDIR)/osu_util_nccl.Po
+	-rm -f ../../util/$(DEPDIR)/osu_util_papi.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_bibw.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_bw.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_latency.Po

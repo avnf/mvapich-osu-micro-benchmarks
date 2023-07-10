@@ -27,10 +27,13 @@ int errors_reduced = 0, local_errors = 0;
 int num_threads_sender = 1;
 typedef struct thread_tag {
     int id;
+    omb_mpi_init_data omb_init_h;
 } thread_tag_t;
 
 void *send_thread(void *arg);
 void *recv_thread(void *arg);
+omb_mpi_init_data omb_lat_mt_get_comm();
+void omb_lat_mt_session_finalize(omb_mpi_init_data omb_session_h);
 
 int main(int argc, char *argv[])
 {
@@ -39,6 +42,8 @@ int main(int argc, char *argv[])
     int po_ret = 0;
     pthread_t sr_threads[MAX_NUM_THREADS];
     thread_tag_t tags[MAX_NUM_THREADS];
+    MPI_Comm omb_comm = MPI_COMM_NULL;
+    omb_mpi_init_data omb_init_h;
 
     pthread_mutex_init(&finished_size_mutex, NULL);
     pthread_cond_init(&finished_size_cond, NULL);
@@ -60,14 +65,16 @@ int main(int argc, char *argv[])
         }
     }
 
+    omb_init_h = omb_lat_mt_get_comm();
+    omb_comm = omb_init_h.omb_comm;
     err = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
 
     if (err != MPI_SUCCESS) {
-        MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, 1));
+        MPI_CHECK(MPI_Abort(omb_comm, 1));
     }
 
-    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myid));
+    MPI_CHECK(MPI_Comm_size(omb_comm, &numprocs));
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &myid));
 
     if (0 == myid) {
         switch (po_ret) {
@@ -85,7 +92,7 @@ int main(int argc, char *argv[])
                 break;
             case PO_VERSION_MESSAGE:
                 print_version_message(myid);
-                MPI_CHECK(MPI_Finalize());
+                omb_lat_mt_session_finalize(omb_init_h);
                 exit(EXIT_SUCCESS);
             case PO_OKAY:
                 break;
@@ -96,11 +103,11 @@ int main(int argc, char *argv[])
         case PO_CUDA_NOT_AVAIL:
         case PO_OPENACC_NOT_AVAIL:
         case PO_BAD_USAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_lat_mt_session_finalize(omb_init_h);
             exit(EXIT_FAILURE);
         case PO_HELP_MESSAGE:
         case PO_VERSION_MESSAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_lat_mt_session_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_OKAY:
             break;
@@ -111,7 +118,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
-        MPI_CHECK(MPI_Finalize());
+        omb_lat_mt_session_finalize(omb_init_h);
 
         return EXIT_FAILURE;
     }
@@ -123,7 +130,7 @@ int main(int argc, char *argv[])
                     " when validation is enabled. Use option -t to set\n");
         }
 
-        MPI_CHECK(MPI_Finalize());
+        omb_lat_mt_session_finalize(omb_init_h);
 
         return EXIT_FAILURE;
     }
@@ -141,7 +148,7 @@ int main(int argc, char *argv[])
                     "MPI_Init_thread must return MPI_THREAD_MULTIPLE!\n");
         }
 
-        MPI_CHECK(MPI_Finalize());
+        omb_lat_mt_session_finalize(omb_init_h);
 
         return EXIT_FAILURE;
     }
@@ -161,6 +168,7 @@ int main(int argc, char *argv[])
 
         for (i = 0; i < num_threads_sender; i++) {
             tags[i].id = i;
+            tags[i].omb_init_h = omb_init_h;
             pthread_create(&sr_threads[i], NULL, send_thread, &tags[i]);
         }
         for (i = 0; i < num_threads_sender; i++) {
@@ -169,6 +177,7 @@ int main(int argc, char *argv[])
     } else {
         for (i = 0; i < options.num_threads; i++) {
             tags[i].id = i;
+            tags[i].omb_init_h = omb_init_h;
             pthread_create(&sr_threads[i], NULL, recv_thread, &tags[i]);
         }
 
@@ -177,7 +186,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    MPI_CHECK(MPI_Finalize());
+    omb_lat_mt_session_finalize(omb_init_h);
 
     return EXIT_SUCCESS;
 }
@@ -196,11 +205,14 @@ void *recv_thread(void *arg)
     int mpi_type_itr = 0, mpi_type_size = 0, mpi_type_name_length = 0;
     char mpi_type_name_str[OMB_DATATYPE_STR_MAX_LEN];
     MPI_Datatype mpi_type_list[OMB_NUM_DATATYPES];
+    MPI_Comm omb_comm = MPI_COMM_NULL;
+    struct omb_buffer_sizes_t omb_buffer_sizes;
 
     thread_id = (thread_tag_t *)arg;
     val = thread_id->id;
 
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myid));
+    omb_comm = thread_id->omb_init_h.omb_comm;
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &myid));
     omb_populate_mpi_type_list(mpi_type_list);
 
     if (NONE != options.accel && init_accel()) {
@@ -243,7 +255,7 @@ void *recv_thread(void *arg)
             pthread_mutex_lock(&finished_size_mutex);
 
             if (finished_size == options.num_threads) {
-                MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+                MPI_CHECK(MPI_Barrier(omb_comm));
 
                 finished_size = 1;
 
@@ -275,19 +287,20 @@ void *recv_thread(void *arg)
                  i += options.num_threads) {
                 if (options.validate) {
                     set_buffer_validation(s_buf, r_buf, size, options.accel,
-                                          (i - val), omb_curr_datatype);
+                                          (i - val), omb_curr_datatype,
+                                          omb_buffer_sizes);
                 }
                 for (j = 0; j <= options.warmup_validation; j++) {
                     if (options.sender_thread > 1) {
                         MPI_Recv(r_buf, num_elements, omb_curr_datatype, 0, i,
-                                 MPI_COMM_WORLD, &reqstat[val]);
+                                 omb_comm, &reqstat[val]);
                         MPI_Send(s_buf, num_elements, omb_curr_datatype, 0, i,
-                                 MPI_COMM_WORLD);
+                                 omb_comm);
                     } else {
                         MPI_Recv(r_buf, num_elements, omb_curr_datatype, 0, 1,
-                                 MPI_COMM_WORLD, &reqstat[val]);
+                                 omb_comm, &reqstat[val]);
                         MPI_Send(s_buf, num_elements, omb_curr_datatype, 0, 2,
-                                 MPI_COMM_WORLD);
+                                 omb_comm);
                     }
                 }
                 if (options.validate) {
@@ -300,7 +313,7 @@ void *recv_thread(void *arg)
             iter++;
             if (options.validate) {
                 MPI_CHECK(MPI_Allreduce(&local_errors, &errors_reduced, 1,
-                                        MPI_INT, MPI_SUM, MPI_COMM_WORLD));
+                                        MPI_INT, MPI_SUM, omb_comm));
                 if (errors_reduced != 0) {
                     break;
                 }
@@ -331,10 +344,13 @@ void *send_thread(void *arg)
     MPI_Datatype mpi_type_list[OMB_NUM_DATATYPES];
     omb_graph_options_t omb_graph_options;
     omb_graph_data_t *omb_graph_data = NULL;
+    MPI_Comm omb_comm = MPI_COMM_NULL;
+    struct omb_buffer_sizes_t omb_buffer_sizes;
 
     val = thread_id->id;
 
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myid));
+    omb_comm = thread_id->omb_init_h.omb_comm;
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &myid));
     omb_populate_mpi_type_list(mpi_type_list);
 
     if (NONE != options.accel && init_accel()) {
@@ -377,7 +393,7 @@ void *send_thread(void *arg)
             pthread_mutex_lock(&finished_size_sender_mutex);
 
             if (finished_size_sender == num_threads_sender) {
-                MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+                MPI_CHECK(MPI_Barrier(omb_comm));
 
                 finished_size_sender = 1;
 
@@ -412,7 +428,8 @@ void *send_thread(void *arg)
                  i += num_threads_sender) {
                 if (options.validate) {
                     set_buffer_validation(s_buf, r_buf, size, options.accel,
-                                          (i - val), omb_curr_datatype);
+                                          (i - val), omb_curr_datatype,
+                                          omb_buffer_sizes);
                 }
 
                 for (j = 0; j <= options.warmup_validation; j++) {
@@ -426,18 +443,16 @@ void *send_thread(void *arg)
 
                     if (options.sender_thread > 1) {
                         MPI_CHECK(MPI_Send(s_buf, num_elements,
-                                           omb_curr_datatype, 1, i,
-                                           MPI_COMM_WORLD));
+                                           omb_curr_datatype, 1, i, omb_comm));
                         MPI_CHECK(MPI_Recv(r_buf, num_elements,
-                                           omb_curr_datatype, 1, i,
-                                           MPI_COMM_WORLD, &reqstat[val]));
+                                           omb_curr_datatype, 1, i, omb_comm,
+                                           &reqstat[val]));
                     } else {
                         MPI_CHECK(MPI_Send(s_buf, num_elements,
-                                           omb_curr_datatype, 1, 1,
-                                           MPI_COMM_WORLD));
+                                           omb_curr_datatype, 1, 1, omb_comm));
                         MPI_CHECK(MPI_Recv(r_buf, num_elements,
-                                           omb_curr_datatype, 1, 2,
-                                           MPI_COMM_WORLD, &reqstat[val]));
+                                           omb_curr_datatype, 1, 2, omb_comm,
+                                           &reqstat[val]));
                     }
 
                     if (i >= options.skip && j == options.warmup_validation) {
@@ -457,7 +472,7 @@ void *send_thread(void *arg)
 
             if (options.validate) {
                 MPI_CHECK(MPI_Allreduce(&local_errors, &errors_reduced, 1,
-                                        MPI_INT, MPI_SUM, MPI_COMM_WORLD));
+                                        MPI_INT, MPI_SUM, omb_comm));
             }
 
             pthread_barrier_wait(&sender_barrier);
@@ -508,4 +523,48 @@ void *send_thread(void *arg)
     return 0;
 }
 
+omb_mpi_init_data omb_lat_mt_get_comm()
+{
+    omb_mpi_init_data init_struct;
+#ifdef _ENABLE_MPI4_
+    const char mt_key[] = "thread_level";
+    const char mt_value[] = "MPI_THREAD_MULTIPLE";
+    MPI_Info sinfo = MPI_INFO_NULL;
+    init_struct.omb_shandle = MPI_SESSION_NULL;
+    MPI_Group wgroup = MPI_GROUP_NULL;
+#endif
+    init_struct.omb_comm = MPI_COMM_NULL;
+
+    if (1 == options.omb_enable_session) {
+#ifdef _ENABLE_MPI4_
+        {
+            MPI_Info_create(&sinfo);
+            MPI_Info_set(sinfo, mt_key, mt_value);
+            MPI_CHECK(MPI_Session_init(sinfo, MPI_ERRORS_RETURN,
+                                       &init_struct.omb_shandle));
+            MPI_CHECK(MPI_Group_from_session_pset(
+                init_struct.omb_shandle, OMB_MPI_SESSION_PSET_NAME, &wgroup));
+            MPI_CHECK(MPI_Comm_create_from_group(
+                wgroup, OMB_MPI_SESSION_GROUP_NAME, MPI_INFO_NULL,
+                MPI_ERRORS_RETURN, &init_struct.omb_comm));
+            MPI_CHECK(MPI_Group_free(&wgroup));
+            return init_struct;
+        }
+#endif
+    } else {
+        init_struct.omb_comm = MPI_COMM_WORLD;
+        return init_struct;
+    }
+    return init_struct;
+}
+
+void omb_lat_mt_session_finalize(omb_mpi_init_data omb_session_h)
+{
+    if (1 == options.omb_enable_session) {
+#ifdef _ENABLE_MPI4_
+        MPI_CHECK(MPI_Comm_free(&omb_session_h.omb_comm));
+        MPI_CHECK(MPI_Session_finalize(&omb_session_h.omb_shandle));
+#endif
+    }
+}
 /* vi: set sw=4 sts=4 tw=80: */

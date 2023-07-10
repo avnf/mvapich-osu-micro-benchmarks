@@ -20,6 +20,7 @@ int main(int argc, char *argv[])
     char *sendbuf = NULL, *recvbuf = NULL;
     int *rdispls = NULL, *recvcounts = NULL, *sdispls = NULL,
         *sendcounts = NULL;
+    void *sendbuf_warmup = NULL, *recvbuf_warmup = NULL;
     int po_ret;
     size_t bufsize;
     omb_graph_options_t omb_graph_options;
@@ -33,6 +34,9 @@ int main(int argc, char *argv[])
     int mpi_type_itr = 0, mpi_type_size = 0, mpi_type_name_length = 0;
     char mpi_type_name_str[OMB_DATATYPE_STR_MAX_LEN];
     MPI_Datatype mpi_type_list[OMB_NUM_DATATYPES];
+    MPI_Comm omb_comm = MPI_COMM_NULL;
+    omb_mpi_init_data omb_init_h;
+    struct omb_buffer_sizes_t omb_buffer_sizes;
 
     set_header(HEADER);
     set_benchmark_name("osu_alltoallv");
@@ -46,23 +50,27 @@ int main(int argc, char *argv[])
         }
     }
 
-    MPI_CHECK(MPI_Init(&argc, &argv));
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
-    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
+    omb_init_h = omb_mpi_init(&argc, &argv);
+    omb_comm = omb_init_h.omb_comm;
+    if (MPI_COMM_NULL == omb_comm) {
+        OMB_ERROR_EXIT("Cant create communicator");
+    }
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &rank));
+    MPI_CHECK(MPI_Comm_size(omb_comm, &numprocs));
 
     omb_graph_options_init(&omb_graph_options);
     switch (po_ret) {
         case PO_BAD_USAGE:
             print_bad_usage_message(rank);
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_FAILURE);
         case PO_HELP_MESSAGE:
             print_help_message(rank);
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_VERSION_MESSAGE:
             print_version_message(rank);
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_OKAY:
             break;
@@ -72,47 +80,56 @@ int main(int argc, char *argv[])
         if (rank == 0) {
             fprintf(stderr, "This test requires at least two processes\n");
         }
-        MPI_CHECK(MPI_Finalize());
+        omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
     check_mem_limit(numprocs);
     if (allocate_memory_coll((void **)&recvcounts, numprocs * sizeof(int),
                              NONE)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
-        MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
     }
     if (allocate_memory_coll((void **)&sendcounts, numprocs * sizeof(int),
                              NONE)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
-        MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
     }
 
     if (allocate_memory_coll((void **)&rdispls, numprocs * sizeof(int), NONE)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
-        MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
     }
     if (allocate_memory_coll((void **)&sdispls, numprocs * sizeof(int), NONE)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
-        MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
     }
 
     bufsize = options.max_message_size * numprocs;
     if (allocate_memory_coll((void **)&sendbuf, bufsize, options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
-        MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
     }
     set_buffer(sendbuf, options.accel, 1, bufsize);
+    sendbuf_warmup = sendbuf;
+    omb_buffer_sizes.sendbuf_size = bufsize;
 
     if (allocate_memory_coll((void **)&recvbuf, bufsize, options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
-        MPI_CHECK(MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE));
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
     }
     set_buffer(recvbuf, options.accel, 0, bufsize);
+    omb_buffer_sizes.recvbuf_size = bufsize;
+    if (allocate_memory_coll((void **)&recvbuf_warmup, bufsize,
+                             options.accel)) {
+        fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
+    }
+    set_buffer(recvbuf_warmup, options.accel, 0, bufsize);
 
     print_preamble(rank);
     omb_papi_init(&papi_eventset);
 
-    MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+    MPI_CHECK(MPI_Barrier(omb_comm));
     for (mpi_type_itr = 0; mpi_type_itr < options.omb_dtype_itr;
          mpi_type_itr++) {
         MPI_CHECK(MPI_Type_size(mpi_type_list[mpi_type_itr], &mpi_type_size));
@@ -139,7 +156,7 @@ int main(int argc, char *argv[])
                                num_elements) *
                 mpi_type_size;
             num_elements = omb_ddt_get_size(num_elements);
-            MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+            MPI_CHECK(MPI_Barrier(omb_comm));
             disp = 0;
             for (i = 0; i < numprocs; i++) {
                 recvcounts[i] = num_elements;
@@ -150,7 +167,7 @@ int main(int argc, char *argv[])
             }
             omb_graph_allocate_and_get_data_buffer(
                 &omb_graph_data, &omb_graph_options, size, options.iterations);
-            MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+            MPI_CHECK(MPI_Barrier(omb_comm));
             timer = 0.0;
             for (i = 0; i < options.iterations + options.skip; i++) {
                 if (i == options.skip) {
@@ -158,26 +175,30 @@ int main(int argc, char *argv[])
                 }
                 if (options.validate) {
                     set_buffer_validation(sendbuf, recvbuf, size, options.accel,
-                                          i, omb_curr_datatype);
-                    for (j = 0; j < options.warmup_validation; j++) {
-                        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
-                        MPI_CHECK(MPI_Alltoallv(
-                            sendbuf, sendcounts, sdispls, omb_curr_datatype,
-                            recvbuf, recvcounts, rdispls, omb_curr_datatype,
-                            MPI_COMM_WORLD));
+                                          i, omb_curr_datatype,
+                                          omb_buffer_sizes);
+                    if (1 == options.omb_enable_mpi_in_place) {
+                        sendbuf = MPI_IN_PLACE;
                     }
-                    MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+                    for (j = 0; j < options.warmup_validation; j++) {
+                        MPI_CHECK(MPI_Barrier(omb_comm));
+                        MPI_CHECK(MPI_Alltoallv(
+                            sendbuf_warmup, sendcounts, sdispls,
+                            omb_curr_datatype, recvbuf_warmup, recvcounts,
+                            rdispls, omb_curr_datatype, omb_comm));
+                    }
+                    MPI_CHECK(MPI_Barrier(omb_comm));
                 }
 
                 t_start = MPI_Wtime();
 
-                MPI_CHECK(MPI_Alltoallv(
-                    sendbuf, sendcounts, sdispls, omb_curr_datatype, recvbuf,
-                    recvcounts, rdispls, omb_curr_datatype, MPI_COMM_WORLD));
+                MPI_CHECK(MPI_Alltoallv(sendbuf, sendcounts, sdispls,
+                                        omb_curr_datatype, recvbuf, recvcounts,
+                                        rdispls, omb_curr_datatype, omb_comm));
 
                 t_stop = MPI_Wtime();
 
-                MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+                MPI_CHECK(MPI_Barrier(omb_comm));
 
                 if (options.validate) {
                     local_errors +=
@@ -198,16 +219,16 @@ int main(int argc, char *argv[])
             latency = (double)(timer * 1e6) / options.iterations;
 
             MPI_CHECK(MPI_Reduce(&latency, &min_time, 1, MPI_DOUBLE, MPI_MIN, 0,
-                                 MPI_COMM_WORLD));
+                                 omb_comm));
             MPI_CHECK(MPI_Reduce(&latency, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0,
-                                 MPI_COMM_WORLD));
+                                 omb_comm));
             MPI_CHECK(MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0,
-                                 MPI_COMM_WORLD));
+                                 omb_comm));
             avg_time = avg_time / numprocs;
 
             if (options.validate) {
                 MPI_CHECK(MPI_Allreduce(&local_errors, &errors, 1, MPI_INT,
-                                        MPI_SUM, MPI_COMM_WORLD));
+                                        MPI_SUM, omb_comm));
             }
 
             if (options.validate) {
@@ -221,7 +242,7 @@ int main(int argc, char *argv[])
             }
             omb_ddt_append_stats(omb_ddt_transmit_size);
             omb_ddt_free(&omb_curr_datatype);
-            MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+            MPI_CHECK(MPI_Barrier(omb_comm));
 
             if (0 != errors) {
                 break;
@@ -239,10 +260,10 @@ int main(int argc, char *argv[])
     free_buffer(sdispls, NONE);
     free_buffer(recvcounts, NONE);
     free_buffer(sendcounts, NONE);
-    free_buffer(sendbuf, options.accel);
+    free_buffer(sendbuf_warmup, options.accel);
+    free_buffer(recvbuf_warmup, options.accel);
     free_buffer(recvbuf, options.accel);
-
-    MPI_CHECK(MPI_Finalize());
+    omb_mpi_finalize(omb_init_h);
 
     if (NONE != options.accel) {
         if (cleanup_accel()) {

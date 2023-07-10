@@ -23,6 +23,8 @@ int main(int argc, char *argv[])
     int papi_eventset = OMB_PAPI_NULL;
     options.bench = COLLECTIVE;
     options.subtype = BARRIER;
+    MPI_Comm omb_comm = MPI_COMM_NULL;
+    omb_mpi_init_data omb_init_h;
 
     set_header(HEADER);
     set_benchmark_name("osu_barrier");
@@ -37,23 +39,27 @@ int main(int argc, char *argv[])
 
     options.show_size = 0;
 
-    MPI_CHECK(MPI_Init(&argc, &argv));
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
-    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
+    omb_init_h = omb_mpi_init(&argc, &argv);
+    omb_comm = omb_init_h.omb_comm;
+    if (MPI_COMM_NULL == omb_comm) {
+        OMB_ERROR_EXIT("Cant create communicator");
+    }
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &rank));
+    MPI_CHECK(MPI_Comm_size(omb_comm, &numprocs));
 
     omb_graph_options_init(&omb_graph_options);
     switch (po_ret) {
         case PO_BAD_USAGE:
             print_bad_usage_message(rank);
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_FAILURE);
         case PO_HELP_MESSAGE:
             print_help_message(rank);
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_VERSION_MESSAGE:
             print_version_message(rank);
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_OKAY:
             break;
@@ -64,7 +70,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "This test requires at least two processes\n");
         }
 
-        MPI_CHECK(MPI_Finalize());
+        omb_mpi_finalize(omb_init_h);
 
         return EXIT_FAILURE;
     }
@@ -73,6 +79,7 @@ int main(int argc, char *argv[])
     omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_options,
                                            1, options.iterations);
     print_preamble(rank);
+    print_only_header(rank);
     omb_papi_init(&papi_eventset);
 
     timer = 0.0;
@@ -82,7 +89,7 @@ int main(int argc, char *argv[])
             omb_papi_start(&papi_eventset);
         }
         t_start = MPI_Wtime();
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
         t_stop = MPI_Wtime();
 
         if (i >= options.skip) {
@@ -94,17 +101,17 @@ int main(int argc, char *argv[])
         }
     }
 
-    MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+    MPI_CHECK(MPI_Barrier(omb_comm));
     omb_papi_stop_and_print(&papi_eventset, 0);
 
     latency = (timer * 1e6) / options.iterations;
 
-    MPI_CHECK(MPI_Reduce(&latency, &min_time, 1, MPI_DOUBLE, MPI_MIN, 0,
-                         MPI_COMM_WORLD));
-    MPI_CHECK(MPI_Reduce(&latency, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0,
-                         MPI_COMM_WORLD));
-    MPI_CHECK(MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0,
-                         MPI_COMM_WORLD));
+    MPI_CHECK(
+        MPI_Reduce(&latency, &min_time, 1, MPI_DOUBLE, MPI_MIN, 0, omb_comm));
+    MPI_CHECK(
+        MPI_Reduce(&latency, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, omb_comm));
+    MPI_CHECK(
+        MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0, omb_comm));
     avg_time = avg_time / numprocs;
 
     print_stats(rank, 0, avg_time, min_time, max_time);
@@ -115,7 +122,7 @@ int main(int argc, char *argv[])
         omb_graph_free_data_buffers(&omb_graph_options);
     }
     omb_papi_free(&papi_eventset);
-    MPI_CHECK(MPI_Finalize());
+    omb_mpi_finalize(omb_init_h);
 
     return EXIT_SUCCESS;
 }

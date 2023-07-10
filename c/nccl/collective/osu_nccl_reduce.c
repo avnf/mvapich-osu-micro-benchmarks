@@ -109,25 +109,12 @@ int main(int argc, char *argv[])
 
         timer = 0.0;
         for (i = 0; i < options.iterations + options.skip; i++) {
-            if (options.validate) {
-                set_buffer_float(sendbuf, 1, size, i, options.accel);
-                if (rank == 0) {
-                    set_buffer_float(recvbuf, 0, size, i, options.accel);
-                }
-                MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
-            }
             t_start = MPI_Wtime();
             NCCL_CHECK(ncclReduce(sendbuf, recvbuf, size, ncclFloat, ncclSum, 0,
                                   nccl_comm, nccl_stream));
             CUDA_STREAM_SYNCHRONIZE(nccl_stream);
             t_stop = MPI_Wtime();
 
-            if (rank == 0) {
-                if (options.validate) {
-                    errors += validate_reduction(recvbuf, size, i, numprocs,
-                                                 options.accel);
-                }
-            }
             if (i >= options.skip) {
                 timer += t_stop - t_start;
             }
@@ -146,12 +133,7 @@ int main(int argc, char *argv[])
                              MPI_COMM_WORLD));
         avg_time = avg_time / numprocs;
 
-        if (options.validate)
-            print_stats_validate(rank, size * sizeof(float), avg_time, min_time,
-                                 max_time, errors);
-        else
-            print_stats(rank, size * sizeof(float), avg_time, min_time,
-                        max_time);
+        print_stats(rank, size * sizeof(float), avg_time, min_time, max_time);
 
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
     }

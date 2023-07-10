@@ -104,25 +104,6 @@ int main(int argc, char *argv[])
 
         rank_offset = size * 1;
         for (i = 0; i < options.iterations + options.skip; i++) {
-            if (options.validate) {
-                set_buffer_validation(sendbuf, recvbuf, size, options.accel, i);
-                for (j = 0; j < options.warmup_validation; j++) {
-                    MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
-                    NCCL_CHECK(ncclGroupStart());
-                    for (proc = 0; proc < numprocs; proc++) {
-                        NCCL_CHECK(
-                            ncclSend((char *)sendbuf + proc * rank_offset, size,
-                                     ncclChar, proc, nccl_comm, nccl_stream));
-                        NCCL_CHECK(
-                            ncclRecv((char *)recvbuf + proc * rank_offset, size,
-                                     ncclChar, proc, nccl_comm, nccl_stream));
-                    }
-                    NCCL_CHECK(ncclGroupEnd());
-                    CUDA_STREAM_SYNCHRONIZE(nccl_stream);
-                }
-                MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
-            }
-
             t_start = MPI_Wtime();
             NCCL_CHECK(ncclGroupStart());
             for (proc = 0; proc < numprocs; proc++) {
@@ -135,11 +116,6 @@ int main(int argc, char *argv[])
             CUDA_STREAM_SYNCHRONIZE(nccl_stream);
             t_stop = MPI_Wtime();
             MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
-
-            if (options.validate) {
-                local_errors +=
-                    validate_data(recvbuf, size, numprocs, options.accel, i);
-            }
 
             if (i >= options.skip) {
                 timer += t_stop - t_start;
@@ -155,17 +131,7 @@ int main(int argc, char *argv[])
                              MPI_COMM_WORLD));
         avg_time = avg_time / numprocs;
 
-        if (options.validate) {
-            MPI_CHECK(MPI_Allreduce(&local_errors, &errors, 1, MPI_INT, MPI_SUM,
-                                    MPI_COMM_WORLD));
-        }
-
-        if (options.validate) {
-            print_stats_validate(rank, size * sizeof(char), avg_time, min_time,
-                                 max_time, errors);
-        } else {
-            print_stats(rank, size, avg_time, min_time, max_time);
-        }
+        print_stats(rank, size, avg_time, min_time, max_time);
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
         if (0 != errors) {
@@ -185,14 +151,6 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Error cleaning up device\n");
             exit(EXIT_FAILURE);
         }
-    }
-
-    if (0 != errors && options.validate && 0 == rank) {
-        fprintf(stdout,
-                "DATA VALIDATION ERROR: %s exited with status %d on"
-                " message size %d.\n",
-                argv[0], EXIT_FAILURE, size);
-        exit(EXIT_FAILURE);
     }
 
     return EXIT_SUCCESS;

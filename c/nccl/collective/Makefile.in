@@ -110,12 +110,14 @@ am__osu_nccl_allgather_SOURCES_DIST = osu_nccl_allgather.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am__dirstamp = $(am__leading_dot)dirstamp
 @CUDA_KERNELS_TRUE@am__objects_1 = ../../util/kernel.$(OBJEXT)
 am__objects_2 = ../../util/osu_util.$(OBJEXT) \
 	../../util/osu_util_mpi.$(OBJEXT) \
-	../../util/osu_util_nccl.$(OBJEXT) $(am__objects_1)
+	../../util/osu_util_nccl.$(OBJEXT) \
+	../../util/osu_util_papi.$(OBJEXT) $(am__objects_1)
 am_osu_nccl_allgather_OBJECTS = osu_nccl_allgather.$(OBJEXT) \
 	$(am__objects_2)
 osu_nccl_allgather_OBJECTS = $(am_osu_nccl_allgather_OBJECTS)
@@ -128,6 +130,7 @@ am__osu_nccl_allreduce_SOURCES_DIST = osu_nccl_allreduce.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_nccl_allreduce_OBJECTS = osu_nccl_allreduce.$(OBJEXT) \
 	$(am__objects_2)
@@ -137,6 +140,7 @@ am__osu_nccl_alltoall_SOURCES_DIST = osu_nccl_alltoall.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_nccl_alltoall_OBJECTS = osu_nccl_alltoall.$(OBJEXT) \
 	$(am__objects_2)
@@ -146,6 +150,7 @@ am__osu_nccl_bcast_SOURCES_DIST = osu_nccl_bcast.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_nccl_bcast_OBJECTS = osu_nccl_bcast.$(OBJEXT) $(am__objects_2)
 osu_nccl_bcast_OBJECTS = $(am_osu_nccl_bcast_OBJECTS)
@@ -154,6 +159,7 @@ am__osu_nccl_reduce_SOURCES_DIST = osu_nccl_reduce.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_nccl_reduce_OBJECTS = osu_nccl_reduce.$(OBJEXT) \
 	$(am__objects_2)
@@ -163,6 +169,7 @@ am__osu_nccl_reduce_scatter_SOURCES_DIST = osu_nccl_reduce_scatter.c \
 	../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	../../util/kernel.cu
 am_osu_nccl_reduce_scatter_OBJECTS =  \
 	osu_nccl_reduce_scatter.$(OBJEXT) $(am__objects_2)
@@ -188,6 +195,7 @@ am__depfiles_remade = ../../util/$(DEPDIR)/kernel.Po \
 	../../util/$(DEPDIR)/osu_util.Po \
 	../../util/$(DEPDIR)/osu_util_mpi.Po \
 	../../util/$(DEPDIR)/osu_util_nccl.Po \
+	../../util/$(DEPDIR)/osu_util_papi.Po \
 	./$(DEPDIR)/osu_nccl_allgather.Po \
 	./$(DEPDIR)/osu_nccl_allreduce.Po \
 	./$(DEPDIR)/osu_nccl_alltoall.Po ./$(DEPDIR)/osu_nccl_bcast.Po \
@@ -394,11 +402,12 @@ AUTOMAKE_OPTIONS = subdir-objects
 NVCC = nvcc
 NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX) $(NVCCFLAGS)
 SUFFIXES = .cu .cpp
-ncclcollectivedir = $(pkglibexecdir)/c/nccl/collective
+ncclcollectivedir = $(pkglibexecdir)/nccl/collective
 AM_CFLAGS = -I${top_srcdir}/c/util $(am__append_3)
 UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
 	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
 	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
+	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
 	$(am__append_1)
 @BUILD_USE_PGI_TRUE@@CUDA_KERNELS_TRUE@AM_CXXFLAGS = --nvcchost --no_preincludes
 @OPENACC_TRUE@AM_CXXFLAGS = -acc -ta=tesla:nordc
@@ -408,11 +417,13 @@ osu_nccl_bcast_SOURCES = osu_nccl_bcast.c $(UTILITIES)
 osu_nccl_reduce_SOURCES = osu_nccl_reduce.c $(UTILITIES)
 osu_nccl_reduce_scatter_SOURCES = osu_nccl_reduce_scatter.c $(UTILITIES)
 osu_nccl_alltoall_SOURCES = osu_nccl_alltoall.c $(UTILITIES)
-@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_2) \
+@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = -I$(top_builddir)/../modules/nccl/build/lib \
+@EMBEDDED_BUILD_TRUE@	-lnccl $(am__append_2) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
 @EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/util \
-@EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include
+@EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include \
+@EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../modules/nccl/build/include
 
 all: all-am
 
@@ -508,6 +519,8 @@ clean-ncclcollectivePROGRAMS:
 	../../util/$(DEPDIR)/$(am__dirstamp)
 ../../util/osu_util_nccl.$(OBJEXT): ../../util/$(am__dirstamp) \
 	../../util/$(DEPDIR)/$(am__dirstamp)
+../../util/osu_util_papi.$(OBJEXT): ../../util/$(am__dirstamp) \
+	../../util/$(DEPDIR)/$(am__dirstamp)
 ../../util/kernel.$(OBJEXT): ../../util/$(am__dirstamp) \
 	../../util/$(DEPDIR)/$(am__dirstamp)
 
@@ -546,6 +559,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_mpi.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_nccl.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_papi.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_allgather.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_allreduce.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_alltoall.Po@am__quote@ # am--include-marker
@@ -747,6 +761,7 @@ distclean: distclean-am
 	-rm -f ../../util/$(DEPDIR)/osu_util.Po
 	-rm -f ../../util/$(DEPDIR)/osu_util_mpi.Po
 	-rm -f ../../util/$(DEPDIR)/osu_util_nccl.Po
+	-rm -f ../../util/$(DEPDIR)/osu_util_papi.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_allgather.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_allreduce.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_alltoall.Po
@@ -802,6 +817,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ../../util/$(DEPDIR)/osu_util.Po
 	-rm -f ../../util/$(DEPDIR)/osu_util_mpi.Po
 	-rm -f ../../util/$(DEPDIR)/osu_util_nccl.Po
+	-rm -f ../../util/$(DEPDIR)/osu_util_papi.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_allgather.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_allreduce.Po
 	-rm -f ./$(DEPDIR)/osu_nccl_alltoall.Po

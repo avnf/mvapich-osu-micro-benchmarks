@@ -88,18 +88,23 @@ void print_stats_nbc(int rank, int size, double ovrl, double cpu,
 /*
  * Memory Management
  */
+struct omb_buffer_sizes_t {
+    size_t sendbuf_size;
+    size_t recvbuf_size;
+};
 int allocate_memory_coll(void **buffer, size_t size, enum accel_type type);
 void free_buffer(void *buffer, enum accel_type type);
 void set_buffer(void *buffer, enum accel_type type, int data, size_t size);
 void set_buffer_pt2pt(void *buffer, int rank, enum accel_type type, int data,
                       size_t size);
 void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
-                           enum accel_type type, int iter, MPI_Datatype dtype);
+                           enum accel_type type, int iter, MPI_Datatype dtype,
+                           struct omb_buffer_sizes_t omb_buffer_sizes);
 void set_buffer_float(float *buffer, int is_send_buf, size_t size, int iter,
                       enum accel_type type);
 void set_buffer_dtype(void *buffer, int is_send_buf, size_t size, int rank,
                       int num_procs, enum accel_type type, int iter,
-                      MPI_Datatype dtype);
+                      MPI_Datatype dtype, size_t bufsize);
 void set_buffer_dtype_reduce(void *buffer, int is_send_buf, size_t size,
                              int iter, enum accel_type type,
                              MPI_Datatype dtype);
@@ -163,7 +168,7 @@ int validate_collective(void *buffer, size_t size, int value1, int value2,
 int validate_reduce_scatter(void *buffer, size_t size, int *recvcounts,
                             int rank, int num_procs, enum accel_type type,
                             int iter, MPI_Datatype dtype);
-int omb_validate_neighbour_col(MPI_Comm comm, char *buffer, int indegree,
+int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
                                int outdegree, size_t size, enum accel_type type,
                                int iter, MPI_Datatype dtype);
 void set_buffer_nhbr_validation(void *s_buf, void *r_buf, int indegree,
@@ -183,7 +188,7 @@ size_t omb_ddt_get_size(size_t size);
 void omb_ddt_append_stats(size_t omb_ddt_transmit_size);
 
 /*
- * Neighbourhood Collectives
+ * Neighborhood Collectives
  */
 #define OMB_NHBRHD_FILE_LINE_MAX_LENGTH 500
 #define OMB_NHBRHD_ADJ_EDGES_MAX_NUM    500
@@ -211,3 +216,20 @@ int atomic_data_validation_print_summary();
  * Data Types
  */
 void omb_populate_mpi_type_list(MPI_Datatype *mpi_type_list);
+
+/*
+ * Session
+ */
+#define OMB_MPI_SESSION_PSET_NAME  "mpi://WORLD"
+#define OMB_MPI_SESSION_GROUP_NAME "omb"
+typedef struct omb_mpi_init_data_t {
+#ifdef _ENABLE_MPI4_
+    MPI_Session omb_shandle;
+#endif
+    MPI_Comm omb_comm;
+} omb_mpi_init_data;
+void omb_mpi_finalize(omb_mpi_init_data omb_init_h);
+omb_mpi_init_data omb_mpi_init(int *argc, char ***argv);
+
+int omb_get_root_rank(int itr, size_t comm_size);
+void omb_scatter_offset_copy(void *buf, int root_rank, size_t size);

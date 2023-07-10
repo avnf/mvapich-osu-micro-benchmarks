@@ -24,6 +24,8 @@ void touch_managed_dst(char *, int);
 double calculate_total(double, double, double);
 
 int errors_reduced = 0;
+MPI_Comm omb_comm = MPI_COMM_NULL;
+omb_mpi_init_data omb_init_h;
 
 int main(int argc, char *argv[])
 {
@@ -45,10 +47,13 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
     }
-    MPI_CHECK(MPI_Init(&argc, &argv));
-
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
-    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &nprocs));
+    omb_init_h = omb_mpi_init(&argc, &argv);
+    omb_comm = omb_init_h.omb_comm;
+    if (MPI_COMM_NULL == omb_comm) {
+        OMB_ERROR_EXIT("Cant create communicator");
+    }
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &rank));
+    MPI_CHECK(MPI_Comm_size(omb_comm, &nprocs));
 
     pairs = nprocs / 2;
 
@@ -70,7 +75,7 @@ int main(int argc, char *argv[])
                 break;
             case PO_VERSION_MESSAGE:
                 print_version_message(rank);
-                MPI_CHECK(MPI_Finalize());
+                omb_mpi_finalize(omb_init_h);
                 exit(EXIT_SUCCESS);
                 break;
             case PO_OKAY:
@@ -82,11 +87,11 @@ int main(int argc, char *argv[])
         case PO_CUDA_NOT_AVAIL:
         case PO_OPENACC_NOT_AVAIL:
         case PO_BAD_USAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_FAILURE);
         case PO_HELP_MESSAGE:
         case PO_VERSION_MESSAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_OKAY:
             break;
@@ -97,13 +102,13 @@ int main(int argc, char *argv[])
         fflush(stdout);
     }
 
-    MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+    MPI_CHECK(MPI_Barrier(omb_comm));
 
     message_size = multi_latency(rank, pairs);
 
-    MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+    MPI_CHECK(MPI_Barrier(omb_comm));
 
-    MPI_CHECK(MPI_Finalize());
+    omb_mpi_finalize(omb_init_h);
 
     if (NONE != options.accel) {
         if (cleanup_accel()) {
@@ -140,6 +145,7 @@ static int multi_latency(int rank, int pairs)
     omb_graph_data_t *omb_graph_data = NULL;
     int papi_eventset = OMB_PAPI_NULL;
     MPI_Status reqstat;
+    struct omb_buffer_sizes_t omb_buffer_sizes;
 
     omb_populate_mpi_type_list(mpi_type_list);
     omb_graph_options_init(&omb_graph_options);
@@ -166,7 +172,7 @@ static int multi_latency(int rank, int pairs)
             if (allocate_memory_pt2pt_mul_size(&s_buf, &r_buf, rank, pairs,
                                                size)) {
                 /* Error allocating memory */
-                MPI_CHECK(MPI_Finalize());
+                omb_mpi_finalize(omb_init_h);
                 exit(EXIT_FAILURE);
             }
 
@@ -195,7 +201,7 @@ static int multi_latency(int rank, int pairs)
 
         omb_graph_allocate_and_get_data_buffer(
             &omb_graph_data, &omb_graph_options, size, options.iterations);
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
         t_total = 0.0;
 
         for (i = 0; i < options.iterations + options.skip; i++) {
@@ -204,10 +210,10 @@ static int multi_latency(int rank, int pairs)
             }
             if (options.validate) {
                 set_buffer_validation(s_buf, r_buf, size, options.accel, i,
-                                      omb_curr_datatype);
+                                      omb_curr_datatype, omb_buffer_sizes);
             }
             for (j = 0; j <= options.warmup_validation; j++) {
-                MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+                MPI_CHECK(MPI_Barrier(omb_comm));
                 if (rank < pairs) {
                     partner = rank + pairs;
                     if (i >= options.skip && j == options.warmup_validation) {
@@ -221,9 +227,9 @@ static int multi_latency(int rank, int pairs)
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
                     MPI_CHECK(MPI_Send(s_buf, num_elements, omb_curr_datatype,
-                                       partner, 1, MPI_COMM_WORLD));
+                                       partner, 1, omb_comm));
                     MPI_CHECK(MPI_Recv(r_buf, num_elements, omb_curr_datatype,
-                                       partner, 1, MPI_COMM_WORLD, &reqstat));
+                                       partner, 1, omb_comm, &reqstat));
 #ifdef _ENABLE_CUDA_KERNEL_
                     if (options.src == 'M') {
                         touch_managed_src(r_buf, size);
@@ -249,7 +255,7 @@ static int multi_latency(int rank, int pairs)
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
                     MPI_CHECK(MPI_Recv(r_buf, num_elements, omb_curr_datatype,
-                                       partner, 1, MPI_COMM_WORLD, &reqstat));
+                                       partner, 1, omb_comm, &reqstat));
 #ifdef _ENABLE_CUDA_KERNEL_
                     if (options.dst == 'M') {
                         touch_managed_dst(r_buf, size);
@@ -257,7 +263,7 @@ static int multi_latency(int rank, int pairs)
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
                     MPI_CHECK(MPI_Send(s_buf, num_elements, omb_curr_datatype,
-                                       partner, 1, MPI_COMM_WORLD));
+                                       partner, 1, omb_comm));
                 }
             }
             if (options.validate) {
@@ -265,7 +271,7 @@ static int multi_latency(int rank, int pairs)
                 error = validate_data(r_buf, size, 1, options.accel, i,
                                       omb_curr_datatype);
                 MPI_CHECK(MPI_Reduce(&error, &error_temp, 1, MPI_INT, MPI_SUM,
-                                     0, MPI_COMM_WORLD));
+                                     0, omb_comm));
                 errors_reduced += error_temp;
             }
         }
@@ -295,8 +301,7 @@ static int multi_latency(int rank, int pairs)
         free_memory_pt2pt_mul(s_buf, r_buf, rank, pairs);
 
         if (options.validate) {
-            MPI_CHECK(
-                MPI_Bcast(&errors_reduced, 1, MPI_INT, 0, MPI_COMM_WORLD));
+            MPI_CHECK(MPI_Bcast(&errors_reduced, 1, MPI_INT, 0, omb_comm));
             if (0 != errors_reduced) {
                 break;
             }

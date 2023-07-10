@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [7.1], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [7.2], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([c/mpi/pt2pt/standard/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -74,6 +74,18 @@ AC_ARG_ENABLE([papi],
               [enable_papi=yes],
               [enable_papi=no])
 
+AC_ARG_ENABLE([mpi4],
+              [AS_HELP_STRING([--enable-mpi4],
+			      [Enables MPI4 support and features for benchmarks (default is
+                   false)])
+              ],
+              [AS_CASE([$enableval],
+                       [yes], [mpi4_library=true],
+                       [mpi4_library=false])
+              ],
+              [AC_CHECK_FUNC([MPI_Session_init], [mpi4_library=true],
+                             [mpi4_library=false]]))
+
 AC_ARG_WITH([papi],
             [AS_HELP_STRING([--with-papi=@<:@PAPI installation path@:>@],
                             [Provide path to PAPI installation])
@@ -101,7 +113,7 @@ if test "x$enable_ncclomb" = "xyes"; then
                 [AS_CASE([$with_nccl],
                          [yes|no], [],
                          [CPPFLAGS="-I$with_nccl/include $CPPFLAGS"
-                          LDFLAGS="-L$with_nccl/lib -Wl,-rpath=$with_nccl/lib -lnccl $LDFLAGS"])
+                          LDFLAGS="-L$with_nccl/lib -Wl,-rpath=$with_nccl/lib $LDFLAGS"])
                 ])
 fi
 
@@ -191,13 +203,19 @@ AC_SUBST([MPILIBNAME], [$MPILIBNAME])
 
 
 AS_IF([test "x$enable_ncclomb" = xyes], [
-       AC_CHECK_HEADERS([nccl.h], [],
-                      [AC_MSG_ERROR([cannot include nccl.h])])
-       AC_SEARCH_LIBS([ncclGetUniqueId], [nccl], [],
-                      [AC_MSG_ERROR([cannot link with -lnccl])])
-       AC_CHECK_FUNC([ncclSend], [nccl_pt2pt=true],
-                     [AC_MSG_WARN([NCCL version >= 2.7 required for point-to-point support. Disabling building NCCL point-to-point benchmarks.])])
-       AC_DEFINE([_ENABLE_NCCL_], [1], [Enable NCCL])
+        AS_IF([test "x$enable_embedded" != xyes], [
+            AC_CHECK_HEADERS([nccl.h], [],
+                          [AC_MSG_ERROR([cannot include nccl.h])])
+            AC_SEARCH_LIBS([ncclGetUniqueId], [nccl], [],
+                          [AC_MSG_ERROR([cannot link with -lnccl])])
+            AC_CHECK_FUNC([ncclSend], [nccl_pt2pt=true],
+                         [AC_MSG_WARN([NCCL version >= 2.7 required for point-to-point support. Disabling building NCCL point-to-point benchmarks.])])
+        ], [nccl_pt2pt=true]) dnl ,
+        dnl[
+        dnl    CPPFLAGS="-I$srcdir/modules/ncclinclude $CPPFLAGS"
+        dnl    LDFLAGS="-L$srcdir/modules/nccl/build/lib -Wl,-rpath=$prefix/lib -lnccl $LDFLAGS"
+        dnl])
+        AC_DEFINE([_ENABLE_NCCL_], [1], [Enable NCCL])
       ])
 
 AS_IF([test "x$enable_openacc" = xyes], [
@@ -213,6 +231,11 @@ AS_IF([test "x$enable_rocm" = xyes], [
        AC_SEARCH_LIBS([hipFree], [amdhip64], [],
                       [AC_MSG_ERROR([cannot link with -lamdhip64])])
        AC_DEFINE([_ENABLE_ROCM_], [1], [Enable ROCm])
+       ])
+
+AS_IF([test "x$mpi4_library" = xtrue], [
+       AC_CHECK_FUNC([MPI_Session_init], [], AC_MSG_ERROR([MPI does not support MPI-4.]))
+       AC_DEFINE([_ENABLE_MPI4_], [1], [Enable MPI4 support])
        ])
 
 AS_CASE([$enable_cuda],

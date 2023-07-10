@@ -16,6 +16,7 @@ char *sbuf = NULL, *rbuf = NULL, *cbuf = NULL;
 MPI_Aint sdisp_remote;
 MPI_Aint sdisp_local;
 omb_graph_options_t omb_graph_op;
+MPI_Comm omb_comm = MPI_COMM_NULL;
 
 void allocate_memory_get_acc_lat(int, char *, int, enum WINDOW, MPI_Win *win);
 void print_header_get_acc_lat(int, enum WINDOW, enum SYNC);
@@ -36,10 +37,28 @@ int main(int argc, char *argv[])
     options.bench = ONE_SIDED;
     options.subtype = LAT;
     MPI_Datatype mpi_type_list[OMB_NUM_DATATYPES];
+    omb_mpi_init_data omb_init_h;
 
-    MPI_CHECK(MPI_Init(&argc, &argv));
-    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &nprocs));
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+    set_header(HEADER);
+    set_benchmark_name("osu_get_acc_latency");
+    po_ret = process_options(argc, argv);
+    omb_populate_mpi_type_list(mpi_type_list);
+    if (options.validate) {
+        OMB_ERROR_EXIT("Benchmark does not support validation");
+    }
+    if (PO_OKAY == po_ret && NONE != options.accel) {
+        if (init_accel()) {
+            fprintf(stderr, "Error initializing device\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    omb_init_h = omb_mpi_init(&argc, &argv);
+    omb_comm = omb_init_h.omb_comm;
+    if (MPI_COMM_NULL == omb_comm) {
+        OMB_ERROR_EXIT("Cant create communicator");
+    }
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &rank));
+    MPI_CHECK(MPI_Comm_size(omb_comm, &nprocs));
     if (0 == rank) {
         if (options.omb_dtype_itr > 1 || mpi_type_list[0] != MPI_CHAR) {
             fprintf(stderr, "Benchmark supports only MPI_CHAR. Continuing with "
@@ -52,38 +71,22 @@ int main(int argc, char *argv[])
         if (rank == 0) {
             fprintf(stderr, "This test requires exactly two processes\n");
         }
-        MPI_CHECK(MPI_Finalize());
+        omb_mpi_finalize(omb_init_h);
         return EXIT_FAILURE;
-    }
-
-    set_header(HEADER);
-    set_benchmark_name("osu_get_acc_latency");
-
-    po_ret = process_options(argc, argv);
-    omb_populate_mpi_type_list(mpi_type_list);
-    if (options.validate) {
-        OMB_ERROR_EXIT("Benchmark does not support validation");
-    }
-
-    if (PO_OKAY == po_ret && NONE != options.accel) {
-        if (init_accel()) {
-            fprintf(stderr, "Error initializing device\n");
-            exit(EXIT_FAILURE);
-        }
     }
 
     switch (po_ret) {
         case PO_BAD_USAGE:
             print_help_message_get_acc_lat(rank);
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             return EXIT_FAILURE;
         case PO_HELP_MESSAGE:
             print_help_message_get_acc_lat(rank);
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             return EXIT_SUCCESS;
         case PO_VERSION_MESSAGE:
             print_version_message(rank);
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_OKAY:
             break;
@@ -124,7 +127,7 @@ int main(int argc, char *argv[])
             break;
     }
 
-    MPI_CHECK(MPI_Finalize());
+    omb_mpi_finalize(omb_init_h);
 
     free(sbuf);
     if (options.win != WIN_ALLOCATE) {
@@ -187,7 +190,7 @@ void run_get_acc_with_flush(int rank, enum WINDOW type)
             MPI_CHECK(MPI_Win_unlock(1, win));
         }
 
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
         omb_papi_stop_and_print(&papi_eventset, size);
         print_latency_get_acc_lat(rank, size);
         if (options.graph && 0 == rank) {
@@ -256,7 +259,7 @@ void run_get_acc_with_flush_local(int rank, enum WINDOW type)
             MPI_CHECK(MPI_Win_unlock(1, win));
         }
 
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
         print_latency_get_acc_lat(rank, size);
         omb_papi_stop_and_print(&papi_eventset, size);
         if (options.graph && 0 == rank) {
@@ -324,7 +327,7 @@ void run_get_acc_with_lock_all(int rank, enum WINDOW type)
             t_end = MPI_Wtime();
         }
 
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         omb_papi_stop_and_print(&papi_eventset, size);
         print_latency_get_acc_lat(rank, size);
@@ -393,7 +396,7 @@ void run_get_acc_with_lock(int rank, enum WINDOW type)
             t_end = MPI_Wtime();
         }
 
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         omb_papi_stop_and_print(&papi_eventset, size);
         print_latency_get_acc_lat(rank, size);
@@ -437,7 +440,7 @@ void run_get_acc_with_fence(int rank, enum WINDOW type)
 
         omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_op,
                                                size, options.iterations);
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         if (rank == 0) {
             for (i = 0; i < options.skip + options.iterations; i++) {
@@ -477,7 +480,7 @@ void run_get_acc_with_fence(int rank, enum WINDOW type)
             }
         }
 
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         omb_papi_stop_and_print(&papi_eventset, size);
         if (rank == 0) {
@@ -512,7 +515,7 @@ void run_get_acc_with_pscw(int rank, enum WINDOW type)
     MPI_Win win;
 
     MPI_Group comm_group, group;
-    MPI_CHECK(MPI_Comm_group(MPI_COMM_WORLD, &comm_group));
+    MPI_CHECK(MPI_Comm_group(omb_comm, &comm_group));
 
     omb_papi_init(&papi_eventset);
     for (size = options.min_message_size; size <= options.max_message_size;
@@ -529,13 +532,13 @@ void run_get_acc_with_pscw(int rank, enum WINDOW type)
         }
         omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_op,
                                                size, options.iterations);
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         if (rank == 0) {
             destrank = 1;
 
             MPI_CHECK(MPI_Group_incl(comm_group, 1, &destrank, &group));
-            MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+            MPI_CHECK(MPI_Barrier(omb_comm));
 
             for (i = 0; i < options.skip + options.iterations; i++) {
                 MPI_CHECK(MPI_Win_start(group, 0, win));
@@ -567,7 +570,7 @@ void run_get_acc_with_pscw(int rank, enum WINDOW type)
             destrank = 0;
 
             MPI_CHECK(MPI_Group_incl(comm_group, 1, &destrank, &group));
-            MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+            MPI_CHECK(MPI_Barrier(omb_comm));
 
             for (i = 0; i < options.skip + options.iterations; i++) {
                 if (i == options.skip) {
@@ -583,7 +586,7 @@ void run_get_acc_with_pscw(int rank, enum WINDOW type)
             }
         }
 
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         omb_papi_stop_and_print(&papi_eventset, size);
         if (rank == 0) {
@@ -618,28 +621,25 @@ void allocate_memory_get_acc_lat(int rank, char *rbuf, int size,
 
     switch (type) {
         case WIN_DYNAMIC:
-            MPI_CHECK(
-                MPI_Win_create_dynamic(MPI_INFO_NULL, MPI_COMM_WORLD, win));
+            MPI_CHECK(MPI_Win_create_dynamic(MPI_INFO_NULL, omb_comm, win));
             MPI_CHECK(MPI_Win_attach(*win, (void *)rbuf, size));
             MPI_CHECK(MPI_Get_address(rbuf, &sdisp_local));
             if (rank == 0) {
-                MPI_CHECK(
-                    MPI_Send(&sdisp_local, 1, MPI_AINT, 1, 1, MPI_COMM_WORLD));
-                MPI_CHECK(MPI_Recv(&sdisp_remote, 1, MPI_AINT, 1, 1,
-                                   MPI_COMM_WORLD, &reqstat));
+                MPI_CHECK(MPI_Send(&sdisp_local, 1, MPI_AINT, 1, 1, omb_comm));
+                MPI_CHECK(MPI_Recv(&sdisp_remote, 1, MPI_AINT, 1, 1, omb_comm,
+                                   &reqstat));
             } else {
-                MPI_CHECK(MPI_Recv(&sdisp_remote, 1, MPI_AINT, 0, 1,
-                                   MPI_COMM_WORLD, &reqstat));
-                MPI_CHECK(
-                    MPI_Send(&sdisp_local, 1, MPI_AINT, 0, 1, MPI_COMM_WORLD));
+                MPI_CHECK(MPI_Recv(&sdisp_remote, 1, MPI_AINT, 0, 1, omb_comm,
+                                   &reqstat));
+                MPI_CHECK(MPI_Send(&sdisp_local, 1, MPI_AINT, 0, 1, omb_comm));
             }
             break;
         case WIN_CREATE:
-            MPI_CHECK(MPI_Win_create(rbuf, size, 1, MPI_INFO_NULL,
-                                     MPI_COMM_WORLD, win));
+            MPI_CHECK(
+                MPI_Win_create(rbuf, size, 1, MPI_INFO_NULL, omb_comm, win));
             break;
         default:
-            MPI_CHECK(MPI_Win_allocate(size, 1, MPI_INFO_NULL, MPI_COMM_WORLD,
+            MPI_CHECK(MPI_Win_allocate(size, 1, MPI_INFO_NULL, omb_comm,
                                        (void *)&rbuf, win));
             break;
     }

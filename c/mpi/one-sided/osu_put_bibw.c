@@ -14,6 +14,7 @@
 double t_start = 0.0, t_end = 0.0;
 char *sbuf = NULL, *win_base = NULL;
 omb_graph_options_t omb_graph_op;
+MPI_Comm omb_comm = MPI_COMM_NULL;
 
 void print_bibw(int, int, double);
 void run_put_with_fence(int, enum WINDOW);
@@ -23,6 +24,7 @@ int main(int argc, char *argv[])
 {
     int rank, nprocs;
     int po_ret = PO_OKAY;
+    omb_mpi_init_data omb_init_h;
 
     options.sync = PSCW;
 #if MPI_VERSION >= 3
@@ -53,9 +55,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    MPI_CHECK(MPI_Init(&argc, &argv));
-    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &nprocs));
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+    omb_init_h = omb_mpi_init(&argc, &argv);
+    omb_comm = omb_init_h.omb_comm;
+    if (MPI_COMM_NULL == omb_comm) {
+        OMB_ERROR_EXIT("Cant create communicator");
+    }
+    MPI_CHECK(MPI_Comm_rank(omb_comm, &rank));
+    MPI_CHECK(MPI_Comm_size(omb_comm, &nprocs));
     if (0 == rank) {
         if (options.omb_dtype_itr > 1 || mpi_type_list[0] != MPI_CHAR) {
             fprintf(stderr, "Benchmark supports only MPI_CHAR. Continuing with "
@@ -81,7 +87,7 @@ int main(int argc, char *argv[])
                 break;
             case PO_VERSION_MESSAGE:
                 print_version_message(rank);
-                MPI_CHECK(MPI_Finalize());
+                omb_mpi_finalize(omb_init_h);
                 exit(EXIT_SUCCESS);
             case PO_OKAY:
                 break;
@@ -100,11 +106,11 @@ int main(int argc, char *argv[])
         case PO_CUDA_NOT_AVAIL:
         case PO_OPENACC_NOT_AVAIL:
         case PO_BAD_USAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_FAILURE);
         case PO_HELP_MESSAGE:
         case PO_VERSION_MESSAGE:
-            MPI_CHECK(MPI_Finalize());
+            omb_mpi_finalize(omb_init_h);
             exit(EXIT_SUCCESS);
         case PO_OKAY:
             break;
@@ -115,7 +121,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
-        MPI_CHECK(MPI_Finalize());
+        omb_mpi_finalize(omb_init_h);
 
         return EXIT_FAILURE;
     }
@@ -130,7 +136,7 @@ int main(int argc, char *argv[])
             break;
     }
 
-    MPI_CHECK(MPI_Finalize());
+    omb_mpi_finalize(omb_init_h);
 
     if (NONE != options.accel) {
         if (cleanup_accel()) {
@@ -184,7 +190,7 @@ void run_put_with_fence(int rank, enum WINDOW type)
 
         omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_op,
                                                size, options.iterations);
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         if (rank == 0) {
             for (i = 0; i < options.skip + options.iterations; i++) {
@@ -226,7 +232,7 @@ void run_put_with_fence(int rank, enum WINDOW type)
             }
         }
 
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         omb_papi_stop_and_print(&papi_eventset, size);
         print_bibw(rank, size, t);
@@ -257,7 +263,7 @@ void run_put_with_pscw(int rank, enum WINDOW type)
     MPI_Win win;
     MPI_Group comm_group, group;
 
-    MPI_CHECK(MPI_Comm_group(MPI_COMM_WORLD, &comm_group));
+    MPI_CHECK(MPI_Comm_group(omb_comm, &comm_group));
 
     omb_papi_init(&papi_eventset);
     int window_size = options.window_size;
@@ -279,7 +285,7 @@ void run_put_with_pscw(int rank, enum WINDOW type)
 
         omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_op,
                                                size, options.iterations);
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         if (rank == 0) {
             destrank = 1;
@@ -336,7 +342,7 @@ void run_put_with_pscw(int rank, enum WINDOW type)
             }
         }
 
-        MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+        MPI_CHECK(MPI_Barrier(omb_comm));
 
         omb_papi_stop_and_print(&papi_eventset, size);
         print_bibw(rank, size, t);
