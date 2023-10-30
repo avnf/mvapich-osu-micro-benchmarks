@@ -34,6 +34,8 @@ int main(int argc, char *argv[])
     MPI_Comm omb_comm = MPI_COMM_NULL;
     omb_mpi_init_data omb_init_h;
     struct omb_buffer_sizes_t omb_buffer_sizes;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
     set_header(HEADER);
     set_benchmark_name("osu_allreduce");
@@ -105,6 +107,10 @@ int main(int argc, char *argv[])
     }
     set_buffer(recvbuf_warmup, options.accel, 0, bufsize);
 
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
     print_preamble(rank);
     omb_papi_init(&papi_eventset);
 
@@ -167,6 +173,10 @@ int main(int argc, char *argv[])
                 }
                 if (i >= options.skip) {
                     timer += t_stop - t_start;
+                    if (options.omb_tail_lat) {
+                        omb_lat_arr[i - options.skip] =
+                            (t_stop - t_start) * 1e6;
+                    }
                     if (options.graph && 0 == rank) {
                         omb_graph_data->data[i - options.skip] =
                             (t_stop - t_start) * 1e6;
@@ -183,6 +193,7 @@ int main(int argc, char *argv[])
             MPI_CHECK(MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0,
                                  omb_comm));
             avg_time = avg_time / numprocs;
+            omb_stat = omb_get_stats(omb_lat_arr);
             if (options.validate) {
                 MPI_CHECK(MPI_Allreduce(&local_errors, &errors, 1, MPI_INT,
                                         MPI_SUM, omb_comm));
@@ -190,9 +201,9 @@ int main(int argc, char *argv[])
 
             if (options.validate) {
                 print_stats_validate(rank, size, avg_time, min_time, max_time,
-                                     errors);
+                                     errors, omb_stat);
             } else {
-                print_stats(rank, size, avg_time, min_time, max_time);
+                print_stats(rank, size, avg_time, min_time, max_time, omb_stat);
             }
             if (options.graph && 0 == rank) {
                 omb_graph_data->avg = avg_time;
@@ -214,6 +225,7 @@ int main(int argc, char *argv[])
     free_buffer(sendbuf_warmup, options.accel);
     free_buffer(recvbuf_warmup, options.accel);
     free_buffer(recvbuf, options.accel);
+    free(omb_lat_arr);
     omb_mpi_finalize(omb_init_h);
 
     if (NONE != options.accel) {

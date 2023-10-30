@@ -19,7 +19,7 @@ int validation_error_flag = 0;
 MPI_Datatype mpi_type_list[OMB_NUM_DATATYPES];
 MPI_Comm omb_comm = MPI_COMM_NULL;
 
-void print_latency(int, int, float);
+void print_latency(int, int, float, struct omb_stat_t);
 void run_fop_with_lock(int rank, enum WINDOW win_type, MPI_Datatype data_type,
                        MPI_Op op);
 void run_fop_with_fence(int rank, enum WINDOW win_type, MPI_Datatype data_type,
@@ -175,7 +175,8 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-void print_latency(int rank, int size, float latency_factor)
+void print_latency(int rank, int size, float latency_factor,
+                   struct omb_stat_t omb_stat)
 {
     char *validation_string;
     if (rank != 0)
@@ -188,20 +189,26 @@ void print_latency(int rank, int size, float latency_factor)
         else
             validation_string = "passed";
 
-        fprintf(stdout, "%-*d%*.*f%*s\n", 10, size, FIELD_WIDTH,
-                FLOAT_PRECISION,
+        fprintf(stdout, "%-*d%*.*f%*s", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                 (t_end - t_start) * 1.0e6 * latency_factor / options.iterations,
                 FIELD_WIDTH, validation_string);
-        fflush(stdout);
         validation_error_flag = 0;
-        return;
     } else {
-        fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
+        fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                 (t_end - t_start) * 1.0e6 * latency_factor /
                     options.iterations);
-        fflush(stdout);
-        return;
     }
+    if (options.omb_tail_lat) {
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                omb_stat.p50 * latency_factor);
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                omb_stat.p95 * latency_factor);
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                omb_stat.p99 * latency_factor);
+    }
+    fprintf(stdout, "\n");
+    fflush(stdout);
+    return;
 }
 
 /*Run FOP with flush local*/
@@ -214,7 +221,13 @@ void run_fop_with_flush_local(int rank, enum WINDOW win_type,
     int i, jrank, dtype_size;
     MPI_Win win;
     MPI_Aint disp = 0;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
     omb_graph_op.number_of_graphs = 0;
     omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_op, 8,
                                            options.iterations);
@@ -254,6 +267,10 @@ void run_fop_with_flush_local(int rank, enum WINDOW win_type,
             MPI_CHECK(MPI_Win_flush_local(1, win));
             if (i >= options.skip) {
                 t_graph_end = MPI_Wtime();
+                if (options.omb_tail_lat) {
+                    omb_lat_arr[i - options.skip] =
+                        (t_graph_end - t_graph_start) * 1.0e6;
+                }
                 if (options.graph) {
                     omb_graph_data->data[i - options.skip] =
                         (t_graph_end - t_graph_start) * 1.0e6;
@@ -277,8 +294,9 @@ void run_fop_with_flush_local(int rank, enum WINDOW win_type,
 
     MPI_CHECK(MPI_Barrier(omb_comm));
 
+    omb_stat = omb_calculate_tail_lat(omb_lat_arr, rank, 1);
     omb_papi_stop_and_print(&papi_eventset, dtype_size);
-    print_latency(rank, dtype_size, 1);
+    print_latency(rank, dtype_size, 1, omb_stat);
     if (options.graph && 0 == rank) {
         omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations;
     }
@@ -286,6 +304,7 @@ void run_fop_with_flush_local(int rank, enum WINDOW win_type,
     omb_graph_free_data_buffers(&omb_graph_op);
     omb_papi_free(&papi_eventset);
     free_atomic_memory(sbuf, win_base, tbuf, NULL, win_type, win, rank);
+    free(omb_lat_arr);
 }
 
 /*Run FOP with flush */
@@ -298,7 +317,13 @@ void run_fop_with_flush(int rank, enum WINDOW win_type, MPI_Datatype data_type,
     int i, dtype_size;
     MPI_Aint disp = 0;
     MPI_Win win;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
     omb_graph_op.number_of_graphs = 0;
     omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_op, 8,
                                            options.iterations);
@@ -338,6 +363,10 @@ void run_fop_with_flush(int rank, enum WINDOW win_type, MPI_Datatype data_type,
             MPI_CHECK(MPI_Win_flush(1, win));
             if (i >= options.skip) {
                 t_graph_end = MPI_Wtime();
+                if (options.omb_tail_lat) {
+                    omb_lat_arr[i - options.skip] =
+                        (t_graph_end - t_graph_start) * 1.0e6;
+                }
                 if (options.graph) {
                     omb_graph_data->data[i - options.skip] =
                         (t_graph_end - t_graph_start) * 1.0e6;
@@ -361,8 +390,9 @@ void run_fop_with_flush(int rank, enum WINDOW win_type, MPI_Datatype data_type,
 
     MPI_CHECK(MPI_Barrier(omb_comm));
 
+    omb_stat = omb_calculate_tail_lat(omb_lat_arr, rank, 1);
     omb_papi_stop_and_print(&papi_eventset, dtype_size);
-    print_latency(rank, dtype_size, 1);
+    print_latency(rank, dtype_size, 1, omb_stat);
     if (options.graph && 0 == rank) {
         omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations;
     }
@@ -370,6 +400,7 @@ void run_fop_with_flush(int rank, enum WINDOW win_type, MPI_Datatype data_type,
     omb_graph_free_data_buffers(&omb_graph_op);
     omb_papi_free(&papi_eventset);
     free_atomic_memory(sbuf, win_base, tbuf, NULL, win_type, win, rank);
+    free(omb_lat_arr);
 }
 
 /*Run FOP with Lock_all/unlock_all */
@@ -382,9 +413,15 @@ void run_fop_with_lock_all(int rank, enum WINDOW win_type,
     int i, dtype_size;
     MPI_Aint disp = 0;
     MPI_Win win;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
     MPI_CHECK(MPI_Type_size(data_type, &dtype_size));
 
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
     omb_graph_op.number_of_graphs = 0;
     omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_op, 8,
                                            options.iterations);
@@ -422,6 +459,10 @@ void run_fop_with_lock_all(int rank, enum WINDOW win_type,
             MPI_CHECK(MPI_Win_unlock_all(win));
             if (i >= options.skip) {
                 t_graph_end = MPI_Wtime();
+                if (options.omb_tail_lat) {
+                    omb_lat_arr[i - options.skip] =
+                        (t_graph_end - t_graph_start) * 1.0e6;
+                }
                 if (options.graph) {
                     omb_graph_data->data[i - options.skip] =
                         (t_graph_end - t_graph_start) * 1.0e6;
@@ -444,8 +485,9 @@ void run_fop_with_lock_all(int rank, enum WINDOW win_type,
 
     MPI_CHECK(MPI_Barrier(omb_comm));
 
+    omb_stat = omb_calculate_tail_lat(omb_lat_arr, rank, 1);
     omb_papi_stop_and_print(&papi_eventset, dtype_size);
-    print_latency(rank, dtype_size, 1);
+    print_latency(rank, dtype_size, 1, omb_stat);
     if (options.graph && 0 == rank) {
         omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations;
     }
@@ -453,6 +495,7 @@ void run_fop_with_lock_all(int rank, enum WINDOW win_type,
     omb_graph_free_data_buffers(&omb_graph_op);
     omb_papi_free(&papi_eventset);
     free_atomic_memory(sbuf, win_base, tbuf, NULL, win_type, win, rank);
+    free(omb_lat_arr);
 }
 
 /*Run FOP with Lock/unlock */
@@ -465,9 +508,15 @@ void run_fop_with_lock(int rank, enum WINDOW win_type, MPI_Datatype data_type,
     int papi_eventset = OMB_PAPI_NULL;
     MPI_Aint disp = 0;
     MPI_Win win;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
     MPI_CHECK(MPI_Type_size(data_type, &dtype_size));
 
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
     omb_graph_op.number_of_graphs = 0;
     omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_op, 8,
                                            options.iterations);
@@ -505,6 +554,10 @@ void run_fop_with_lock(int rank, enum WINDOW win_type, MPI_Datatype data_type,
             MPI_CHECK(MPI_Win_unlock(1, win));
             if (i >= options.skip) {
                 t_graph_end = MPI_Wtime();
+                if (options.omb_tail_lat) {
+                    omb_lat_arr[i - options.skip] =
+                        (t_graph_end - t_graph_start) * 1.0e6;
+                }
                 if (options.graph) {
                     omb_graph_data->data[i - options.skip] =
                         (t_graph_end - t_graph_start) * 1.0e6;
@@ -527,8 +580,9 @@ void run_fop_with_lock(int rank, enum WINDOW win_type, MPI_Datatype data_type,
 
     MPI_CHECK(MPI_Barrier(omb_comm));
 
+    omb_stat = omb_calculate_tail_lat(omb_lat_arr, rank, 1);
     omb_papi_stop_and_print(&papi_eventset, dtype_size);
-    print_latency(rank, dtype_size, 1);
+    print_latency(rank, dtype_size, 1, omb_stat);
     if (options.graph && 0 == rank) {
         omb_graph_data->avg = (t_end - t_start) * 1.0e6 / options.iterations;
     }
@@ -536,6 +590,7 @@ void run_fop_with_lock(int rank, enum WINDOW win_type, MPI_Datatype data_type,
     omb_graph_free_data_buffers(&omb_graph_op);
     omb_papi_free(&papi_eventset);
     free_atomic_memory(sbuf, win_base, tbuf, NULL, win_type, win, rank);
+    free(omb_lat_arr);
 }
 
 /*Run FOP with Fence */
@@ -548,8 +603,14 @@ void run_fop_with_fence(int rank, enum WINDOW win_type, MPI_Datatype data_type,
     int i, dtype_size;
     MPI_Aint disp = 0;
     MPI_Win win;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
     MPI_CHECK(MPI_Type_size(data_type, &dtype_size));
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
 
     allocate_atomic_memory(rank, (char **)&sbuf, (char **)&tbuf, NULL,
                            (char **)&win_base, options.max_message_size,
@@ -588,6 +649,10 @@ void run_fop_with_fence(int rank, enum WINDOW win_type, MPI_Datatype data_type,
             MPI_CHECK(MPI_Win_fence(0, win));
             if (i >= options.skip) {
                 t_graph_end = MPI_Wtime();
+                if (options.omb_tail_lat) {
+                    omb_lat_arr[i - options.skip] =
+                        (t_graph_end - t_graph_start) * 1.0e6;
+                }
                 if (options.graph) {
                     omb_graph_data->data[i - options.skip] =
                         (t_graph_end - t_graph_start) * 1.0e6;
@@ -628,8 +693,9 @@ void run_fop_with_fence(int rank, enum WINDOW win_type, MPI_Datatype data_type,
 
     MPI_CHECK(MPI_Barrier(omb_comm));
 
+    omb_stat = omb_calculate_tail_lat(omb_lat_arr, rank, 1);
     omb_papi_stop_and_print(&papi_eventset, dtype_size);
-    print_latency(rank, dtype_size, 0.5);
+    print_latency(rank, dtype_size, 0.5, omb_stat);
     if (options.graph && 0 == rank) {
         omb_graph_data->avg =
             (t_end - t_start) * 1.0e6 / options.iterations / 2;
@@ -639,6 +705,7 @@ void run_fop_with_fence(int rank, enum WINDOW win_type, MPI_Datatype data_type,
 
     omb_papi_free(&papi_eventset);
     free_atomic_memory(sbuf, win_base, tbuf, NULL, win_type, win, rank);
+    free(omb_lat_arr);
 }
 
 /*Run FOP with Post/Start/Complete/Wait */
@@ -651,7 +718,13 @@ void run_fop_with_pscw(int rank, enum WINDOW win_type, MPI_Datatype data_type,
     int destrank, i, dtype_size;
     MPI_Aint disp = 0;
     MPI_Win win;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
     MPI_Group comm_group, group;
     MPI_CHECK(MPI_Comm_group(omb_comm, &comm_group));
     MPI_CHECK(MPI_Type_size(data_type, &dtype_size));
@@ -676,13 +749,15 @@ void run_fop_with_pscw(int rank, enum WINDOW win_type, MPI_Datatype data_type,
 
         for (i = 0; i < options.skip + options.iterations; i++) {
             if (i >= options.skip) {
-                atomic_data_validation_setup(data_type, rank, sbuf,
-                                             options.max_message_size);
-                atomic_data_validation_setup(data_type, rank, tbuf,
-                                             options.max_message_size);
-                atomic_data_validation_setup(data_type, rank, win_base,
-                                             options.max_message_size);
-                MPI_CHECK(MPI_Barrier(omb_comm));
+                if (options.validate) {
+                    atomic_data_validation_setup(data_type, rank, sbuf,
+                                                 options.max_message_size);
+                    atomic_data_validation_setup(data_type, rank, tbuf,
+                                                 options.max_message_size);
+                    atomic_data_validation_setup(data_type, rank, win_base,
+                                                 options.max_message_size);
+                    MPI_CHECK(MPI_Barrier(omb_comm));
+                }
             }
 
             MPI_CHECK(MPI_Win_start(group, 0, win));
@@ -702,6 +777,10 @@ void run_fop_with_pscw(int rank, enum WINDOW win_type, MPI_Datatype data_type,
             MPI_CHECK(MPI_Win_wait(win));
             if (i >= options.skip) {
                 t_graph_end = MPI_Wtime();
+                if (options.omb_tail_lat) {
+                    omb_lat_arr[i - options.skip] =
+                        (t_graph_end - t_graph_start) * 1.0e6;
+                }
                 if (options.graph) {
                     omb_graph_data->data[i - options.skip] =
                         (t_graph_end - t_graph_start) * 1.0e6;
@@ -722,7 +801,7 @@ void run_fop_with_pscw(int rank, enum WINDOW win_type, MPI_Datatype data_type,
         MPI_CHECK(MPI_Group_incl(comm_group, 1, &destrank, &group));
 
         for (i = 0; i < options.skip + options.iterations; i++) {
-            if (i >= options.skip) {
+            if (i >= options.skip && options.validate) {
                 atomic_data_validation_setup(data_type, rank, sbuf,
                                              options.max_message_size);
                 atomic_data_validation_setup(data_type, rank, tbuf,
@@ -751,8 +830,9 @@ void run_fop_with_pscw(int rank, enum WINDOW win_type, MPI_Datatype data_type,
 
     MPI_CHECK(MPI_Barrier(omb_comm));
 
+    omb_stat = omb_calculate_tail_lat(omb_lat_arr, rank, 1);
     omb_papi_stop_and_print(&papi_eventset, dtype_size);
-    print_latency(rank, dtype_size, 0.5);
+    print_latency(rank, dtype_size, 0.5, omb_stat);
     if (options.graph && 0 == rank) {
         omb_graph_data->avg =
             (t_end - t_start) * 1.0e6 / options.iterations / 2;
@@ -763,5 +843,6 @@ void run_fop_with_pscw(int rank, enum WINDOW win_type, MPI_Datatype data_type,
     MPI_CHECK(MPI_Group_free(&comm_group));
 
     free_atomic_memory(sbuf, win_base, tbuf, NULL, win_type, win, rank);
+    free(omb_lat_arr);
 }
 /* vi: set sw=4 sts=4 tw=80: */

@@ -1,4 +1,4 @@
-#define BENCHMARK "OSU NCCL%s Bi-Directional Bandwidth Test"
+#define BENCHMARK "OSU " OMB_XCCL_TYPE_STR "%s Bi-Directional Bandwidth Test"
 /*
  * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
@@ -8,40 +8,40 @@
  * For detailed copyright and licensing information, please refer to the
  * copyright file COPYRIGHT in the top level OMB directory.
  */
-#include <osu_util_nccl.h>
+
+#include "osu_util_xccl_interface.h"
 
 int main(int argc, char *argv[])
 {
-    int myid, numprocs, i, j;
-    int size;
-    char *s_buf, *r_buf;
-    double t_start = 0.0, t_end = 0.0, t = 0.0;
+    omb_xccl_int_t *omb_xccl_interface = omb_xccl_interface_inject();
+    int myid = 0, numprocs = 0, i = 0, j = 0;
+    int size = 0;
+    char *s_buf = NULL, *r_buf = NULL;
+    double t_start = 0.0, t_end = 0.0, t = 0.0, t_total = 0.0;
     int window_size = 64;
     int po_ret = 0;
-    int peer;
+    double tmp = 0;
+    int peer = 0;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
+
     options.bench = PT2PT;
     options.subtype = BW;
 
     set_header(HEADER);
-    set_benchmark_name("osu_nccl_bibw");
+    set_benchmark_name("osu_xccl_bibw");
 
     po_ret = process_options(argc, argv);
     window_size = options.window_size;
 
-    if (options.accel != CUDA || options.src != 'D' || options.dst != 'D') {
-        fprintf(
-            stderr,
-            "Warning: Host buffer was set for one of the processes. NCCL "
-            "does not support host buffers. Implicitly converting to device "
-            "buffer (D D).\n\n");
-        options.accel = CUDA;
-        options.src = 'D';
-        options.dst = 'D';
-    }
-
-    if (init_accel()) {
-        fprintf(stderr, "Error initializing device\n");
-        exit(EXIT_FAILURE);
+    if (PO_OKAY == po_ret) {
+        if (OMB_XCCL_ACC_TYPE != options.accel) {
+            omb_force_accelerator();
+        }
+        if (init_accel()) {
+            fprintf(stderr, "Error initializing device\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     MPI_CHECK(MPI_Init(&argc, &argv));
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     }
 
     if (numprocs != 2) {
-        if (myid == 0) {
+        if (0 == myid) {
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
@@ -98,13 +98,17 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    allocate_nccl_stream();
-    create_nccl_comm(numprocs, myid);
+    omb_xccl_interface->allocate_xccl_stream();
+    omb_xccl_interface->create_xccl_comm(numprocs, myid);
 
     if (allocate_memory_pt2pt(&s_buf, &r_buf, myid)) {
         /* Error allocating memory */
         MPI_CHECK(MPI_Finalize());
         exit(EXIT_FAILURE);
+    }
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
     }
 
     print_header(myid, BW);
@@ -113,6 +117,7 @@ int main(int argc, char *argv[])
     for (size = options.min_message_size; size <= options.max_message_size;
          size *= 2) {
         /* touch the data */
+        t_total = 0.0;
         set_buffer_pt2pt(s_buf, myid, options.accel, 'a', size);
         set_buffer_pt2pt(r_buf, myid, options.accel, 'b', size);
 
@@ -122,36 +127,50 @@ int main(int argc, char *argv[])
         }
 
         for (i = 0; i < options.iterations + options.skip; i++) {
-            if (myid == 0) {
-                if (i == options.skip) {
-                    t_start = MPI_Wtime();
+            if (i >= options.skip) {
+                t_start = MPI_Wtime();
+            }
+            omb_xccl_interface->ncclGroupStart();
+            for (j = 0; j < window_size; j++) {
+                NCCL_CHECK(omb_xccl_interface->ncclSend(
+                    s_buf, size, ncclChar, peer, nccl_comm, nccl_stream));
+                NCCL_CHECK(omb_xccl_interface->ncclRecv(
+                    r_buf, size, ncclChar, peer, nccl_comm, nccl_stream));
+            }
+            omb_xccl_interface->ncclGroupEnd();
+            omb_xccl_interface->synchronize_xccl_stream(nccl_stream);
+            if (i >= options.skip) {
+                t_end = MPI_Wtime();
+                t_total += t_end - t_start;
+                if (options.omb_tail_lat) {
+                    omb_lat_arr[i - options.skip] =
+                        (size / 1e6 * window_size * 2) / (t_end - t_start);
                 }
             }
-            ncclGroupStart();
-            for (j = 0; j < window_size; j++) {
-                NCCL_CHECK(ncclSend(s_buf, size, ncclChar, peer, nccl_comm,
-                                    nccl_stream));
-                NCCL_CHECK(ncclRecv(r_buf, size, ncclChar, peer, nccl_comm,
-                                    nccl_stream));
-            }
-            ncclGroupEnd();
-            CUDA_STREAM_SYNCHRONIZE(nccl_stream);
         }
 
-        if (myid == 0) {
-            t_end = MPI_Wtime();
-            t = t_end - t_start;
-            double tmp = size / 1e6 * options.iterations * window_size * 2;
-
-            fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
-                    FLOAT_PRECISION, tmp / t);
+        if (0 == myid) {
+            tmp = size / 1e6 * options.iterations * window_size * 2;
+            fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
+                    tmp / t_total);
+            if (options.omb_tail_lat) {
+                omb_stat = omb_calculate_tail_lat(omb_lat_arr, myid, 1);
+                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                        omb_stat.p50);
+                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                        omb_stat.p95);
+                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                        omb_stat.p99);
+            }
+            fprintf(stdout, "\n");
             fflush(stdout);
         }
     }
 
     free_memory(s_buf, r_buf, myid);
-    deallocate_nccl_stream();
-    destroy_nccl_comm();
+    free(omb_lat_arr);
+    omb_xccl_interface->deallocate_xccl_stream();
+    omb_xccl_interface->destroy_xccl_comm();
     MPI_CHECK(MPI_Finalize());
 
     if (NONE != options.accel) {
@@ -160,6 +179,6 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
     }
-
+    omb_xccl_interface_free(omb_xccl_interface);
     return EXIT_SUCCESS;
 }

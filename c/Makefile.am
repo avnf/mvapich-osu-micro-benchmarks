@@ -1,4 +1,4 @@
-SUBDIRS = 
+SUBDIRS =
 
 if CUDA
     dist_pkglibexec_SCRIPTS = get_local_rank
@@ -25,6 +25,9 @@ if UPCXX
 endif
 
 if NCCL
-    SUBDIRS += nccl
+    SUBDIRS += xccl
 endif
 
+if RCCL
+    SUBDIRS += xccl
+endif

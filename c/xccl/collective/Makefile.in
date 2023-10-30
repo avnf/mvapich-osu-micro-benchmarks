@@ -88,14 +88,25 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-ncclcollective_PROGRAMS = osu_nccl_allgather$(EXEEXT) \
-	osu_nccl_allreduce$(EXEEXT) osu_nccl_bcast$(EXEEXT) \
-	osu_nccl_reduce$(EXEEXT) osu_nccl_reduce_scatter$(EXEEXT) \
-	osu_nccl_alltoall$(EXEEXT)
-@CUDA_KERNELS_TRUE@am__append_1 = ../../util/kernel.cu
-@BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_2 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
-@OPENACC_TRUE@am__append_3 = -acc -ta=tesla:nordc
-subdir = c/nccl/collective
+xcclcollective_PROGRAMS = osu_xccl_allgather$(EXEEXT) \
+	osu_xccl_allreduce$(EXEEXT) osu_xccl_bcast$(EXEEXT) \
+	osu_xccl_reduce$(EXEEXT) osu_xccl_reduce_scatter$(EXEEXT) \
+	osu_xccl_alltoall$(EXEEXT)
+@CUDA_KERNELS_TRUE@am__append_1 = ${top_srcdir}/c/util/kernel.cu
+@RCCL_TRUE@am__append_2 = ${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.c ${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.h
+@NCCL_TRUE@am__append_3 = ${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.c ${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.h
+@EMBEDDED_BUILD_TRUE@am__append_4 = -I$(top_builddir)/../src/include \
+@EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/util \
+@EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/../src/include \
+@EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/../modules/rccl/build/include
+
+@EMBEDDED_BUILD_TRUE@@RCCL_TRUE@am__append_5 = -I$(top_builddir)/../modules/rccl/build/lib -lrccl
+@EMBEDDED_BUILD_TRUE@@RCCL_TRUE@am__append_6 = -I${top_srcdir}/../modules/rccl/build/include
+@EMBEDDED_BUILD_TRUE@@NCCL_TRUE@am__append_7 = -I$(top_builddir)/../modules/nccl/build/lib -lnccl
+@EMBEDDED_BUILD_TRUE@@NCCL_TRUE@am__append_8 = -I${top_srcdir}/../modules/nccl/build/include
+@BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_9 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
+@OPENACC_TRUE@am__append_10 = -acc -ta=tesla:nordc
+subdir = c/xccl/collective
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -104,78 +115,130 @@ DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am__installdirs = "$(DESTDIR)$(ncclcollectivedir)"
-PROGRAMS = $(ncclcollective_PROGRAMS)
-am__osu_nccl_allgather_SOURCES_DIST = osu_nccl_allgather.c \
-	../../util/osu_util.c ../../util/osu_util.h \
-	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
-	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
-	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
-	../../util/kernel.cu
+am__installdirs = "$(DESTDIR)$(xcclcollectivedir)"
+PROGRAMS = $(xcclcollective_PROGRAMS)
+am__osu_xccl_allgather_SOURCES_DIST = osu_xccl_allgather.c \
+	${top_srcdir}/c/util/osu_util.c \
+	${top_srcdir}/c/util/osu_util.h \
+	${top_srcdir}/c/util/osu_util_mpi.c \
+	${top_srcdir}/c/util/osu_util_mpi.h \
+	${top_srcdir}/c/util/osu_util_papi.c \
+	${top_srcdir}/c/util/osu_util_papi.h \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.c \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.h \
+	${top_srcdir}/c/util/kernel.cu \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.c \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.h \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.c \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.h
 am__dirstamp = $(am__leading_dot)dirstamp
-@CUDA_KERNELS_TRUE@am__objects_1 = ../../util/kernel.$(OBJEXT)
-am__objects_2 = ../../util/osu_util.$(OBJEXT) \
-	../../util/osu_util_mpi.$(OBJEXT) \
-	../../util/osu_util_nccl.$(OBJEXT) \
-	../../util/osu_util_papi.$(OBJEXT) $(am__objects_1)
-am_osu_nccl_allgather_OBJECTS = osu_nccl_allgather.$(OBJEXT) \
-	$(am__objects_2)
-osu_nccl_allgather_OBJECTS = $(am_osu_nccl_allgather_OBJECTS)
-osu_nccl_allgather_LDADD = $(LDADD)
+@CUDA_KERNELS_TRUE@am__objects_1 =  \
+@CUDA_KERNELS_TRUE@	$(top_builddir)/c/util/kernel.$(OBJEXT)
+@RCCL_TRUE@am__objects_2 = $(top_builddir)/c/xccl/util/rccl/osu_util_rccl_impl.$(OBJEXT)
+@NCCL_TRUE@am__objects_3 = $(top_builddir)/c/xccl/util/nccl/osu_util_nccl_impl.$(OBJEXT)
+am__objects_4 = $(top_builddir)/c/util/osu_util.$(OBJEXT) \
+	$(top_builddir)/c/util/osu_util_mpi.$(OBJEXT) \
+	$(top_builddir)/c/util/osu_util_papi.$(OBJEXT) \
+	$(top_builddir)/c/xccl/util/osu_util_xccl_interface.$(OBJEXT) \
+	$(am__objects_1) $(am__objects_2) $(am__objects_3)
+am_osu_xccl_allgather_OBJECTS = osu_xccl_allgather.$(OBJEXT) \
+	$(am__objects_4)
+osu_xccl_allgather_OBJECTS = $(am_osu_xccl_allgather_OBJECTS)
+osu_xccl_allgather_LDADD = $(LDADD)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-am__osu_nccl_allreduce_SOURCES_DIST = osu_nccl_allreduce.c \
-	../../util/osu_util.c ../../util/osu_util.h \
-	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
-	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
-	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
-	../../util/kernel.cu
-am_osu_nccl_allreduce_OBJECTS = osu_nccl_allreduce.$(OBJEXT) \
-	$(am__objects_2)
-osu_nccl_allreduce_OBJECTS = $(am_osu_nccl_allreduce_OBJECTS)
-osu_nccl_allreduce_LDADD = $(LDADD)
-am__osu_nccl_alltoall_SOURCES_DIST = osu_nccl_alltoall.c \
-	../../util/osu_util.c ../../util/osu_util.h \
-	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
-	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
-	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
-	../../util/kernel.cu
-am_osu_nccl_alltoall_OBJECTS = osu_nccl_alltoall.$(OBJEXT) \
-	$(am__objects_2)
-osu_nccl_alltoall_OBJECTS = $(am_osu_nccl_alltoall_OBJECTS)
-osu_nccl_alltoall_LDADD = $(LDADD)
-am__osu_nccl_bcast_SOURCES_DIST = osu_nccl_bcast.c \
-	../../util/osu_util.c ../../util/osu_util.h \
-	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
-	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
-	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
-	../../util/kernel.cu
-am_osu_nccl_bcast_OBJECTS = osu_nccl_bcast.$(OBJEXT) $(am__objects_2)
-osu_nccl_bcast_OBJECTS = $(am_osu_nccl_bcast_OBJECTS)
-osu_nccl_bcast_LDADD = $(LDADD)
-am__osu_nccl_reduce_SOURCES_DIST = osu_nccl_reduce.c \
-	../../util/osu_util.c ../../util/osu_util.h \
-	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
-	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
-	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
-	../../util/kernel.cu
-am_osu_nccl_reduce_OBJECTS = osu_nccl_reduce.$(OBJEXT) \
-	$(am__objects_2)
-osu_nccl_reduce_OBJECTS = $(am_osu_nccl_reduce_OBJECTS)
-osu_nccl_reduce_LDADD = $(LDADD)
-am__osu_nccl_reduce_scatter_SOURCES_DIST = osu_nccl_reduce_scatter.c \
-	../../util/osu_util.c ../../util/osu_util.h \
-	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
-	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
-	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
-	../../util/kernel.cu
-am_osu_nccl_reduce_scatter_OBJECTS =  \
-	osu_nccl_reduce_scatter.$(OBJEXT) $(am__objects_2)
-osu_nccl_reduce_scatter_OBJECTS =  \
-	$(am_osu_nccl_reduce_scatter_OBJECTS)
-osu_nccl_reduce_scatter_LDADD = $(LDADD)
+am__osu_xccl_allreduce_SOURCES_DIST = osu_xccl_allreduce.c \
+	${top_srcdir}/c/util/osu_util.c \
+	${top_srcdir}/c/util/osu_util.h \
+	${top_srcdir}/c/util/osu_util_mpi.c \
+	${top_srcdir}/c/util/osu_util_mpi.h \
+	${top_srcdir}/c/util/osu_util_papi.c \
+	${top_srcdir}/c/util/osu_util_papi.h \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.c \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.h \
+	${top_srcdir}/c/util/kernel.cu \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.c \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.h \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.c \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.h
+am_osu_xccl_allreduce_OBJECTS = osu_xccl_allreduce.$(OBJEXT) \
+	$(am__objects_4)
+osu_xccl_allreduce_OBJECTS = $(am_osu_xccl_allreduce_OBJECTS)
+osu_xccl_allreduce_LDADD = $(LDADD)
+am__osu_xccl_alltoall_SOURCES_DIST = osu_xccl_alltoall.c \
+	${top_srcdir}/c/util/osu_util.c \
+	${top_srcdir}/c/util/osu_util.h \
+	${top_srcdir}/c/util/osu_util_mpi.c \
+	${top_srcdir}/c/util/osu_util_mpi.h \
+	${top_srcdir}/c/util/osu_util_papi.c \
+	${top_srcdir}/c/util/osu_util_papi.h \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.c \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.h \
+	${top_srcdir}/c/util/kernel.cu \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.c \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.h \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.c \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.h
+am_osu_xccl_alltoall_OBJECTS = osu_xccl_alltoall.$(OBJEXT) \
+	$(am__objects_4)
+osu_xccl_alltoall_OBJECTS = $(am_osu_xccl_alltoall_OBJECTS)
+osu_xccl_alltoall_LDADD = $(LDADD)
+am__osu_xccl_bcast_SOURCES_DIST = osu_xccl_bcast.c \
+	${top_srcdir}/c/util/osu_util.c \
+	${top_srcdir}/c/util/osu_util.h \
+	${top_srcdir}/c/util/osu_util_mpi.c \
+	${top_srcdir}/c/util/osu_util_mpi.h \
+	${top_srcdir}/c/util/osu_util_papi.c \
+	${top_srcdir}/c/util/osu_util_papi.h \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.c \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.h \
+	${top_srcdir}/c/util/kernel.cu \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.c \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.h \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.c \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.h
+am_osu_xccl_bcast_OBJECTS = osu_xccl_bcast.$(OBJEXT) $(am__objects_4)
+osu_xccl_bcast_OBJECTS = $(am_osu_xccl_bcast_OBJECTS)
+osu_xccl_bcast_LDADD = $(LDADD)
+am__osu_xccl_reduce_SOURCES_DIST = osu_xccl_reduce.c \
+	${top_srcdir}/c/util/osu_util.c \
+	${top_srcdir}/c/util/osu_util.h \
+	${top_srcdir}/c/util/osu_util_mpi.c \
+	${top_srcdir}/c/util/osu_util_mpi.h \
+	${top_srcdir}/c/util/osu_util_papi.c \
+	${top_srcdir}/c/util/osu_util_papi.h \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.c \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.h \
+	${top_srcdir}/c/util/kernel.cu \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.c \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.h \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.c \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.h
+am_osu_xccl_reduce_OBJECTS = osu_xccl_reduce.$(OBJEXT) \
+	$(am__objects_4)
+osu_xccl_reduce_OBJECTS = $(am_osu_xccl_reduce_OBJECTS)
+osu_xccl_reduce_LDADD = $(LDADD)
+am__osu_xccl_reduce_scatter_SOURCES_DIST = osu_xccl_reduce_scatter.c \
+	${top_srcdir}/c/util/osu_util.c \
+	${top_srcdir}/c/util/osu_util.h \
+	${top_srcdir}/c/util/osu_util_mpi.c \
+	${top_srcdir}/c/util/osu_util_mpi.h \
+	${top_srcdir}/c/util/osu_util_papi.c \
+	${top_srcdir}/c/util/osu_util_papi.h \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.c \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.h \
+	${top_srcdir}/c/util/kernel.cu \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.c \
+	${top_srcdir}/c/xccl/util/rccl/osu_util_rccl_impl.h \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.c \
+	${top_srcdir}/c/xccl/util/nccl/osu_util_nccl_impl.h
+am_osu_xccl_reduce_scatter_OBJECTS =  \
+	osu_xccl_reduce_scatter.$(OBJEXT) $(am__objects_4)
+osu_xccl_reduce_scatter_OBJECTS =  \
+	$(am_osu_xccl_reduce_scatter_OBJECTS)
+osu_xccl_reduce_scatter_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -191,16 +254,18 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ../../util/$(DEPDIR)/kernel.Po \
-	../../util/$(DEPDIR)/osu_util.Po \
-	../../util/$(DEPDIR)/osu_util_mpi.Po \
-	../../util/$(DEPDIR)/osu_util_nccl.Po \
-	../../util/$(DEPDIR)/osu_util_papi.Po \
-	./$(DEPDIR)/osu_nccl_allgather.Po \
-	./$(DEPDIR)/osu_nccl_allreduce.Po \
-	./$(DEPDIR)/osu_nccl_alltoall.Po ./$(DEPDIR)/osu_nccl_bcast.Po \
-	./$(DEPDIR)/osu_nccl_reduce.Po \
-	./$(DEPDIR)/osu_nccl_reduce_scatter.Po
+am__depfiles_remade = $(top_builddir)/c/util/$(DEPDIR)/kernel.Po \
+	$(top_builddir)/c/util/$(DEPDIR)/osu_util.Po \
+	$(top_builddir)/c/util/$(DEPDIR)/osu_util_mpi.Po \
+	$(top_builddir)/c/util/$(DEPDIR)/osu_util_papi.Po \
+	$(top_builddir)/c/xccl/util/$(DEPDIR)/osu_util_xccl_interface.Po \
+	$(top_builddir)/c/xccl/util/nccl/$(DEPDIR)/osu_util_nccl_impl.Po \
+	$(top_builddir)/c/xccl/util/rccl/$(DEPDIR)/osu_util_rccl_impl.Po \
+	./$(DEPDIR)/osu_xccl_allgather.Po \
+	./$(DEPDIR)/osu_xccl_allreduce.Po \
+	./$(DEPDIR)/osu_xccl_alltoall.Po ./$(DEPDIR)/osu_xccl_bcast.Po \
+	./$(DEPDIR)/osu_xccl_reduce.Po \
+	./$(DEPDIR)/osu_xccl_reduce_scatter.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -238,15 +303,15 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(osu_nccl_allgather_SOURCES) $(osu_nccl_allreduce_SOURCES) \
-	$(osu_nccl_alltoall_SOURCES) $(osu_nccl_bcast_SOURCES) \
-	$(osu_nccl_reduce_SOURCES) $(osu_nccl_reduce_scatter_SOURCES)
-DIST_SOURCES = $(am__osu_nccl_allgather_SOURCES_DIST) \
-	$(am__osu_nccl_allreduce_SOURCES_DIST) \
-	$(am__osu_nccl_alltoall_SOURCES_DIST) \
-	$(am__osu_nccl_bcast_SOURCES_DIST) \
-	$(am__osu_nccl_reduce_SOURCES_DIST) \
-	$(am__osu_nccl_reduce_scatter_SOURCES_DIST)
+SOURCES = $(osu_xccl_allgather_SOURCES) $(osu_xccl_allreduce_SOURCES) \
+	$(osu_xccl_alltoall_SOURCES) $(osu_xccl_bcast_SOURCES) \
+	$(osu_xccl_reduce_SOURCES) $(osu_xccl_reduce_scatter_SOURCES)
+DIST_SOURCES = $(am__osu_xccl_allgather_SOURCES_DIST) \
+	$(am__osu_xccl_allreduce_SOURCES_DIST) \
+	$(am__osu_xccl_alltoall_SOURCES_DIST) \
+	$(am__osu_xccl_bcast_SOURCES_DIST) \
+	$(am__osu_xccl_reduce_SOURCES_DIST) \
+	$(am__osu_xccl_reduce_scatter_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -402,29 +467,32 @@ AUTOMAKE_OPTIONS = subdir-objects
 NVCC = nvcc
 NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX) $(NVCCFLAGS)
 SUFFIXES = .cu .cpp
-ncclcollectivedir = $(pkglibexecdir)/nccl/collective
-AM_CFLAGS = -I${top_srcdir}/c/util $(am__append_3)
-UTILITIES = ../../util/osu_util.c ../../util/osu_util.h \
-	../../util/osu_util_mpi.c ../../util/osu_util_mpi.h \
-	../../util/osu_util_nccl.c ../../util/osu_util_nccl.h \
-	../../util/osu_util_papi.c ../../util/osu_util_papi.h \
-	$(am__append_1)
+xcclcollectivedir = $(pkglibexecdir)/xccl/collective
+AM_CFLAGS = -I${top_srcdir}/c/util -I${top_srcdir}/c/xccl/util \
+	$(am__append_10)
+UTILITIES = ${top_srcdir}/c/util/osu_util.c \
+	${top_srcdir}/c/util/osu_util.h \
+	${top_srcdir}/c/util/osu_util_mpi.c \
+	${top_srcdir}/c/util/osu_util_mpi.h \
+	${top_srcdir}/c/util/osu_util_papi.c \
+	${top_srcdir}/c/util/osu_util_papi.h \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.c \
+	${top_srcdir}/c/xccl/util/osu_util_xccl_interface.h \
+	$(am__append_1) $(am__append_2) $(am__append_3)
+@CUDA_KERNELS_TRUE@CLEANFILES = ${top_srcdir}/c/util/kernel.cpp
 @BUILD_USE_PGI_TRUE@@CUDA_KERNELS_TRUE@AM_CXXFLAGS = --nvcchost --no_preincludes
 @OPENACC_TRUE@AM_CXXFLAGS = -acc -ta=tesla:nordc
-osu_nccl_allgather_SOURCES = osu_nccl_allgather.c $(UTILITIES)
-osu_nccl_allreduce_SOURCES = osu_nccl_allreduce.c $(UTILITIES)
-osu_nccl_bcast_SOURCES = osu_nccl_bcast.c $(UTILITIES)
-osu_nccl_reduce_SOURCES = osu_nccl_reduce.c $(UTILITIES)
-osu_nccl_reduce_scatter_SOURCES = osu_nccl_reduce_scatter.c $(UTILITIES)
-osu_nccl_alltoall_SOURCES = osu_nccl_alltoall.c $(UTILITIES)
-@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = -I$(top_builddir)/../modules/nccl/build/lib \
-@EMBEDDED_BUILD_TRUE@	-lnccl $(am__append_2) \
+osu_xccl_allgather_SOURCES = osu_xccl_allgather.c $(UTILITIES)
+osu_xccl_allreduce_SOURCES = osu_xccl_allreduce.c $(UTILITIES)
+osu_xccl_bcast_SOURCES = osu_xccl_bcast.c $(UTILITIES)
+osu_xccl_reduce_SOURCES = osu_xccl_reduce.c $(UTILITIES)
+osu_xccl_reduce_scatter_SOURCES = osu_xccl_reduce_scatter.c $(UTILITIES)
+osu_xccl_alltoall_SOURCES = osu_xccl_alltoall.c $(UTILITIES)
+AM_CPPFLAGS = -DNCCL_USE_ROCM $(am__append_4) $(am__append_6) \
+	$(am__append_8)
+@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_5) $(am__append_7) \
+@EMBEDDED_BUILD_TRUE@	$(am__append_9) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
-@EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
-@EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/util \
-@EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../src/include \
-@EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/../modules/nccl/build/include
-
 all: all-am
 
 .SUFFIXES:
@@ -438,9 +506,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign c/nccl/collective/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign c/xccl/collective/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign c/nccl/collective/Makefile
+	  $(AUTOMAKE) --foreign c/xccl/collective/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
@@ -458,12 +526,12 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-install-ncclcollectivePROGRAMS: $(ncclcollective_PROGRAMS)
+install-xcclcollectivePROGRAMS: $(xcclcollective_PROGRAMS)
 	@$(NORMAL_INSTALL)
-	@list='$(ncclcollective_PROGRAMS)'; test -n "$(ncclcollectivedir)" || list=; \
+	@list='$(xcclcollective_PROGRAMS)'; test -n "$(xcclcollectivedir)" || list=; \
 	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(ncclcollectivedir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(ncclcollectivedir)" || exit 1; \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(xcclcollectivedir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(xcclcollectivedir)" || exit 1; \
 	fi; \
 	for p in $$list; do echo "$$p $$p"; done | \
 	sed 's/$(EXEEXT)$$//' | \
@@ -483,89 +551,123 @@ install-ncclcollectivePROGRAMS: $(ncclcollective_PROGRAMS)
 	while read type dir files; do \
 	    if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
 	    test -z "$$files" || { \
-	    echo " $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(ncclcollectivedir)$$dir'"; \
-	    $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(ncclcollectivedir)$$dir" || exit $$?; \
+	    echo " $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(xcclcollectivedir)$$dir'"; \
+	    $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(xcclcollectivedir)$$dir" || exit $$?; \
 	    } \
 	; done
 
-uninstall-ncclcollectivePROGRAMS:
+uninstall-xcclcollectivePROGRAMS:
 	@$(NORMAL_UNINSTALL)
-	@list='$(ncclcollective_PROGRAMS)'; test -n "$(ncclcollectivedir)" || list=; \
+	@list='$(xcclcollective_PROGRAMS)'; test -n "$(xcclcollectivedir)" || list=; \
 	files=`for p in $$list; do echo "$$p"; done | \
 	  sed -e 'h;s,^.*/,,;s/$(EXEEXT)$$//;$(transform)' \
 	      -e 's/$$/$(EXEEXT)/' \
 	`; \
 	test -n "$$list" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(ncclcollectivedir)' && rm -f" $$files ")"; \
-	cd "$(DESTDIR)$(ncclcollectivedir)" && rm -f $$files
+	echo " ( cd '$(DESTDIR)$(xcclcollectivedir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(xcclcollectivedir)" && rm -f $$files
 
-clean-ncclcollectivePROGRAMS:
-	@list='$(ncclcollective_PROGRAMS)'; test -n "$$list" || exit 0; \
+clean-xcclcollectivePROGRAMS:
+	@list='$(xcclcollective_PROGRAMS)'; test -n "$$list" || exit 0; \
 	echo " rm -f" $$list; \
 	rm -f $$list || exit $$?; \
 	test -n "$(EXEEXT)" || exit 0; \
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
-../../util/$(am__dirstamp):
-	@$(MKDIR_P) ../../util
-	@: > ../../util/$(am__dirstamp)
-../../util/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) ../../util/$(DEPDIR)
-	@: > ../../util/$(DEPDIR)/$(am__dirstamp)
-../../util/osu_util.$(OBJEXT): ../../util/$(am__dirstamp) \
-	../../util/$(DEPDIR)/$(am__dirstamp)
-../../util/osu_util_mpi.$(OBJEXT): ../../util/$(am__dirstamp) \
-	../../util/$(DEPDIR)/$(am__dirstamp)
-../../util/osu_util_nccl.$(OBJEXT): ../../util/$(am__dirstamp) \
-	../../util/$(DEPDIR)/$(am__dirstamp)
-../../util/osu_util_papi.$(OBJEXT): ../../util/$(am__dirstamp) \
-	../../util/$(DEPDIR)/$(am__dirstamp)
-../../util/kernel.$(OBJEXT): ../../util/$(am__dirstamp) \
-	../../util/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/util/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/c/util
+	@: > $(top_builddir)/c/util/$(am__dirstamp)
+$(top_builddir)/c/util/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/c/util/$(DEPDIR)
+	@: > $(top_builddir)/c/util/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/util/osu_util.$(OBJEXT):  \
+	$(top_builddir)/c/util/$(am__dirstamp) \
+	$(top_builddir)/c/util/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/util/osu_util_mpi.$(OBJEXT):  \
+	$(top_builddir)/c/util/$(am__dirstamp) \
+	$(top_builddir)/c/util/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/util/osu_util_papi.$(OBJEXT):  \
+	$(top_builddir)/c/util/$(am__dirstamp) \
+	$(top_builddir)/c/util/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/xccl/util/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/c/xccl/util
+	@: > $(top_builddir)/c/xccl/util/$(am__dirstamp)
+$(top_builddir)/c/xccl/util/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/c/xccl/util/$(DEPDIR)
+	@: > $(top_builddir)/c/xccl/util/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/xccl/util/osu_util_xccl_interface.$(OBJEXT):  \
+	$(top_builddir)/c/xccl/util/$(am__dirstamp) \
+	$(top_builddir)/c/xccl/util/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/util/kernel.$(OBJEXT):  \
+	$(top_builddir)/c/util/$(am__dirstamp) \
+	$(top_builddir)/c/util/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/xccl/util/rccl/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/c/xccl/util/rccl
+	@: > $(top_builddir)/c/xccl/util/rccl/$(am__dirstamp)
+$(top_builddir)/c/xccl/util/rccl/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/c/xccl/util/rccl/$(DEPDIR)
+	@: > $(top_builddir)/c/xccl/util/rccl/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/xccl/util/rccl/osu_util_rccl_impl.$(OBJEXT):  \
+	$(top_builddir)/c/xccl/util/rccl/$(am__dirstamp) \
+	$(top_builddir)/c/xccl/util/rccl/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/xccl/util/nccl/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/c/xccl/util/nccl
+	@: > $(top_builddir)/c/xccl/util/nccl/$(am__dirstamp)
+$(top_builddir)/c/xccl/util/nccl/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/c/xccl/util/nccl/$(DEPDIR)
+	@: > $(top_builddir)/c/xccl/util/nccl/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/c/xccl/util/nccl/osu_util_nccl_impl.$(OBJEXT):  \
+	$(top_builddir)/c/xccl/util/nccl/$(am__dirstamp) \
+	$(top_builddir)/c/xccl/util/nccl/$(DEPDIR)/$(am__dirstamp)
 
-osu_nccl_allgather$(EXEEXT): $(osu_nccl_allgather_OBJECTS) $(osu_nccl_allgather_DEPENDENCIES) $(EXTRA_osu_nccl_allgather_DEPENDENCIES) 
-	@rm -f osu_nccl_allgather$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(osu_nccl_allgather_OBJECTS) $(osu_nccl_allgather_LDADD) $(LIBS)
+osu_xccl_allgather$(EXEEXT): $(osu_xccl_allgather_OBJECTS) $(osu_xccl_allgather_DEPENDENCIES) $(EXTRA_osu_xccl_allgather_DEPENDENCIES) 
+	@rm -f osu_xccl_allgather$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(osu_xccl_allgather_OBJECTS) $(osu_xccl_allgather_LDADD) $(LIBS)
 
-osu_nccl_allreduce$(EXEEXT): $(osu_nccl_allreduce_OBJECTS) $(osu_nccl_allreduce_DEPENDENCIES) $(EXTRA_osu_nccl_allreduce_DEPENDENCIES) 
-	@rm -f osu_nccl_allreduce$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(osu_nccl_allreduce_OBJECTS) $(osu_nccl_allreduce_LDADD) $(LIBS)
+osu_xccl_allreduce$(EXEEXT): $(osu_xccl_allreduce_OBJECTS) $(osu_xccl_allreduce_DEPENDENCIES) $(EXTRA_osu_xccl_allreduce_DEPENDENCIES) 
+	@rm -f osu_xccl_allreduce$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(osu_xccl_allreduce_OBJECTS) $(osu_xccl_allreduce_LDADD) $(LIBS)
 
-osu_nccl_alltoall$(EXEEXT): $(osu_nccl_alltoall_OBJECTS) $(osu_nccl_alltoall_DEPENDENCIES) $(EXTRA_osu_nccl_alltoall_DEPENDENCIES) 
-	@rm -f osu_nccl_alltoall$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(osu_nccl_alltoall_OBJECTS) $(osu_nccl_alltoall_LDADD) $(LIBS)
+osu_xccl_alltoall$(EXEEXT): $(osu_xccl_alltoall_OBJECTS) $(osu_xccl_alltoall_DEPENDENCIES) $(EXTRA_osu_xccl_alltoall_DEPENDENCIES) 
+	@rm -f osu_xccl_alltoall$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(osu_xccl_alltoall_OBJECTS) $(osu_xccl_alltoall_LDADD) $(LIBS)
 
-osu_nccl_bcast$(EXEEXT): $(osu_nccl_bcast_OBJECTS) $(osu_nccl_bcast_DEPENDENCIES) $(EXTRA_osu_nccl_bcast_DEPENDENCIES) 
-	@rm -f osu_nccl_bcast$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(osu_nccl_bcast_OBJECTS) $(osu_nccl_bcast_LDADD) $(LIBS)
+osu_xccl_bcast$(EXEEXT): $(osu_xccl_bcast_OBJECTS) $(osu_xccl_bcast_DEPENDENCIES) $(EXTRA_osu_xccl_bcast_DEPENDENCIES) 
+	@rm -f osu_xccl_bcast$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(osu_xccl_bcast_OBJECTS) $(osu_xccl_bcast_LDADD) $(LIBS)
 
-osu_nccl_reduce$(EXEEXT): $(osu_nccl_reduce_OBJECTS) $(osu_nccl_reduce_DEPENDENCIES) $(EXTRA_osu_nccl_reduce_DEPENDENCIES) 
-	@rm -f osu_nccl_reduce$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(osu_nccl_reduce_OBJECTS) $(osu_nccl_reduce_LDADD) $(LIBS)
+osu_xccl_reduce$(EXEEXT): $(osu_xccl_reduce_OBJECTS) $(osu_xccl_reduce_DEPENDENCIES) $(EXTRA_osu_xccl_reduce_DEPENDENCIES) 
+	@rm -f osu_xccl_reduce$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(osu_xccl_reduce_OBJECTS) $(osu_xccl_reduce_LDADD) $(LIBS)
 
-osu_nccl_reduce_scatter$(EXEEXT): $(osu_nccl_reduce_scatter_OBJECTS) $(osu_nccl_reduce_scatter_DEPENDENCIES) $(EXTRA_osu_nccl_reduce_scatter_DEPENDENCIES) 
-	@rm -f osu_nccl_reduce_scatter$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(osu_nccl_reduce_scatter_OBJECTS) $(osu_nccl_reduce_scatter_LDADD) $(LIBS)
+osu_xccl_reduce_scatter$(EXEEXT): $(osu_xccl_reduce_scatter_OBJECTS) $(osu_xccl_reduce_scatter_DEPENDENCIES) $(EXTRA_osu_xccl_reduce_scatter_DEPENDENCIES) 
+	@rm -f osu_xccl_reduce_scatter$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(osu_xccl_reduce_scatter_OBJECTS) $(osu_xccl_reduce_scatter_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f ../../util/*.$(OBJEXT)
+	-rm -f $(top_builddir)/c/util/*.$(OBJEXT)
+	-rm -f $(top_builddir)/c/xccl/util/*.$(OBJEXT)
+	-rm -f $(top_builddir)/c/xccl/util/nccl/*.$(OBJEXT)
+	-rm -f $(top_builddir)/c/xccl/util/rccl/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/kernel.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_mpi.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_nccl.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@../../util/$(DEPDIR)/osu_util_papi.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_allgather.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_allreduce.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_alltoall.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_bcast.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_reduce.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_nccl_reduce_scatter.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/c/util/$(DEPDIR)/kernel.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/c/util/$(DEPDIR)/osu_util.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/c/util/$(DEPDIR)/osu_util_mpi.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/c/util/$(DEPDIR)/osu_util_papi.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/c/xccl/util/$(DEPDIR)/osu_util_xccl_interface.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/c/xccl/util/nccl/$(DEPDIR)/osu_util_nccl_impl.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/c/xccl/util/rccl/$(DEPDIR)/osu_util_rccl_impl.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_xccl_allgather.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_xccl_allreduce.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_xccl_alltoall.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_xccl_bcast.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_xccl_reduce.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_xccl_reduce_scatter.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -716,7 +818,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(PROGRAMS)
 installdirs:
-	for dir in "$(DESTDIR)$(ncclcollectivedir)"; do \
+	for dir in "$(DESTDIR)$(xcclcollectivedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -741,33 +843,42 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-rm -f ../../util/$(DEPDIR)/$(am__dirstamp)
-	-rm -f ../../util/$(am__dirstamp)
+	-test -z "$(top_builddir)/c/util/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_builddir)/c/util/$(DEPDIR)/$(am__dirstamp)
+	-test -z "$(top_builddir)/c/util/$(am__dirstamp)" || rm -f $(top_builddir)/c/util/$(am__dirstamp)
+	-test -z "$(top_builddir)/c/xccl/util/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_builddir)/c/xccl/util/$(DEPDIR)/$(am__dirstamp)
+	-test -z "$(top_builddir)/c/xccl/util/$(am__dirstamp)" || rm -f $(top_builddir)/c/xccl/util/$(am__dirstamp)
+	-test -z "$(top_builddir)/c/xccl/util/nccl/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_builddir)/c/xccl/util/nccl/$(DEPDIR)/$(am__dirstamp)
+	-test -z "$(top_builddir)/c/xccl/util/nccl/$(am__dirstamp)" || rm -f $(top_builddir)/c/xccl/util/nccl/$(am__dirstamp)
+	-test -z "$(top_builddir)/c/xccl/util/rccl/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_builddir)/c/xccl/util/rccl/$(DEPDIR)/$(am__dirstamp)
+	-test -z "$(top_builddir)/c/xccl/util/rccl/$(am__dirstamp)" || rm -f $(top_builddir)/c/xccl/util/rccl/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libtool clean-ncclcollectivePROGRAMS \
+clean-am: clean-generic clean-libtool clean-xcclcollectivePROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ../../util/$(DEPDIR)/kernel.Po
-	-rm -f ../../util/$(DEPDIR)/osu_util.Po
-	-rm -f ../../util/$(DEPDIR)/osu_util_mpi.Po
-	-rm -f ../../util/$(DEPDIR)/osu_util_nccl.Po
-	-rm -f ../../util/$(DEPDIR)/osu_util_papi.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_allgather.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_allreduce.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_alltoall.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_bcast.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_reduce.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_reduce_scatter.Po
+		-rm -f $(top_builddir)/c/util/$(DEPDIR)/kernel.Po
+	-rm -f $(top_builddir)/c/util/$(DEPDIR)/osu_util.Po
+	-rm -f $(top_builddir)/c/util/$(DEPDIR)/osu_util_mpi.Po
+	-rm -f $(top_builddir)/c/util/$(DEPDIR)/osu_util_papi.Po
+	-rm -f $(top_builddir)/c/xccl/util/$(DEPDIR)/osu_util_xccl_interface.Po
+	-rm -f $(top_builddir)/c/xccl/util/nccl/$(DEPDIR)/osu_util_nccl_impl.Po
+	-rm -f $(top_builddir)/c/xccl/util/rccl/$(DEPDIR)/osu_util_rccl_impl.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_allgather.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_allreduce.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_alltoall.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_bcast.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_reduce.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_reduce_scatter.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -784,7 +895,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-ncclcollectivePROGRAMS
+install-data-am: install-xcclcollectivePROGRAMS
 
 install-dvi: install-dvi-am
 
@@ -813,17 +924,19 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ../../util/$(DEPDIR)/kernel.Po
-	-rm -f ../../util/$(DEPDIR)/osu_util.Po
-	-rm -f ../../util/$(DEPDIR)/osu_util_mpi.Po
-	-rm -f ../../util/$(DEPDIR)/osu_util_nccl.Po
-	-rm -f ../../util/$(DEPDIR)/osu_util_papi.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_allgather.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_allreduce.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_alltoall.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_bcast.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_reduce.Po
-	-rm -f ./$(DEPDIR)/osu_nccl_reduce_scatter.Po
+		-rm -f $(top_builddir)/c/util/$(DEPDIR)/kernel.Po
+	-rm -f $(top_builddir)/c/util/$(DEPDIR)/osu_util.Po
+	-rm -f $(top_builddir)/c/util/$(DEPDIR)/osu_util_mpi.Po
+	-rm -f $(top_builddir)/c/util/$(DEPDIR)/osu_util_papi.Po
+	-rm -f $(top_builddir)/c/xccl/util/$(DEPDIR)/osu_util_xccl_interface.Po
+	-rm -f $(top_builddir)/c/xccl/util/nccl/$(DEPDIR)/osu_util_nccl_impl.Po
+	-rm -f $(top_builddir)/c/xccl/util/rccl/$(DEPDIR)/osu_util_rccl_impl.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_allgather.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_allreduce.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_alltoall.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_bcast.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_reduce.Po
+	-rm -f ./$(DEPDIR)/osu_xccl_reduce_scatter.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -840,25 +953,24 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-ncclcollectivePROGRAMS
+uninstall-am: uninstall-xcclcollectivePROGRAMS
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am am--depfiles check check-am clean \
-	clean-generic clean-libtool clean-ncclcollectivePROGRAMS \
+	clean-generic clean-libtool clean-xcclcollectivePROGRAMS \
 	cscopelist-am ctags ctags-am distclean distclean-compile \
 	distclean-generic distclean-libtool distclean-tags distdir dvi \
 	dvi-am html html-am info info-am install install-am \
 	install-data install-data-am install-dvi install-dvi-am \
 	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man \
-	install-ncclcollectivePROGRAMS install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags tags-am uninstall uninstall-am \
-	uninstall-ncclcollectivePROGRAMS
+	install-info install-info-am install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	install-xcclcollectivePROGRAMS installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-compile mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-am uninstall \
+	uninstall-am uninstall-xcclcollectivePROGRAMS
 
 .PRECIOUS: Makefile
 

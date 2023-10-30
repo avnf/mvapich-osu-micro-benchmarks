@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [7.2], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [7.3], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([c/mpi/pt2pt/standard/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -134,6 +134,27 @@ AC_ARG_WITH([rocm],
                      [CPPFLAGS="-I$with_rocm/include $CPPFLAGS"
                       LDFLAGS="-L$with_rocm/lib64 -Wl,-rpath=$with_rocm/lib64 -L$with_rocm/lib -Wl,-rpath=$with_rocm/lib -lamdhip64 $LDFLAGS"])
             ])
+
+AC_ARG_ENABLE([rcclomb],
+         [AS_HELP_STRING([--enable-rcclomb],
+             [Enable RCCL benchmarks (default is no). Specify
+             --enable-rcclomb to enable RCCL benchmarks support])
+         ],
+         [],
+         [enable_rcclomb=no])
+
+if test "x$enable_rcclomb" = "xyes"; then
+    AC_ARG_WITH([rccl],
+             [AS_HELP_STRING([--with-rccl=@<:@RCCL installation path@:>@],
+                             [Provide path to RCCL installation])
+             ],
+             [AS_CASE([$with_rccl],
+                      [yes|no], [],
+                      [CPPFLAGS="-I$with_rccl/include $CPPFLAGS"
+                       LDFLAGS="-L$with_rccl/lib -Wl,-rpath=$with_rccl/lib -lrccl $LDFLAGS"])
+             ])
+fi
+
 AC_ARG_WITH([gnuplot],
             [AS_HELP_STRING([--with-gnuplot=@<:@gnuplot installation path@:>@],
                             [Provide path to gnuplot installation])
@@ -202,6 +223,9 @@ AC_SUBST([PMPILIBNAME], [$PMILIBNAME])
 AC_SUBST([MPILIBNAME], [$MPILIBNAME])
 
 
+AS_IF([test "x$enable_rcclomb" = xyes && test "x$enable_ncclomb" = xyes],
+      [AC_MSG_ERROR([Can not enable NCCL and RCCL benchmarks together])])
+
 AS_IF([test "x$enable_ncclomb" = xyes], [
         AS_IF([test "x$enable_embedded" != xyes], [
             AC_CHECK_HEADERS([nccl.h], [],
@@ -216,6 +240,17 @@ AS_IF([test "x$enable_ncclomb" = xyes], [
         dnl    LDFLAGS="-L$srcdir/modules/nccl/build/lib -Wl,-rpath=$prefix/lib -lnccl $LDFLAGS"
         dnl])
         AC_DEFINE([_ENABLE_NCCL_], [1], [Enable NCCL])
+      ])
+
+AS_IF([test "x$enable_rcclomb" = xyes], [
+       AC_DEFINE([__HIP_PLATFORM_HCC__])
+       AC_CHECK_HEADERS([rccl.h], [],
+                      [AC_MSG_ERROR([cannot include rccl.h])])
+       AC_SEARCH_LIBS([ncclGetUniqueId], [nccl], [],
+                      [AC_MSG_ERROR([cannot link with -lrccl])])
+       AC_CHECK_FUNC([ncclSend], [rccl_pt2pt=true],
+                     [AC_MSG_WARN([RCCL version >= 3.7.0 required for point-to-point support. Disabling building RCCL point-to-point benchmarks.])])
+       AC_DEFINE([_ENABLE_RCCL_], [1], [Enable RCCL])
       ])
 
 AS_IF([test "x$enable_openacc" = xyes], [
@@ -275,6 +310,7 @@ AS_IF([test "x$oshm_13_library" = xtrue], [
        ])
 AM_CONDITIONAL([MPI2_LIBRARY], [test x$mpi2_library = xtrue])
 AM_CONDITIONAL([MPI3_LIBRARY], [test x$mpi3_library = xtrue])
+AM_CONDITIONAL([MPI4_LIBRARY], [test x$mpi4_library = xtrue])
 AM_CONDITIONAL([C], [test x$enable_c != xno])
 AM_CONDITIONAL([CUDA], [test x$build_cuda = xyes])
 AM_CONDITIONAL([NCCL], [test x$enable_ncclomb = xyes])
@@ -282,6 +318,8 @@ AM_CONDITIONAL([NCCL_PT2PT], [test x$nccl_pt2pt = xtrue])
 AM_CONDITIONAL([CUDA_KERNELS], [test x$build_cuda_kernels = xyes])
 AM_CONDITIONAL([OPENACC], [test x$enable_openacc = xyes])
 AM_CONDITIONAL([ROCM], [test x$enable_rocm = xyes])
+AM_CONDITIONAL([RCCL], [test x$enable_rcclomb = xyes])
+AM_CONDITIONAL([RCCL_PT2PT], [test x$rccl_pt2pt = xtrue])
 AM_CONDITIONAL([OSHM], [test x$oshm_library = xtrue])
 AM_CONDITIONAL([MPI], [test x$mpi_library = xtrue])
 AM_CONDITIONAL([UPC], [test x$upc_compiler = xtrue])
@@ -295,12 +333,13 @@ AC_DEFINE([FLOAT_PRECISION], [2], [Precision of reported numbers])
 AC_CONFIG_FILES([Makefile c/Makefile c/mpi/Makefile c/mpi/pt2pt/Makefile
                  c/mpi/startup/Makefile c/mpi/one-sided/Makefile
                  c/mpi/collective/Makefile c/openshmem/Makefile
-                 c/upc/Makefile c/upcxx/Makefile c/nccl/Makefile
-                 c/nccl/collective/Makefile c/nccl/pt2pt/Makefile
+                 c/xccl/collective/Makefile c/xccl/pt2pt/Makefile
+                 c/xccl/Makefile c/upc/Makefile c/upcxx/Makefile
                  c/mpi/pt2pt/standard/Makefile c/mpi/pt2pt/persistent/Makefile
                  c/mpi/collective/blocking/Makefile
                  c/mpi/collective/non_blocking/Makefile
                  c/mpi/collective/neighborhood/Makefile
+                 c/mpi/collective/persistent/Makefile
                ])
 
 AC_OUTPUT

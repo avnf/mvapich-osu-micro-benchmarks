@@ -9,7 +9,6 @@
  */
 
 #include "osu_util.h"
-#include "osu_util_options.h"
 #ifdef _ENABLE_OPENACC_
 #include <openacc.h>
 #endif
@@ -86,6 +85,23 @@ void print_header(int rank, int full)
                         if (options.validate && !(options.subtype == BW &&
                                                   options.bench == MBW_MR)) {
                             fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
+                        }
+                        if (options.omb_tail_lat) {
+                            if (options.subtype == BW) {
+                                fprintf(stdout, "%*s", FIELD_WIDTH,
+                                        "P50 Tail BW(MB/s)");
+                                fprintf(stdout, "%*s", FIELD_WIDTH,
+                                        "P95 Tail BW(MB/s)");
+                                fprintf(stdout, "%*s", FIELD_WIDTH,
+                                        "P99 Tail BW(MB/s)");
+                            } else {
+                                fprintf(stdout, "%*s", FIELD_WIDTH,
+                                        "P50 Tail Lat(us)");
+                                fprintf(stdout, "%*s", FIELD_WIDTH,
+                                        "P95 Tail Lat(us)");
+                                fprintf(stdout, "%*s", FIELD_WIDTH,
+                                        "P99 Tail Lat(us)");
+                            }
                         }
                         if (options.omb_enable_ddt &&
                             !(options.subtype == BW &&
@@ -431,7 +447,6 @@ int process_options(int argc, char *argv[])
 {
     extern char *optarg;
     extern int optind, optopt;
-    char const *optstring = NULL;
     char optstring_buf[80];
     int c, ret = PO_OKAY;
     int option_index = 0;
@@ -490,6 +505,33 @@ int process_options(int argc, char *argv[])
             case REDUCE_SCATTER:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, REDUCE_SCATTER);
                 break;
+            case GATHER_P:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, GATHER_P);
+                break;
+            case ALL_GATHER_P:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, ALL_GATHER_P);
+                break;
+            case SCATTER_P:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, SCATTER_P);
+                break;
+            case ALLTOALL_P:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, ALLTOALL_P);
+                break;
+            case BCAST_P:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, BCAST_P);
+                break;
+            case BARRIER_P:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, BARRIER_P);
+                break;
+            case REDUCE_P:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, REDUCE_P);
+                break;
+            case ALL_REDUCE_P:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, ALL_REDUCE_P);
+                break;
+            case REDUCE_SCATTER_P:
+                OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, REDUCE_SCATTER_P);
+                break;
             case NBC_BARRIER:
                 OMBOP_OPTSTR_CUDA_BLK(COLLECTIVE, NBC_BARRIER);
                 break;
@@ -534,19 +576,20 @@ int process_options(int argc, char *argv[])
                 break;
         }
     } else if (MBW_MR == options.bench) {
-        optstring = (accel_enabled) ? OMBOP__ACCEL__MBW_MR : OMBOP__MBW_MR;
+        options.optstring =
+            (accel_enabled) ? OMBOP__ACCEL__MBW_MR : OMBOP__MBW_MR;
     } else if (OSHM == options.bench) {
-        optstring = OMBOP__OSHM;
+        options.optstring = OMBOP__OSHM;
     } else if (UPC == options.bench) {
-        optstring = OMBOP__UPC;
+        options.optstring = OMBOP__UPC;
     } else if (UPCXX == options.bench) {
-        optstring = OMBOP__UPCXX;
+        options.optstring = OMBOP__UPCXX;
     } else if (STARTUP == options.bench && INIT == options.subtype) {
-        optstring = OMBOP__STARTUP__INIT;
+        options.optstring = OMBOP__STARTUP__INIT;
     } else if (options.bench == ONE_SIDED) {
         int jchar = 0;
 
-        jchar = sprintf(&optstring_buf[jchar], "%s", "+:w:s:hvm:x:i:G:I");
+        jchar = sprintf(&optstring_buf[jchar], "%s", "+:w:s:hvm:x:i:G:Iz");
         if (options.subtype == BW) {
             jchar += sprintf(&optstring_buf[jchar], "%s", "W:");
         }
@@ -558,11 +601,14 @@ int process_options(int argc, char *argv[])
         if (options.show_validation) {
             jchar += sprintf(&optstring_buf[jchar], "%s", "cT:");
         }
-        optstring = optstring_buf;
+        options.optstring = malloc(strlen(optstring_buf) * sizeof(char));
+        OMB_CHECK_NULL_AND_EXIT(options.optstring,
+                                "Unable to allocated memory");
+        strcpy((char *)options.optstring, optstring_buf);
     } else {
         OMB_ERROR_EXIT("Unknown benchmark");
     }
-    omb_process_long_options(long_options, optstring);
+    omb_process_long_options(long_options, options.optstring);
     /* Set default options*/
     options.accel = NONE;
     options.show_size = 1;
@@ -603,6 +649,7 @@ int process_options(int argc, char *argv[])
     options.omb_enable_session = 0;
     options.omb_enable_mpi_in_place = 0;
     options.omb_root_rank = 0;
+    options.omb_tail_lat = 0;
 
     switch (options.subtype) {
         case BW:
@@ -643,6 +690,15 @@ int process_options(int argc, char *argv[])
         case REDUCE_SCATTER:
         case NBC_REDUCE_SCATTER:
         case NBC_BARRIER:
+        case BARRIER_P:
+        case GATHER_P:
+        case ALL_GATHER_P:
+        case ALLTOALL_P:
+        case REDUCE_P:
+        case ALL_REDUCE_P:
+        case SCATTER_P:
+        case BCAST_P:
+        case REDUCE_SCATTER_P:
             if (options.bench == COLLECTIVE) {
                 options.iterations = COLL_LOOP_SMALL;
                 options.skip = COLL_SKIP_SMALL;
@@ -678,7 +734,7 @@ int process_options(int argc, char *argv[])
             break;
     }
 
-    while ((c = getopt_long(argc, argv, optstring, long_options,
+    while ((c = getopt_long(argc, argv, options.optstring, long_options,
                             &option_index)) != -1) {
         bad_usage.opt = c;
         bad_usage.optarg = NULL;
@@ -769,6 +825,9 @@ int process_options(int argc, char *argv[])
                 break;
             case 'f':
                 options.show_full = 1;
+                break;
+            case 'z':
+                options.omb_tail_lat = 1;
                 break;
             case 'M':
                 /*

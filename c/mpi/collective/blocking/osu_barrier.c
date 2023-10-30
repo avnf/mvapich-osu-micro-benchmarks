@@ -25,6 +25,8 @@ int main(int argc, char *argv[])
     options.subtype = BARRIER;
     MPI_Comm omb_comm = MPI_COMM_NULL;
     omb_mpi_init_data omb_init_h;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
     set_header(HEADER);
     set_benchmark_name("osu_barrier");
@@ -74,6 +76,10 @@ int main(int argc, char *argv[])
 
         return EXIT_FAILURE;
     }
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
 
     omb_graph_options.number_of_graphs = 0;
     omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_options,
@@ -94,6 +100,9 @@ int main(int argc, char *argv[])
 
         if (i >= options.skip) {
             timer += t_stop - t_start;
+            if (options.omb_tail_lat) {
+                omb_lat_arr[i - options.skip] = (t_stop - t_start) * 1e6;
+            }
             if (options.graph && 0 == rank) {
                 omb_graph_data->data[i - options.skip] =
                     (t_stop - t_start) * 1e6;
@@ -113,8 +122,9 @@ int main(int argc, char *argv[])
     MPI_CHECK(
         MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0, omb_comm));
     avg_time = avg_time / numprocs;
+    omb_stat = omb_get_stats(omb_lat_arr);
 
-    print_stats(rank, 0, avg_time, min_time, max_time);
+    print_stats(rank, 0, avg_time, min_time, max_time, omb_stat);
     if (0 == rank && options.graph) {
         omb_graph_data->avg = avg_time;
         omb_graph_plot(&omb_graph_options, benchmark_name);
@@ -123,6 +133,7 @@ int main(int argc, char *argv[])
     }
     omb_papi_free(&papi_eventset);
     omb_mpi_finalize(omb_init_h);
+    free(omb_lat_arr);
 
     return EXIT_SUCCESS;
 }

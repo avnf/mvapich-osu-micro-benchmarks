@@ -88,7 +88,8 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @NCCL_PT2PT_TRUE@am__append_1 = pt2pt
-subdir = c/nccl
+@RCCL_PT2PT_TRUE@am__append_2 = pt2pt
+subdir = c/xccl
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -304,7 +305,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = collective $(am__append_1)
+SUBDIRS = collective $(am__append_1) $(am__append_2)
 all: all-recursive
 
 .SUFFIXES:
@@ -317,9 +318,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign c/nccl/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign c/xccl/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign c/nccl/Makefile
+	  $(AUTOMAKE) --foreign c/xccl/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \

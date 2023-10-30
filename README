@@ -181,7 +181,21 @@ osu_multi_lat - Multi-pair Latency Test
     * In order to perform the test across just two nodes the hostnames must
     * be specified in block fashion.
 
-Point-to-Point NCCL Benchmarks
+Building XCCL(NCCL/RCCL) benchmarks
+--------------------------------------
+NCCL and RCCL benchmarks are now merged into XCCL benchmarks. XCCL benchmarks
+will run with either NCCL or RCCL support set during configure time.
+
+Configure command line to enable NCCL benchmarks is as follows:
+--enable-cuda --with-cuda-include=/path/to/cuda/include
+--with-cuda-libpath=/path/to/cuda/lib64 --enable-ncclomb
+--with-nccl=/path/to/nccl/build
+
+Configure command line to enable RCCL benchmarks is as follows:
+--enable-rocm --with-rocm=/path/to/rocm/build --enable-rcclomb
+--with-rccl=/path/to/rocm/build
+
+Point-to-Point XCCL(NCCL/RCCL) Benchmarks
 ------------------------------
 osu_latency - Latency Test
     * The latency tests are carried out in a ping-pong fashion. The sender
@@ -189,7 +203,7 @@ osu_latency - Latency Test
     * reply from the receiver. The receiver receives the message from the sender
     * and sends back a reply with the same data size. Many iterations of this
     * ping-pong test are carried out and average one-way latency numbers are
-    * obtained. Non-Blocking version of NCCL functions (ncclSend and ncclRecv)
+    * obtained. Non-Blocking version of XCCL functions (ncclSend and ncclRecv)
     * are used in the tests. This test is available here.
 
 osu_bw - Bandwidth Test
@@ -202,7 +216,7 @@ osu_bw - Bandwidth Test
     * time it receives the reply back from the receiver) and the number of bytes
     * sent by the sender. The objective of this bandwidth test is to determine
     * the maximum sustained date rate that can be achieved at the network level.
-    * Thus, non-blocking version of NCCL functions (ncclSend and ncclRecv) are
+    * Thus, non-blocking version of XCCL functions (ncclSend and ncclRecv) are
     * used in the test. This test is available here.
 
 osu_bibw - Bidirectional Bandwidth Test
@@ -253,19 +267,20 @@ Collective Latency Tests
     * "-M" can be used to set per process maximum memory consumption.  By
            default the benchmarks are limited to 512MB allocations.
 
-Collective NCCL Benchmarks
+Collective XCCL(NCCL/RCCL) Benchmarks
 --------------------------
-osu_nccl_allgather      - NCCL Allgather Latency Test(*)
-osu_nccl_allreduce      - NCCL Allreduce Latency Test
-osu_nccl_bcast          - NCCL Bcast Latency Test
-osu_nccl_reduce         - NCCL Reduce Latency Test
-osu_nccl_reduce_scatter - NCCL Reduce_scatter Latency Test
+osu_xccl_allgather      - XCCL Allgather Latency Test(*)
+osu_xccl_allreduce      - XCCL Allreduce Latency Test
+osu_xccl_alltoall       - XCCL Alltoall Latency Test
+osu_xccl_bcast          - XCCL Bcast Latency Test
+osu_xccl_reduce         - XCCL Reduce Latency Test
+osu_xccl_reduce_scatter - XCCL Reduce_scatter Latency Test
 
 Collective Latency Tests
     * The latest OMB version includes benchmarks for various MPI blocking
-    * collective operations (NCCL Allgather, NCCL Allreduce, NCCL Bcast,
-    * NCCL Reduce, NCCL Reduce_Scatter. These benchmarks work in the
-    * following manner.  Suppose users run the osu_nccl_bcast benchmark with N
+    * collective operations (NCCL Allgather, NCCL Allreduce, NCCL Alltoall,
+    * NCCL Bcast, NCCL Reduce, NCCL Reduce_Scatter. These benchmarks work in the
+    * following manner.  Suppose users run the osu_xccl_bcast benchmark with N
     * processes, the benchmark measures the min, max and the average latency of
     * the NCCL Bcast collective operation across N processes, for various
     * message lengths, over a large number of iterations. In the default
@@ -292,9 +307,9 @@ The following benchmarks have been extended to evalaute the correctness in
 addition to the communication performance.
 
     * osu_allreduce         - MPI_Allreduce Latency Test
-    * osu_nccl_allreduce    - NCCL Allreduce Latency Test
+    * osu_xccl_allreduce    - XCCL Allreduce Latency Test
     * osu_reduce            - MPI_Reduce Latency Test
-    * osu_nccl_reduce       - NCCL Reduce Latency Test
+    * osu_xccl_reduce       - XCCL Reduce Latency Test
     * osu_alltoall          - MPI_Alltoall Latency Test
 
 Support for CUDA Managed Memory
@@ -1400,3 +1415,22 @@ The following benchmarks have been extended which an option to set root rank.
     * "-r" option can be used to set the root rank of the collective.
     *      "-r rotate" to change root for every iteration.
     *      "-r fixed:<rank>" to run benchmark with a fixed root.
+
+Option to print tail latencies/bandwidth
+-----------------------------------------
+Benchmarks have been extended to support the following additional metrics,
+    * 50th percentile tail latency/bandwidth
+    * 95th percentile tail latency/bandwidth
+    * 99th percentile tail latency/bandwidth
+
+The benchmarks offer following options:
+    * "-z" option can be used to print tail latencies/bandwith.
+
+Building with MPI-4 support
+--------------------------------------
+OMB supports some of the MPI-4 features like MPI Sessions and Persistenct
+Collectives. When an MPI-4 supported MPI library is used at the time of
+configuration, OMB will automatically detect and build with MPI-4 support.
+
+OMB can also be forced to build with MPI-4 support by passing "--enable-mpi4"
+during configure time.

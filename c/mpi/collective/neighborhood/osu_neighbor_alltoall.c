@@ -40,6 +40,8 @@ int main(int argc, char *argv[])
     int reorder = 0;
     double t_gca = 0, t_gca_total = 0;
     MPI_Comm comm_dist_graph;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
     set_header(HEADER);
     set_benchmark_name("osu_neighbor_alltoall");
@@ -94,6 +96,10 @@ int main(int argc, char *argv[])
         MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
     }
     set_buffer(recvbuf, options.accel, 0, bufsize);
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
     omb_neighborhood_create(omb_comm, &indegree, &sources, &sourceweights,
                             &outdegree, &destinations, &destweights);
     t_gca = MPI_Wtime();
@@ -143,10 +149,10 @@ int main(int argc, char *argv[])
                     omb_papi_start(&papi_eventset);
                 }
                 if (options.validate) {
-                    set_buffer_nhbr_validation(sendbuf, recvbuf, *indegree,
-                                               sources, *outdegree, destinations,
-                                               size, options.accel, i,
-                                               omb_curr_datatype);
+                    set_buffer_nhbr_validation(
+                        sendbuf, recvbuf, *indegree, sources, *outdegree,
+                        destinations, size, options.accel, i,
+                        omb_curr_datatype);
                     for (j = 0; j < options.warmup_validation; j++) {
                         MPI_CHECK(MPI_Barrier(omb_comm));
                         MPI_CHECK(MPI_Neighbor_alltoall(
@@ -168,6 +174,10 @@ int main(int argc, char *argv[])
                 }
                 if (i >= options.skip) {
                     timer += t_stop - t_start;
+                    if (options.omb_tail_lat) {
+                        omb_lat_arr[i - options.skip] =
+                            (t_stop - t_start) * 1e6;
+                    }
                     if (options.graph && 0 == rank) {
                         omb_graph_data->data[i - options.skip] =
                             (t_stop - t_start) * 1e6;
@@ -184,15 +194,16 @@ int main(int argc, char *argv[])
             MPI_CHECK(MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0,
                                  omb_comm));
             avg_time = avg_time / numprocs;
+            omb_stat = omb_get_stats(omb_lat_arr);
             if (options.validate) {
                 MPI_CHECK(MPI_Allreduce(&local_errors, &errors, 1, MPI_INT,
                                         MPI_SUM, omb_comm));
             }
             if (options.validate) {
                 print_stats_validate(rank, size, avg_time, min_time, max_time,
-                                     local_errors);
+                                     local_errors, omb_stat);
             } else {
-                print_stats(rank, size, avg_time, min_time, max_time);
+                print_stats(rank, size, avg_time, min_time, max_time, omb_stat);
             }
             if (options.graph && 0 == rank) {
                 omb_graph_data->avg = avg_time;
@@ -219,6 +230,7 @@ int main(int argc, char *argv[])
     free(sourceweights);
     free(indegree);
     free(outdegree);
+    free(omb_lat_arr);
     MPI_CHECK(MPI_Comm_free(&comm_dist_graph));
     omb_mpi_finalize(omb_init_h);
     if (NONE != options.accel) {

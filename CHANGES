@@ -1,3 +1,35 @@
+OSU Micro Benchmarks v7.3 (10/30/2023)
+
+* New Features & Enhancements
+    - Add support for RCCL benchmarks
+        * Thanks to Marcel Koch @KIT for the initial patch
+        * Point-to-point benchmarks supported
+            * osu_xccl_bibw, osu_xccl_bw, osu_xccl_latency
+        * Collective benchmarks supported
+            * osu_xccl_allgather, osu_xccl_allreduce, osu_xccl_alltoall,
+            * osu_xccl_bcast, osu_xccl_reduce, osu_xccl_reduce_scatter
+    - Add new benchmarks for persistent collectives
+        * osu_allgather_persistent, osu_allgatherv_persistent,
+        * osu_allreduce_persistent, osu_alltoall_persistent,
+        * osu_alltoallv_persistent, osu_alltoallw_persistent,
+        * osu_barrier_persistent, osu_bcast_persistent,
+        * osu_gather_persistent, osu_gatherv_persistent,
+        * osu_reduce_persistent, osu_reduce_scatter_persistent,
+        * osu_scatter_persistent, osu_scatterv_persistent
+    - Support new metrics to evaluate benchmark performance
+        * 50th percentile tail latency/bandwidth
+        * 95th percentile tail latency/bandwidth
+        * 99th percentile tail latency/bandwidth
+
+* Bug Fixes
+    - Fixed acknowledgement buffer memory allocation issue in bandwidth related 
+      benchmarks
+        * Thanks to Emmanuel BRELLE @Eviden for report and patch.
+    - Fixed validation issue in osu_fop_latency.
+        * Thanks to Coey Minear @HPE for report and patch.
+    - Added support to managed buffers in one-sided collectives and
+      one-sided point-to-point benchmarks
+
 OSU Micro Benchmarks v7.2 (07/10/2023)
 
 * New Features & Enhancements

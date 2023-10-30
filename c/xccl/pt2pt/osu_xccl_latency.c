@@ -1,4 +1,4 @@
-#define BENCHMARK "OSU NCCL%s Latency Test"
+#define BENCHMARK "OSU " OMB_XCCL_TYPE_STR "%s Latency Test"
 /*
  * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
@@ -8,40 +8,43 @@
  * For detailed copyright and licensing information, please refer to the
  * copyright file COPYRIGHT in the top level OMB directory.
  */
-#include <osu_util_nccl.h>
+
+#include "osu_util_xccl_interface.h"
 
 int main(int argc, char *argv[])
 {
-    int myid, numprocs, i;
-    int size;
+    omb_xccl_int_t *omb_xccl_interface = omb_xccl_interface_inject();
+    int myid = 0, numprocs = 0, i = 0;
+    int size = 0;
     MPI_Status reqstat;
-    char *send_buf, *recv_buf;
-    double t_start = 0.0, t_end = 0.0;
+    char *send_buf = NULL, *recv_buf = NULL;
+    double t_start = 0.0, t_end = 0.0, t_total = 0.0;
     int po_ret = 0;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
+
     options.bench = PT2PT;
     options.subtype = LAT;
 
     set_header(HEADER);
-    set_benchmark_name("osu_nccl_latency");
+    set_benchmark_name("osu_xccl_latency");
 
     po_ret = process_options(argc, argv);
 
-    if (options.accel != CUDA || options.src != 'D' || options.dst != 'D') {
-        fprintf(
-            stderr,
-            "Warning: Host buffer was set for one of the processes. NCCL "
-            "does not support host buffers. Implicitly converting to device "
-            "buffer (D D).\n\n");
-        options.accel = CUDA;
-        options.src = 'D';
-        options.dst = 'D';
+    if (PO_OKAY == po_ret) {
+        if (OMB_XCCL_ACC_TYPE != options.accel) {
+            omb_force_accelerator();
+        }
+        if (init_accel()) {
+            fprintf(stderr, "Error initializing device\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
-    if (init_accel()) {
-        fprintf(stderr, "Error initializing device\n");
-        exit(EXIT_FAILURE);
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
     }
-
     MPI_CHECK(MPI_Init(&argc, &argv));
     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myid));
@@ -86,7 +89,7 @@ int main(int argc, char *argv[])
     }
 
     if (numprocs != 2) {
-        if (myid == 0) {
+        if (0 == myid) {
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
@@ -94,8 +97,8 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    allocate_nccl_stream();
-    create_nccl_comm(numprocs, myid);
+    omb_xccl_interface->allocate_xccl_stream();
+    omb_xccl_interface->create_xccl_comm(numprocs, myid);
 
     if (allocate_memory_pt2pt(&send_buf, &recv_buf, myid)) {
         /* Error allocating memory */
@@ -108,6 +111,7 @@ int main(int argc, char *argv[])
     /* Latency test */
     for (size = options.min_message_size; size <= options.max_message_size;
          size = (size ? size * 2 : 1)) {
+        t_total = 0.0;
         set_buffer_pt2pt(send_buf, myid, options.accel, 'a', size);
         set_buffer_pt2pt(recv_buf, myid, options.accel, 'b', size);
 
@@ -118,47 +122,64 @@ int main(int argc, char *argv[])
 
         MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 
-        if (myid == 0) {
+        if (0 == myid) {
             for (i = 0; i < options.iterations + options.skip; i++) {
-                if (i == options.skip) {
+                if (i >= options.skip) {
                     t_start = MPI_Wtime();
                 }
 
-                NCCL_CHECK(ncclSend(send_buf, size, ncclChar, 1, nccl_comm,
-                                    nccl_stream));
-                CUDA_STREAM_SYNCHRONIZE(nccl_stream);
-                NCCL_CHECK(ncclRecv(recv_buf, size, ncclChar, 1, nccl_comm,
-                                    nccl_stream));
-                CUDA_STREAM_SYNCHRONIZE(nccl_stream);
+                omb_xccl_interface->ncclSend(send_buf, size, ncclChar, 1,
+                                             nccl_comm, nccl_stream);
+                omb_xccl_interface->synchronize_xccl_stream();
+                omb_xccl_interface->ncclRecv(recv_buf, size, ncclChar, 1,
+                                             nccl_comm, nccl_stream);
+                omb_xccl_interface->synchronize_xccl_stream();
+                if (i >= options.skip) {
+                    t_end = MPI_Wtime();
+                    t_total += t_end - t_start;
+                    if (options.omb_tail_lat) {
+                        omb_lat_arr[i - options.skip] =
+                            (t_end - t_start) * 1e6 / 2.0;
+                    }
+                }
             }
 
-            t_end = MPI_Wtime();
         }
 
-        else if (myid == 1) {
+        else if (1 == myid) {
             for (i = 0; i < options.iterations + options.skip; i++) {
-                NCCL_CHECK(ncclRecv(recv_buf, size, ncclChar, 0, nccl_comm,
-                                    nccl_stream));
-                CUDA_STREAM_SYNCHRONIZE(nccl_stream);
-                NCCL_CHECK(ncclSend(send_buf, size, ncclChar, 0, nccl_comm,
-                                    nccl_stream));
-                CUDA_STREAM_SYNCHRONIZE(nccl_stream);
+                omb_xccl_interface->ncclRecv(recv_buf, size, ncclChar, 0,
+                                             nccl_comm, nccl_stream);
+                omb_xccl_interface->synchronize_xccl_stream();
+                omb_xccl_interface->ncclSend(send_buf, size, ncclChar, 0,
+                                             nccl_comm, nccl_stream);
+                omb_xccl_interface->synchronize_xccl_stream();
             }
         }
 
-        if (myid == 0) {
-            double latency =
-                (t_end - t_start) * 1e6 / (2.0 * options.iterations);
+        if (0 == myid) {
+            double latency = t_total * 1e6 / (2.0 * options.iterations);
 
-            fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
-                    FLOAT_PRECISION, latency);
+            fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
+                    latency);
+            if (options.omb_tail_lat) {
+                omb_stat = omb_calculate_tail_lat(omb_lat_arr, myid, 1);
+                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                        omb_stat.p50);
+                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                        omb_stat.p95);
+                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                        omb_stat.p99);
+            }
+            fprintf(stdout, "\n");
             fflush(stdout);
         }
     }
 
     free_memory(send_buf, recv_buf, myid);
-    deallocate_nccl_stream();
-    destroy_nccl_comm();
+    free(omb_lat_arr);
+    omb_xccl_interface->deallocate_xccl_stream();
+    omb_xccl_interface->destroy_xccl_comm();
     MPI_CHECK(MPI_Finalize());
 
     if (NONE != options.accel) {
@@ -167,6 +188,6 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
     }
-
+    omb_xccl_interface_free(omb_xccl_interface);
     return EXIT_SUCCESS;
 }

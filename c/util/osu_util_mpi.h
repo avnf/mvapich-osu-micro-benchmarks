@@ -71,19 +71,37 @@ extern void call_empty_kernel(char *buf, size_t length, cudaStream_t *stream);
 /*
  * Print Information
  */
+typedef struct omb_stat_t {
+    double p50;
+    double p95;
+    double p99;
+} omb_stat_t;
+
 void print_bad_usage_message(int rank);
 void print_help_message(int rank);
+void print_help_message_common();
 void print_version_message(int rank);
 void print_preamble(int rank);
 void print_only_header(int rank);
 void print_preamble_nbc(int rank);
 void print_only_header_nbc(int rank);
-void print_stats(int rank, int size, double avg, double min, double max);
+void print_stats(int rank, int size, double avg, double min, double max,
+                 struct omb_stat_t omb_stats);
 void print_stats_validate(int rank, int size, double avg, double min,
-                          double max, int errors);
+                          double max, int errors, struct omb_stat_t omb_stats);
 void print_stats_nbc(int rank, int size, double ovrl, double cpu,
                      double avg_comm, double min_comm, double max_comm,
-                     double wait, double init, double test, int errors);
+                     double wait, double init, double test, int errors,
+                     struct omb_stat_t omb_stats);
+int omb_ascending_cmp_double(const void *a, const void *b);
+struct omb_stat_t omb_get_stats(double *lat_arr);
+struct omb_stat_t omb_calculate_tail_lat(double *avg_lat_arr, int rank,
+                                         int comm_size);
+double calculate_and_print_stats(int rank, int size, int numprocs, double timer,
+                                 double latency, double test_time,
+                                 double cpu_time, double wait_time,
+                                 double init_time, int errors,
+                                 struct omb_stat_t omb_stat);
 
 /*
  * Memory Management
@@ -169,8 +187,9 @@ int validate_reduce_scatter(void *buffer, size_t size, int *recvcounts,
                             int rank, int num_procs, enum accel_type type,
                             int iter, MPI_Datatype dtype);
 int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
-                               int outdegree, size_t size, enum accel_type type,
-                               int iter, MPI_Datatype dtype);
+                                  int outdegree, size_t size,
+                                  enum accel_type type, int iter,
+                                  MPI_Datatype dtype);
 void set_buffer_nhbr_validation(void *s_buf, void *r_buf, int indegree,
                                 int *sources, int outdegree, int *destinations,
                                 size_t size, enum accel_type type, int iter,
@@ -192,9 +211,10 @@ void omb_ddt_append_stats(size_t omb_ddt_transmit_size);
  */
 #define OMB_NHBRHD_FILE_LINE_MAX_LENGTH 500
 #define OMB_NHBRHD_ADJ_EDGES_MAX_NUM    500
-int omb_neighborhood_create(MPI_Comm comm, int **indegree_ptr, int **sources_ptr,
-                            int **sourceweights_ptr, int **outdegree_ptr,
-                            int **destinations_ptr, int **destweights_ptr);
+int omb_neighborhood_create(MPI_Comm comm, int **indegree_ptr,
+                            int **sources_ptr, int **sourceweights_ptr,
+                            int **outdegree_ptr, int **destinations_ptr,
+                            int **destweights_ptr);
 
 #define ATOM_CTYPE_FOR_DMPI_CHAR  char
 #define ATOM_CTYPE_FOR_DMPI_INT   int

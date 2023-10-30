@@ -39,6 +39,8 @@ int papi_eventset = OMB_PAPI_NULL;
 MPI_Datatype mpi_type_list[OMB_NUM_DATATYPES];
 MPI_Comm omb_comm = MPI_COMM_NULL;
 omb_mpi_init_data omb_init_h;
+double *omb_lat_arr = NULL;
+struct omb_stat_t omb_stat;
 
 int main(int argc, char *argv[])
 {
@@ -151,6 +153,10 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
     }
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
 
     if (rank == 0) {
         fprintf(stdout, HEADER);
@@ -178,6 +184,11 @@ int main(int argc, char *argv[])
             if (options.validate) {
                 fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
             }
+            if (options.omb_tail_lat) {
+                fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail BW(MB/s)");
+                fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail BW(MB/s)");
+                fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail BW(MB/s)");
+            }
             if (options.omb_enable_ddt) {
                 fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
             }
@@ -190,202 +201,214 @@ int main(int argc, char *argv[])
     /* More than one window size */
     for (mpi_type_itr = 0; mpi_type_itr < options.omb_dtype_itr;
          mpi_type_itr++) {
-      MPI_CHECK(MPI_Type_size(mpi_type_list[mpi_type_itr], &mpi_type_size));
-      MPI_CHECK(MPI_Type_get_name(mpi_type_list[mpi_type_itr],
-                                  mpi_type_name_str, &mpi_type_name_length));
-      if (0 == rank) {
-        fprintf(stdout, "# Datatype: %s.\n", mpi_type_name_str);
-      }
-      fflush(stdout);
-      if (1 <= mpi_type_itr) {
-        print_only_header(rank);
-      }
-      if (options.window_varied) {
-        int window_array[] = WINDOW_SIZES;
-        double **bandwidth_results;
-        int log_val = 1, tmp_message_size = options.max_message_size;
-        int i, j;
-
-        for (i = 0; i < WINDOW_SIZES_COUNT; i++) {
-            if (window_array[i] > options.window_size) {
-                options.window_size = window_array[i];
-            }
+        MPI_CHECK(MPI_Type_size(mpi_type_list[mpi_type_itr], &mpi_type_size));
+        MPI_CHECK(MPI_Type_get_name(mpi_type_list[mpi_type_itr],
+                                    mpi_type_name_str, &mpi_type_name_length));
+        if (0 == rank) {
+            fprintf(stdout, "# Datatype: %s.\n", mpi_type_name_str);
         }
-
-        mbw_request =
-            (MPI_Request *)malloc(sizeof(MPI_Request) * options.window_size);
-        mbw_reqstat =
-            (MPI_Status *)malloc(sizeof(MPI_Status) * options.window_size);
-
-        while (tmp_message_size >>= 1) {
-            log_val++;
+        fflush(stdout);
+        if (1 <= mpi_type_itr) {
+            print_only_header(rank);
         }
-
-        bandwidth_results = (double **)malloc(sizeof(double *) * log_val);
-
-        for (i = 0; i < log_val; i++) {
-            bandwidth_results[i] =
-                (double *)malloc(sizeof(double) * WINDOW_SIZES_COUNT);
-        }
-
-        if (rank == 0) {
-            fprintf(stdout, "#      ");
+        if (options.window_varied) {
+            int window_array[] = WINDOW_SIZES;
+            double **bandwidth_results;
+            int log_val = 1, tmp_message_size = options.max_message_size;
+            int i, j;
 
             for (i = 0; i < WINDOW_SIZES_COUNT; i++) {
-                fprintf(stdout, "  %10d", window_array[i]);
+                if (window_array[i] > options.window_size) {
+                    options.window_size = window_array[i];
+                }
             }
 
-            fprintf(stdout, "\n");
-            fflush(stdout);
-        }
+            mbw_request = (MPI_Request *)malloc(sizeof(MPI_Request) *
+                                                options.window_size);
+            mbw_reqstat =
+                (MPI_Status *)malloc(sizeof(MPI_Status) * options.window_size);
 
-        for (j = 0, curr_size = options.min_message_size;
-             curr_size <= options.max_message_size; curr_size *= 2) {
-          num_elements = curr_size / mpi_type_size;
-          if (0 == num_elements) {
-            continue;
-          }
-          if (rank == 0) {
-            fprintf(stdout, "%-7d", curr_size);
-          }
-
-          for (i = 0; i < WINDOW_SIZES_COUNT; i++) {
-            if (options.buf_num == MULTIPLE) {
-              s_buf = malloc(sizeof(char *) * options.window_size);
-              r_buf = malloc(sizeof(char *) * options.window_size);
+            while (tmp_message_size >>= 1) {
+                log_val++;
             }
 
-            bandwidth_results[j][i] =
-                calc_bw(rank, curr_size, options.pairs, window_array[i], s_buf,
-                        r_buf, mpi_type_itr, num_elements, mpi_type_size);
+            bandwidth_results = (double **)malloc(sizeof(double *) * log_val);
+
+            for (i = 0; i < log_val; i++) {
+                bandwidth_results[i] =
+                    (double *)malloc(sizeof(double) * WINDOW_SIZES_COUNT);
+            }
 
             if (rank == 0) {
-              fprintf(stdout, "  %10.*f", FLOAT_PRECISION,
-                      bandwidth_results[j][i]);
-            }
-            if (options.buf_num == MULTIPLE) {
-              free(s_buf);
-              free(r_buf);
-            }
-          }
-
-          if (rank == 0) {
-            fprintf(stdout, "\n");
-            fflush(stdout);
-          }
-          j++;
-        }
-
-        if (rank == 0 && options.print_rate) {
-            fprintf(stdout, "\n# Message Rate Profile\n");
-            fprintf(stdout, "#      ");
-
-            for (i = 0; i < WINDOW_SIZES_COUNT; i++) {
-                fprintf(stdout, "  %10d", window_array[i]);
-            }
-
-            fprintf(stdout, "\n");
-            fflush(stdout);
-
-            for (c = 0, curr_size = options.min_message_size;
-                 curr_size <= options.max_message_size; curr_size *= 2) {
-              num_elements = curr_size / mpi_type_size;
-              if (0 == num_elements) {
-                continue;
-              }
-                fprintf(stdout, "%-7d", curr_size);
+                fprintf(stdout, "#      ");
 
                 for (i = 0; i < WINDOW_SIZES_COUNT; i++) {
-                    if (options.omb_enable_ddt) {
-                        message_rate = 1e6 * bandwidth_results[c][i] /
-                                       omb_ddt_transmit_size;
-                    } else {
-                        message_rate =
-                            1e6 * bandwidth_results[c][i] / curr_size;
-                    }
-
-                    fprintf(stdout, "  %10.2f", message_rate);
+                    fprintf(stdout, "  %10d", window_array[i]);
                 }
 
                 fprintf(stdout, "\n");
                 fflush(stdout);
-                c++;
             }
-        }
-    }
 
-    else {
-        if (options.buf_num == MULTIPLE) {
-            s_buf = malloc(sizeof(char *) * options.window_size);
-            r_buf = malloc(sizeof(char *) * options.window_size);
-        }
-
-        /* Just one window size */
-        mbw_request =
-            (MPI_Request *)malloc(sizeof(MPI_Request) * options.window_size);
-        mbw_reqstat =
-            (MPI_Status *)malloc(sizeof(MPI_Status) * options.window_size);
-
-        for (curr_size = options.min_message_size;
-             curr_size <= options.max_message_size; curr_size *= 2) {
-            double bw, rate;
-
-            num_elements = curr_size / mpi_type_size;
-            if (0 == num_elements) {
-              continue;
-            }
-            bw = calc_bw(rank, curr_size, options.pairs, options.window_size,
-                         s_buf, r_buf, mpi_type_itr, num_elements,
-                         mpi_type_size);
-
-            if (rank == 0) {
-                if (options.omb_enable_ddt) {
-                    rate = 1e6 * bw / omb_ddt_transmit_size;
-                } else {
-                    rate = 1e6 * bw / curr_size;
+            for (j = 0, curr_size = options.min_message_size;
+                 curr_size <= options.max_message_size; curr_size *= 2) {
+                num_elements = curr_size / mpi_type_size;
+                if (0 == num_elements) {
+                    continue;
+                }
+                if (rank == 0) {
+                    fprintf(stdout, "%-7d", curr_size);
                 }
 
-                if (options.print_rate) {
-                    if (options.validate) {
-                        fprintf(stdout, "%-*d%*.*f%*.*f%*s", 10, curr_size,
-                                FIELD_WIDTH, FLOAT_PRECISION, bw, FIELD_WIDTH,
-                                FLOAT_PRECISION, rate, FIELD_WIDTH,
-                                VALIDATION_STATUS(errors_reduced));
-                    } else {
-                        fprintf(stdout, "%-*d%*.*f%*.*f", 10, curr_size,
-                                FIELD_WIDTH, FLOAT_PRECISION, bw, FIELD_WIDTH,
-                                FLOAT_PRECISION, rate);
+                for (i = 0; i < WINDOW_SIZES_COUNT; i++) {
+                    if (options.buf_num == MULTIPLE) {
+                        s_buf = malloc(sizeof(char *) * options.window_size);
+                        r_buf = malloc(sizeof(char *) * options.window_size);
+                    }
+
+                    bandwidth_results[j][i] = calc_bw(
+                        rank, curr_size, options.pairs, window_array[i], s_buf,
+                        r_buf, mpi_type_itr, num_elements, mpi_type_size);
+
+                    if (rank == 0) {
+                        fprintf(stdout, "  %10.*f", FLOAT_PRECISION,
+                                bandwidth_results[j][i]);
+                    }
+                    if (options.buf_num == MULTIPLE) {
+                        free(s_buf);
+                        free(r_buf);
                     }
                 }
 
-                else {
-                    if (options.validate) {
-                        fprintf(stdout, "%-*d%*.*f%*s", 10, curr_size,
-                                FIELD_WIDTH, FLOAT_PRECISION, bw, FIELD_WIDTH,
-                                VALIDATION_STATUS(errors_reduced));
-                    } else {
-                        fprintf(stdout, "%-*d%*.*f", 10, curr_size, FIELD_WIDTH,
-                                FLOAT_PRECISION, bw);
-                    }
+                if (rank == 0) {
+                    fprintf(stdout, "\n");
+                    fflush(stdout);
                 }
-                if (options.omb_enable_ddt) {
-                    fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);
+                j++;
+            }
+
+            if (rank == 0 && options.print_rate) {
+                fprintf(stdout, "\n# Message Rate Profile\n");
+                fprintf(stdout, "#      ");
+
+                for (i = 0; i < WINDOW_SIZES_COUNT; i++) {
+                    fprintf(stdout, "  %10d", window_array[i]);
                 }
+
                 fprintf(stdout, "\n");
-            }
+                fflush(stdout);
 
-            if (options.validate) {
-                MPI_CHECK(MPI_Bcast(&errors_reduced, 1, MPI_INT, 0, omb_comm));
-                if (0 != errors_reduced) {
-                    break;
+                for (c = 0, curr_size = options.min_message_size;
+                     curr_size <= options.max_message_size; curr_size *= 2) {
+                    num_elements = curr_size / mpi_type_size;
+                    if (0 == num_elements) {
+                        continue;
+                    }
+                    fprintf(stdout, "%-7d", curr_size);
+
+                    for (i = 0; i < WINDOW_SIZES_COUNT; i++) {
+                        if (options.omb_enable_ddt) {
+                            message_rate = 1e6 * bandwidth_results[c][i] /
+                                           omb_ddt_transmit_size;
+                        } else {
+                            message_rate =
+                                1e6 * bandwidth_results[c][i] / curr_size;
+                        }
+
+                        fprintf(stdout, "  %10.2f", message_rate);
+                    }
+
+                    fprintf(stdout, "\n");
+                    fflush(stdout);
+                    c++;
                 }
             }
         }
-        if (options.buf_num == MULTIPLE) {
-            free(s_buf);
-            free(r_buf);
+
+        else {
+            if (options.buf_num == MULTIPLE) {
+                s_buf = malloc(sizeof(char *) * options.window_size);
+                r_buf = malloc(sizeof(char *) * options.window_size);
+            }
+
+            /* Just one window size */
+            mbw_request = (MPI_Request *)malloc(sizeof(MPI_Request) *
+                                                options.window_size);
+            mbw_reqstat =
+                (MPI_Status *)malloc(sizeof(MPI_Status) * options.window_size);
+
+            for (curr_size = options.min_message_size;
+                 curr_size <= options.max_message_size; curr_size *= 2) {
+                double bw, rate;
+
+                num_elements = curr_size / mpi_type_size;
+                if (0 == num_elements) {
+                    continue;
+                }
+                bw = calc_bw(rank, curr_size, options.pairs,
+                             options.window_size, s_buf, r_buf, mpi_type_itr,
+                             num_elements, mpi_type_size);
+
+                if (rank == 0) {
+                    if (options.omb_enable_ddt) {
+                        rate = 1e6 * bw / omb_ddt_transmit_size;
+                    } else {
+                        rate = 1e6 * bw / curr_size;
+                    }
+
+                    if (options.print_rate) {
+                        if (options.validate) {
+                            fprintf(stdout, "%-*d%*.*f%*.*f%*s", 10, curr_size,
+                                    FIELD_WIDTH, FLOAT_PRECISION, bw,
+                                    FIELD_WIDTH, FLOAT_PRECISION, rate,
+                                    FIELD_WIDTH,
+                                    VALIDATION_STATUS(errors_reduced));
+                        } else {
+                            fprintf(stdout, "%-*d%*.*f%*.*f", 10, curr_size,
+                                    FIELD_WIDTH, FLOAT_PRECISION, bw,
+                                    FIELD_WIDTH, FLOAT_PRECISION, rate);
+                        }
+                    }
+
+                    else {
+                        if (options.validate) {
+                            fprintf(stdout, "%-*d%*.*f%*s", 10, curr_size,
+                                    FIELD_WIDTH, FLOAT_PRECISION, bw,
+                                    FIELD_WIDTH,
+                                    VALIDATION_STATUS(errors_reduced));
+                        } else {
+                            fprintf(stdout, "%-*d%*.*f", 10, curr_size,
+                                    FIELD_WIDTH, FLOAT_PRECISION, bw);
+                        }
+                    }
+                    if (options.omb_tail_lat) {
+                        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                                omb_stat.p50);
+                        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                                omb_stat.p95);
+                        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                                omb_stat.p99);
+                    }
+                    if (options.omb_enable_ddt) {
+                        fprintf(stdout, "%*zu", FIELD_WIDTH,
+                                omb_ddt_transmit_size);
+                    }
+                    fprintf(stdout, "\n");
+                }
+
+                if (options.validate) {
+                    MPI_CHECK(
+                        MPI_Bcast(&errors_reduced, 1, MPI_INT, 0, omb_comm));
+                    if (0 != errors_reduced) {
+                        break;
+                    }
+                }
+            }
+            if (options.buf_num == MULTIPLE) {
+                free(s_buf);
+                free(r_buf);
+            }
         }
-    }
     }
 
     if (options.graph) {
@@ -399,6 +422,7 @@ int main(int argc, char *argv[])
         free(s_buf);
         free(r_buf);
     }
+    free(omb_lat_arr);
     omb_mpi_finalize(omb_init_h);
 
     if (NONE != options.accel) {
@@ -420,22 +444,23 @@ int main(int argc, char *argv[])
 
 double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
                char **r_buf, int mpi_type_itr, int num_elements,
-               int mpi_type_size) {
-  double t_start = 0, t_end = 0, t = 0, bw = 0, t_lo = 0.0, tmp_total = 0.0;
-  int i, j, k, target;
-  MPI_Datatype omb_curr_datatype = mpi_type_list[mpi_type_itr];
-  omb_graph_data_t *omb_graph_data = NULL;
-  struct omb_buffer_sizes_t omb_buffer_sizes;
+               int mpi_type_size)
+{
+    double t_start = 0, t_end = 0, t = 0, bw = 0, t_lo = 0.0, tmp_total = 0.0;
+    int i, j, k, target;
+    MPI_Datatype omb_curr_datatype = mpi_type_list[mpi_type_itr];
+    omb_graph_data_t *omb_graph_data = NULL;
+    struct omb_buffer_sizes_t omb_buffer_sizes;
 
-  omb_ddt_transmit_size =
-      omb_ddt_assign(&omb_curr_datatype, mpi_type_list[mpi_type_itr],
-                     num_elements) *
-      mpi_type_size;
-  num_elements = omb_ddt_get_size(num_elements);
-  if (options.buf_num == SINGLE) {
-    set_buffer_pt2pt(s_buf[0], rank, options.accel, 'a', size);
-    set_buffer_pt2pt(r_buf[0], rank, options.accel, 'b', size);
-  }
+    omb_ddt_transmit_size =
+        omb_ddt_assign(&omb_curr_datatype, mpi_type_list[mpi_type_itr],
+                       num_elements) *
+        mpi_type_size;
+    num_elements = omb_ddt_get_size(num_elements);
+    if (options.buf_num == SINGLE) {
+        set_buffer_pt2pt(s_buf[0], rank, options.accel, 'a', size);
+        set_buffer_pt2pt(r_buf[0], rank, options.accel, 'b', size);
+    }
 
 #ifdef _ENABLE_CUDA_KERNEL_
     if (options.dst == 'M' && options.MMdst == 'D') {
@@ -509,7 +534,7 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
                     }
                 }
                 MPI_CHECK(MPI_Waitall(window_size, mbw_request, mbw_reqstat));
-                MPI_CHECK(MPI_Recv(r_buf[0], 4, MPI_CHAR, target, 101, omb_comm,
+                MPI_CHECK(MPI_Recv(r_buf[0], 1, MPI_CHAR, target, 101, omb_comm,
                                    &mbw_reqstat[0]));
 
 #ifdef _ENABLE_CUDA_KERNEL_
@@ -520,12 +545,18 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
                 if (i >= options.skip && k == options.warmup_validation) {
                     t_end = MPI_Wtime();
                     t += calculate_total(t_start, t_end, t_lo, window_size);
+                    if (options.omb_enable_ddt) {
+                        tmp_total = omb_ddt_transmit_size / 1e6 * num_pairs;
+                    } else {
+                        tmp_total = size / 1e6 * num_pairs;
+                    }
+                    tmp_total = tmp_total * window_size;
+                    if (options.omb_tail_lat) {
+                        omb_lat_arr[i - options.skip] =
+                            tmp_total /
+                            calculate_total(t_start, t_end, t_lo, window_size);
+                    }
                     if (options.graph) {
-                        if (options.omb_enable_ddt) {
-                            tmp_total = omb_ddt_transmit_size / 1e6 * num_pairs;
-                        } else {
-                            tmp_total = size / 1e6 * num_pairs;
-                        }
                         tmp_total = tmp_total * window_size;
                         omb_graph_data->data[i - options.skip] =
                             tmp_total /
@@ -567,16 +598,16 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
                 }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
                 MPI_CHECK(
-                    MPI_Send(s_buf[0], 4, MPI_CHAR, target, 101, omb_comm));
+                    MPI_Send(s_buf[0], 1, MPI_CHAR, target, 101, omb_comm));
             }
             if (options.validate) {
                 if (options.buf_num == SINGLE) {
-                  errors = validate_data(r_buf[0], size, 1, options.accel, i,
-                                         omb_curr_datatype);
+                    errors = validate_data(r_buf[0], size, 1, options.accel, i,
+                                           omb_curr_datatype);
                 } else {
                     for (j = 0; j < window_size; j++) {
-                      errors = validate_data(r_buf[j], size, 1, options.accel,
-                                             j, omb_curr_datatype);
+                        errors = validate_data(r_buf[j], size, 1, options.accel,
+                                               j, omb_curr_datatype);
                     }
                 }
                 MPI_CHECK(MPI_Reduce(&errors, &error_temp, 1, MPI_INT, MPI_SUM,
@@ -589,6 +620,7 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
             }
         }
     }
+    omb_stat = omb_calculate_tail_lat(omb_lat_arr, rank, 1);
     omb_papi_stop_and_print(&papi_eventset, size);
     if (options.buf_num == MULTIPLE) {
         for (i = 0; i < window_size; i++) {

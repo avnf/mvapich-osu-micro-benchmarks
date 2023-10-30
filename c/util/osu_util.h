@@ -32,6 +32,7 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <ctype.h>
+#include "osu_util_options.h"
 
 #ifdef _ENABLE_PAPI_
 #include <papi.h>
@@ -67,12 +68,6 @@
 #define CUDA_KERNEL_ENABLED 1
 #else
 #define CUDA_KERNEL_ENABLED 0
-#endif
-
-#ifdef _ENABLE_NCCL_
-#define NCCL_ENABLED 1
-#else
-#define NCCL_ENABLED 0
 #endif
 
 #ifdef _ENABLE_ROCM_
@@ -167,14 +162,9 @@ void print_data_nbc(int rank, int full, int size, double ovrl, double cpu,
 
 void allocate_host_arrays();
 
-double calculate_and_print_stats(int rank, int size, int numprocs, double timer,
-                                 double latency, double test_time,
-                                 double cpu_time, double wait_time,
-                                 double init_time, int errors);
-
 enum mpi_req { MAX_REQ_NUM = 1000 };
 
-#define OMB_LONG_OPTIONS_ARRAY_SIZE     28
+#define OMB_LONG_OPTIONS_ARRAY_SIZE     29
 #define BW_LOOP_SMALL                   100
 #define BW_SKIP_SMALL                   10
 #define BW_LOOP_LARGE                   20
@@ -197,10 +187,10 @@ enum mpi_req { MAX_REQ_NUM = 1000 };
 #define VALIDATION_SKIP_DEFAULT         5
 #define VALIDATION_SKIP_MAX             10
 #define OMB_DDT_STRIDE_DEFAULT          8
-#define OMB_DDT_BLOCK_LENGTH_DEFAULT 4
+#define OMB_DDT_BLOCK_LENGTH_DEFAULT    4
 #define OMB_FILE_PATH_MAX_LENGTH        1024
 #define OMB_NHBRHD_FILE_PATH_MAX_LENGTH OMB_FILE_PATH_MAX_LENGTH
-#define OMB_DDT_FILE_PATH_MAX_LENGTH OMB_FILE_PATH_MAX_LENGTH
+#define OMB_DDT_FILE_PATH_MAX_LENGTH    OMB_FILE_PATH_MAX_LENGTH
 #define MAX_MESSAGE_SIZE                (1 << 22)
 #define MAX_MSG_SIZE_PT2PT              (1 << 20)
 #define MAX_MSG_SIZE_COLL               (1 << 20)
@@ -269,7 +259,16 @@ enum test_subtype {
     SCATTER,
     REDUCE,
     ALL_REDUCE,
-    BCAST
+    BCAST,
+    BARRIER_P,
+    ALLTOALL_P,
+    GATHER_P,
+    ALL_GATHER_P,
+    REDUCE_SCATTER_P,
+    SCATTER_P,
+    REDUCE_P,
+    ALL_REDUCE_P,
+    BCAST_P
 };
 
 enum test_synctype { ALL_SYNC, ACTIVE_SYNC };
@@ -339,7 +338,7 @@ struct options_t {
     size_t window_size_large;
     int num_probes;
     int device_array_size;
-
+    char const *optstring;
     enum benchmark_type bench;
     enum test_subtype subtype;
     enum test_synctype synctype;
@@ -380,6 +379,12 @@ struct options_t {
     int omb_enable_session;
     int omb_enable_mpi_in_place;
     int omb_root_rank;
+    int omb_tail_lat;
+};
+
+struct help_msg_t {
+    char opt;
+    char msg[2048];
 };
 
 struct bad_usage_t {

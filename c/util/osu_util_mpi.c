@@ -153,101 +153,7 @@ void usage_one_sided(char const *name)
     }
 
     fprintf(stdout, "Options:\n");
-
-    if (accel_enabled) {
-        fprintf(stdout, "  -d --accelerator <type>       accelerator device "
-                        "buffers can be of <type> "
-                        "`cuda', `openacc', or `rocm'\n");
-    }
-    fprintf(stdout, "\n");
-
-#if MPI_VERSION >= 3
-    fprintf(stdout, "  -w --win-option <win_option>\n");
-    fprintf(stdout, "            <win_option> can be any of the follows:\n");
-    fprintf(stdout, "            create            use MPI_Win_create to "
-                    "create an MPI Window object\n");
-    if (accel_enabled) {
-        fprintf(stdout,
-                "            allocate          use MPI_Win_allocate to create "
-                "an MPI Window object (not valid when using device memory)\n");
-    } else {
-        fprintf(stdout, "            allocate          use MPI_Win_allocate to "
-                        "create an MPI Window object\n");
-    }
-    fprintf(stdout, "            dynamic           use MPI_Win_create_dynamic "
-                    "to create an MPI Window object\n");
-    fprintf(stdout, "\n");
-#endif
-
-    fprintf(stdout, "  -s, --sync-option <sync_option>\n");
-    fprintf(stdout, "            <sync_option> can be any of the follows:\n");
-    fprintf(stdout, "            pscw              use "
-                    "Post/Start/Complete/Wait synchronization calls \n");
-    fprintf(stdout, "            fence             use MPI_Win_fence "
-                    "synchronization call\n");
-    if (options.synctype == ALL_SYNC) {
-        fprintf(stdout, "            lock              use MPI_Win_lock/unlock "
-                        "synchronizations calls\n");
-#if MPI_VERSION >= 3
-        fprintf(stdout, "            flush             use MPI_Win_flush "
-                        "synchronization call\n");
-        fprintf(stdout, "            flush_local       use MPI_Win_flush_local "
-                        "synchronization call\n");
-        fprintf(stdout, "            lock_all          use "
-                        "MPI_Win_lock_all/unlock_all synchronization calls\n");
-#endif
-    }
-    fprintf(stdout, "\n");
-    if (options.show_size) {
-        fprintf(stdout,
-                "  -m, --message-size          [MIN:]MAX  set the minimum "
-                "and/or the maximum message size to MIN and/or MAX\n");
-        fprintf(
-            stdout,
-            "                              bytes respectively. Examples:\n");
-        fprintf(stdout, "                              -m 128      // min = "
-                        "default, max = 128\n");
-        fprintf(stdout, "                              -m 2:128    // min = 2, "
-                        "max = 128\n");
-        fprintf(stdout, "                              -m 2:       // min = 2, "
-                        "max = default\n");
-        fprintf(stdout, "  -M, --mem-limit SIZE        set per process maximum "
-                        "memory consumption to SIZE bytes\n");
-        fprintf(stdout, "                              (default %d)\n",
-                MAX_MEM_LIMIT);
-    }
-    fprintf(stdout, "  -x, --warmup ITER           number of warmup iterations "
-                    "to skip before timing"
-                    "(default 100)\n");
-
-    if (options.subtype == BW) {
-        fprintf(stdout, "  -W, --window-size SIZE      set number of messages "
-                        "to send before synchronization (default 64)\n");
-    }
-
-    fprintf(stdout, "  -G, --graph tty,png,pdf     graph output of per"
-                    " iteration values.\n");
-    fprintf(stdout, "  -T, --type [TYPE]           Set MPI_TYPE "
-                    "<all,mpi_char,mpi_int,mpi_float>. Default:MPI_CHAR.\n");
-#ifdef _ENABLE_PAPI_
-    fprintf(stdout, "  -P, --papi [EVENTS]:[PATH]     Enable PAPI support\n");
-    fprintf(stdout, "                                 [EVENTS]       //Comma "
-                    "seperated list of PAPI events\n");
-    fprintf(stdout, "                                 [PATH]         //PAPI "
-                    "output file path\n");
-#endif
-    fprintf(stdout, "  -i, --iterations ITER       number of iterations for "
-                    "timing (default 10000)\n");
-    if (options.show_validation) {
-        fprintf(stdout, "  -c, --validation            Enable or disable "
-                        "validation. Disabled by default. \n");
-    }
-#ifdef _ENABLE_MPI4_
-    fprintf(stdout, "  -I, --session               Enable session based MPI "
-                    "initialization.\n");
-#endif
-    fprintf(stdout, "  -h, --help                  print this help message\n");
-    fflush(stdout);
+    print_help_message_common();
 }
 
 int process_one_sided_options(int opt, char *arg)
@@ -317,70 +223,7 @@ void usage_mbw_mr()
     }
 
     fprintf(stdout, "Options:\n");
-    fprintf(stdout, "  -R=<0,1>, --print-rate         Print uni-directional "
-                    "message rate (default 1)\n");
-    fprintf(stdout, "  -p=<pairs>, --num-pairs        Number of pairs involved "
-                    "(default np / 2)\n");
-    fprintf(stdout, "  -W=<window>, --window-size     Number of messages sent "
-                    "before acknowledgement (default 64)\n");
-    fprintf(stdout,
-            "                                 [cannot be used with -v]\n");
-    fprintf(
-        stdout,
-        "  -V, --vary-window              Vary the window size (default no)\n");
-    fprintf(stdout,
-            "                                 [cannot be used with -W]\n");
-    fprintf(stdout, "  -b, --buffer-num               Use different buffers to "
-                    "perform data transfer (default single)\n");
-    fprintf(stdout,
-            "                                 Options: single, multiple\n");
-    if (options.show_size) {
-        fprintf(stdout,
-                "  -m, --message-size             [MIN:]MAX  set the minimum "
-                "and/or the maximum message size to MIN and/or MAX\n");
-        fprintf(
-            stdout,
-            "                                 bytes respectively. Examples:\n");
-        fprintf(stdout, "                                 -m 128      // min = "
-                        "default, max = 128\n");
-        fprintf(stdout,
-                "                                 -m 2:128    // min = 2, "
-                "max = 128\n");
-        fprintf(stdout,
-                "                                 -m 2:       // min = 2, "
-                "max = default\n");
-        fprintf(stdout,
-                "  -M, --mem-limit SIZE           set per process maximum "
-                "memory consumption to SIZE bytes\n");
-        fprintf(stdout, "                                 (default %d)\n",
-                MAX_MEM_LIMIT);
-    }
-    if (accel_enabled) {
-        fprintf(stdout, "  -d, --accelerator  TYPE     use accelerator device "
-                        "buffers, which can be of TYPE `cuda', \n");
-        fprintf(stdout,
-                "                              `managed', `openacc', or `rocm' "
-                "(uses standard host buffers if not specified)\n");
-    }
-    fprintf(stdout, "  -G, --graph tty,png,pdf        graph output of per"
-                    " iteration values.\n");
-    fprintf(stdout, "  -T, --type [TYPE]              Set MPI_TYPE "
-                    "<all,mpi_char,mpi_int,mpi_float>. Default:MPI_CHAR.\n");
-#ifdef _ENABLE_PAPI_
-    fprintf(stdout, "  -P, --papi [EVENTS]:[PATH]     Enable PAPI support\n");
-    fprintf(stdout, "                                 [EVENTS]       //Comma "
-                    "seperated list of PAPI events\n");
-    fprintf(stdout, "                                 [PATH]         //PAPI "
-                    "output file path\n");
-#endif
-    fprintf(stdout, "  -c, --validation               Enable or disable "
-                    "validation. Disabled by default. \n");
-#ifdef _ENABLE_MPI4_
-    fprintf(stdout, "  -I, --session                  Enable session based MPI "
-                    "initialization.\n");
-#endif
-    fprintf(stdout, "  -h, --help                     Print this help\n");
-    fprintf(stdout, "\n");
+    print_help_message_common();
     fprintf(stdout, "  Note: This benchmark relies on block ordering of the "
                     "ranks.  Please see\n");
     fprintf(stdout, "        the README for more information.\n");
@@ -411,7 +254,6 @@ void print_help_message(int rank)
     if (rank) {
         return;
     }
-
     if (accel_enabled && (options.bench == PT2PT)) {
         fprintf(stdout, "Usage: %s [options] [SRC DST]\n\n", benchmark_name);
         fprintf(
@@ -427,215 +269,49 @@ void print_help_message(int rank)
         fprintf(stdout, "Usage: %s [options]\n", benchmark_name);
         fprintf(stdout, "Options:\n");
     }
+    print_help_message_common();
+}
 
-    if (((options.bench == PT2PT) || (options.bench == MBW_MR)) &&
-        (LAT_MT != options.subtype) && (LAT_MP != options.subtype)) {
-        fprintf(stdout, "  -b, --buffer-num            Use different buffers "
-                        "to perform data transfer (default single)\n");
-        fprintf(stdout,
-                "                              Options: single, multiple\n");
-    }
-
-    if (accel_enabled && (options.subtype != LAT_MT) &&
-        (options.subtype != LAT_MP)) {
-        fprintf(stdout, "  -d, --accelerator  TYPE     use accelerator device "
-                        "buffers, which can be of TYPE `cuda', \n");
-        fprintf(stdout,
-                "                              `managed', `openacc', or `rocm' "
-                "(uses standard host buffers if not specified)\n");
-    }
-
-    if (options.show_size) {
-        fprintf(stdout,
-                "  -m, --message-size          [MIN:]MAX  set the minimum "
-                "and/or the maximum message size to MIN and/or MAX\n");
-        fprintf(
-            stdout,
-            "                              bytes respectively. Examples:\n");
-        fprintf(stdout, "                              -m 128      // min = "
-                        "default, max = 128\n");
-        fprintf(stdout, "                              -m 2:128    // min = 2, "
-                        "max = 128\n");
-        fprintf(stdout, "                              -m 2:       // min = 2, "
-                        "max = default\n");
-        fprintf(stdout, "  -M, --mem-limit SIZE        set per process maximum "
-                        "memory consumption to SIZE bytes\n");
-        fprintf(stdout, "                              (default %d)\n",
-                MAX_MEM_LIMIT);
-    }
-
-    fprintf(stdout, "  -i, --iterations ITER       set iterations per message "
-                    "size to ITER (default 1000 for small\n");
-    fprintf(
-        stdout,
-        "                              messages, 100 for large messages)\n");
-    fprintf(stdout, "  -x, --warmup ITER           set number of warmup "
-                    "iterations to skip before timing (default 200)\n");
-
-    if (options.subtype == BW) {
-        fprintf(stdout, "  -W, --window-size SIZE      set number of messages "
-                        "to send before synchronization (default 64)\n");
-    }
-
-    if ((options.bench == PT2PT)) {
-        fprintf(stdout, "  -c, --validation            Enable or disable"
-                        " validation. Disabled by default. \n");
-        fprintf(stdout,
-                "  -u, --validation-warmup ITR Set number of warmup"
-                " iterations to skip before timing when validation is enabled"
-                " (default 5)\n");
-        fprintf(stdout, "  -G, --graph tty,png,pdf     graph output of per"
-                        " iteration values.\n");
-    }
-
-    if (options.bench == COLLECTIVE) {
-        fprintf(stdout, "  -f, --full                  print full format "
-                        "listing (MIN/MAX latency and ITERATIONS\n");
-        fprintf(stdout, "                              displayed in addition "
-                        "to AVERAGE latency)\n");
-        if (options.subtype != NBC_BARRIER &&
-            (options.bench == COLLECTIVE && options.subtype != LAT)) {
-            fprintf(stdout, "  -c, --validation            Enable or disable"
-                            " validation. Disabled by default. \n");
-            fprintf(
-                stdout,
-                "  -u, --validation-warmup ITR Set number of warmup"
-                " iterations to skip before timing when validation is enabled"
-                " (default 5)\n");
+void print_help_message_common()
+{
+    int str_itr = 0, long_itr = 0, num_long_options = 0;
+    char *temp_long_opt = NULL;
+    struct option long_options[OMB_LONG_OPTIONS_ARRAY_SIZE] =
+        OMBOP_LONG_OPTIONS_ALL;
+    struct help_msg_t help_msg[OMB_LONG_OPTIONS_ARRAY_SIZE] = OMBOP_HELP_MSG;
+    char *help_str = NULL;
+    num_long_options = sizeof(long_options) / sizeof(struct option);
+    for (str_itr = 0; str_itr < strlen(options.optstring); str_itr++) {
+        if (!isalpha(options.optstring[str_itr])) {
+            continue;
         }
+        for (long_itr = 0; long_itr < num_long_options; long_itr++) {
+            if (options.optstring[str_itr] == long_options[long_itr].val) {
+                if (options.optstring[str_itr] != help_msg[long_itr].opt) {
+                    OMB_ERROR_EXIT(
+                        "OMBOP_LONG_OPTIONS_ALL and OMBOP_HELP_MSG mismatch.");
+                }
+                temp_long_opt =
+                    malloc(strlen(long_options[long_itr].name) * sizeof(char));
+                OMB_CHECK_NULL_AND_EXIT(temp_long_opt,
+                                        "Unable to allocate memory");
+                sprintf(temp_long_opt, "%s%s", "--",
+                        long_options[long_itr].name);
+                fprintf(stdout, "  -%c, --%-20s", options.optstring[str_itr],
+                        long_options[long_itr].name);
+                help_str = strtok(help_msg[long_itr].msg, "~~");
+                fprintf(stdout, "%s\n", help_str);
+                help_str = strtok(NULL, "~~");
+                while (help_str != NULL) {
+                    fprintf(stdout, "%28s%s\n", "", help_str);
+                    help_str = strtok(NULL, "~~");
+                }
 
-        if (options.subtype == NBC_ALLTOALL ||
-            options.subtype == NBC_BCAST || options.subtype == NBC_GATHER ||
-            options.subtype == NBC_ALL_GATHER ||
-            options.subtype == NBC_REDUCE || options.subtype == NBC_SCATTER ||
-            options.subtype == NBC_ALL_REDUCE || options.subtype == NBC_BARRIER) {
-            fprintf(stdout,
-                    "  -t, --num_test_calls CALLS  set the number of "
-                    "MPI_Test() calls during the dummy computation, \n");
-            fprintf(stdout, "                              set CALLS to 100, "
-                            "1000, or any number > 0.\n");
-        }
-
-        if (CUDA_KERNEL_ENABLED) {
-            fprintf(stdout, "  -r, --cuda-target TARGET    set the compute "
-                            "target for dummy computation\n");
-            fprintf(stdout, "                              set TARGET to cpu "
-                            "(default) to execute \n");
-            fprintf(stdout, "                              on CPU only, set to "
-                            "gpu for executing kernel \n");
-            fprintf(stdout, "                              on the GPU only, "
-                            "and set to both for compute on both.\n");
-
-            fprintf(stdout, "  -a, --array-size SIZE       set the size of "
-                            "arrays to be allocated on device (GPU) \n");
-            fprintf(stdout, "                              for dummy compute "
-                            "on device (GPU) (default 32) \n");
+                fflush(stdout);
+                free(temp_long_opt);
+            }
         }
     }
-    if (LAT_MT == options.subtype) {
-        fprintf(stdout, "  -t, --num_threads           SEND:[RECV]  set the "
-                        "sender and receiver number of threads \n");
-        fprintf(stdout,
-                "                              min: %d default: (receiver "
-                "threads: %d sender threads: 1), max: %d.\n",
-                MIN_NUM_THREADS, DEF_NUM_THREADS, MAX_NUM_THREADS);
-        fprintf(stdout, "                              Examples: \n");
-        fprintf(stdout, "                              -t 4        // receiver "
-                        "threads = 4 and sender threads = 1\n");
-        fprintf(stdout, "                              -t 4:6      // sender "
-                        "threads = 4 and receiver threads = 6\n");
-        fprintf(stdout,
-                "                              -t 2:       // not defined\n");
-    }
-
-    if (LAT_MP == options.subtype) {
-        fprintf(stdout, "  -t, --num_processes         SEND:[RECV]  set the "
-                        "sender and receiver number of processes \n");
-        fprintf(stdout,
-                "                              min: %d default: (receiver "
-                "processes: %d sender processes: 1), max: %d.\n",
-                MIN_NUM_PROCESSES, DEF_NUM_PROCESSES, MAX_NUM_PROCESSES);
-        fprintf(stdout, "                              Examples: \n");
-        fprintf(stdout, "                              -t 4        // receiver "
-                        "processes = 4 and sender processes = 1\n");
-        fprintf(stdout, "                              -t 4:6      // sender "
-                        "processes = 4 and receiver processes = 6\n");
-        fprintf(stdout,
-                "                              -t 2:       // not defined\n");
-    }
-    if (options.subtype == GATHER || options.subtype == SCATTER ||
-        options.subtype == ALLTOALL || options.subtype == NBC_GATHER ||
-        options.subtype == NBC_SCATTER || options.subtype == NBC_ALLTOALL ||
-        options.subtype == NBC_BCAST || options.subtype == BCAST ||
-        options.bench == PT2PT || options.subtype == NHBR_ALLTOALL ||
-        options.subtype == NHBR_GATHER ||
-        options.subtype == NBC_NHBR_ALLTOALL ||
-        options.subtype == NBC_NHBR_GATHER || options.subtype == ALL_GATHER ||
-        options.subtype == NBC_ALL_GATHER) {
-        fprintf(stdout, "  -D, --ddt [TYPE]:[ARGS]     Enable DDT support\n");
-        fprintf(stdout,
-                "                              -D cont                   "
-                "       //Contiguous\n");
-        fprintf(stdout, "                              -D "
-                        "vect:[stride]:[block_length]  //Vector\n");
-        fprintf(stdout,
-                "                              -D indx:[ddt file path]   "
-                "       //Index\n");
-    }
-    if (options.subtype == NHBR_ALLTOALL || options.subtype == NHBR_GATHER ||
-        options.subtype == NBC_NHBR_ALLTOALL ||
-        options.subtype == NBC_NHBR_GATHER) {
-        fprintf(stdout, "  -N, --nhbr [TYPE]:[ARGS]    Configure neighborhood "
-                        "collectives. (default:- cart:1:1)\n");
-        fprintf(stdout, "                              -N cart:<num of "
-                        "dimentions:radius>   //Cartesian\n");
-        fprintf(stdout,
-                "                              -N graph:<adjacency graph "
-                "file>      //Graph\n");
-    }
-    if (options.bench == COLLECTIVE && options.subtype != LAT) {
-        fprintf(stdout, "  -G, --graph tty,png,pdf     graph output of per"
-                        " iteration values.\n");
-        if (options.subtype != BARRIER && options.subtype != NBC_BARRIER) {
-            fprintf(stdout,
-                    "  -T, --type [TYPE]           Set MPI_TYPE "
-                    "<all,mpi_char,mpi_int,mpi_float>. Default:MPI_CHAR.\n");
-        }
-#ifdef _ENABLE_PAPI_
-    fprintf(stdout, "  -P, --papi [EVENTS]:[PATH]     Enable PAPI support\n");
-    fprintf(stdout, "                                 [EVENTS]       //Comma "
-                    "seperated list of PAPI events\n");
-    fprintf(stdout, "                                 [PATH]         //PAPI "
-                    "output file path\n");
-#endif
-#ifdef _ENABLE_MPI4_
-    fprintf(stdout, "  -I, --session               Enable session based MPI "
-                    "initialization.\n");
-#endif
-    }
-    if (options.subtype == GATHER || options.subtype == SCATTER ||
-        options.subtype == ALLTOALL || options.subtype == NBC_GATHER ||
-        options.subtype == NBC_SCATTER || options.subtype == NBC_ALLTOALL ||
-        options.subtype == ALL_GATHER || options.subtype == NBC_ALL_GATHER) {
-        fprintf(stdout, "  -l, --in-place              Run benchmark with "
-                        "MPI_IN_PLACE support.\n");
-    }
-    if (options.subtype == GATHER || options.subtype == REDUCE ||
-        options.subtype == SCATTER || options.subtype == NBC_GATHER ||
-        options.subtype == NBC_REDUCE || options.subtype == NBC_SCATTER) {
-        fprintf(
-            stdout,
-            "  -k, --root-rank             Set root rank. Default: fixed:0\n");
-        fprintf(stdout, "                              -k fixed:[RANK] //Fixed "
-                        "root rank.\n");
-        fprintf(stdout, "                              -k rotate       "
-                        "//Rotate root rank for"
-                        " each iteration.\n");
-    }
-    fprintf(stdout, "  -h, --help                  print this help\n");
-    fprintf(stdout, "  -v, --version               print version info\n");
-    fprintf(stdout, "\n");
-    fflush(stdout);
 }
 
 void print_help_message_get_acc_lat(int rank)
@@ -654,59 +330,7 @@ void print_help_message_get_acc_lat(int rank)
 
     fprintf(stdout, "Usage: ./osu_get_acc_latency -w <win_option>  -s < "
                     "sync_option> [-x ITER] [-i ITER]\n");
-    if (options.show_size) {
-        fprintf(stdout,
-                "  -m, --message-size          [MIN:]MAX  set the minimum "
-                "and/or the maximum message size to MIN and/or MAX\n");
-        fprintf(
-            stdout,
-            "                              bytes respectively. Examples:\n");
-        fprintf(stdout, "                              -m 128      // min = "
-                        "default, max = 128\n");
-        fprintf(stdout, "                              -m 2:128    // min = 2, "
-                        "max = 128\n");
-        fprintf(stdout, "                              -m 2:       // min = 2, "
-                        "max = default\n");
-        fprintf(stdout, "  -M, --mem-limit SIZE        set per process maximum "
-                        "memory consumption to SIZE bytes\n");
-        fprintf(stdout, "                              (default %d)\n",
-                MAX_MEM_LIMIT);
-    }
-
-    fprintf(stdout,
-            "  -x ITER       number of warmup iterations to skip before timing"
-            "(default 100)\n");
-    fprintf(
-        stdout,
-        "  -i ITER       number of iterations for timing (default 10000)\n");
-    fprintf(stdout, "\n");
-    fprintf(stdout, "win_option:\n");
-    fprintf(stdout, "  create            use MPI_Win_create to create an MPI "
-                    "Window object\n");
-    fprintf(stdout, "  allocate          use MPI_Win_allocate to create an MPI "
-                    "Window object\n");
-    fprintf(stdout, "  dynamic           use MPI_Win_create_dynamic to create "
-                    "an MPI Window object\n");
-    fprintf(stdout, "\n");
-
-    fprintf(stdout, "sync_option:\n");
-    fprintf(
-        stdout,
-        "  lock              use MPI_Win_lock/unlock synchronizations calls\n");
-    fprintf(stdout,
-            "  flush             use MPI_Win_flush synchronization call\n");
-    fprintf(
-        stdout,
-        "  flush_local       use MPI_Win_flush_local synchronization call\n");
-    fprintf(stdout, "  lock_all          use MPI_Win_lock_all/unlock_all "
-                    "synchronization calls\n");
-    fprintf(stdout, "  pscw              use Post/Start/Complete/Wait "
-                    "synchronization calls \n");
-    fprintf(stdout,
-            "  fence             use MPI_Win_fence synchronization call\n");
-    fprintf(stdout, "\n");
-
-    fflush(stdout);
+    print_help_message_common();
 }
 
 void print_header_one_sided(int rank, enum WINDOW win, enum SYNC sync,
@@ -756,6 +380,20 @@ void print_header_one_sided(int rank, enum WINDOW win, enum SYNC sync,
                 }
                 if (options.validate) {
                     fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
+                }
+                if (options.omb_tail_lat) {
+                    if (options.subtype == BW) {
+                        fprintf(stdout, "%*s", FIELD_WIDTH,
+                                "P50 Tail BW(MB/s)");
+                        fprintf(stdout, "%*s", FIELD_WIDTH,
+                                "P95 Tail BW(MB/s)");
+                        fprintf(stdout, "%*s", FIELD_WIDTH,
+                                "P99 Tail BW(MB/s)");
+                    } else {
+                        fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail Lat(us)");
+                        fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail Lat(us)");
+                        fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail Lat(us)");
+                    }
                 }
                 fprintf(stdout, "\n");
                 fflush(stdout);
@@ -853,6 +491,11 @@ void print_only_header_nbc(int rank)
     if (options.validate) {
         fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
     }
+    if (options.omb_tail_lat) {
+        fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail Lat(us)");
+        fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail Lat(us)");
+        fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail Lat(us)");
+    }
     if (options.omb_enable_ddt) {
         fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
     }
@@ -923,6 +566,17 @@ void print_only_header(int rank)
 
     if (options.validate)
         fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
+    if (options.omb_tail_lat) {
+        if (options.subtype == BW) {
+            fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail BW(MB/s)");
+            fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail BW(MB/s)");
+            fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail BW(MB/s)");
+        } else {
+            fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail Lat(us)");
+            fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail Lat(us)");
+            fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail Lat(us)");
+        }
+    }
     if (options.omb_enable_ddt) {
         fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
     }
@@ -984,7 +638,9 @@ void check_mem_limit(int numprocs)
         options.subtype == NBC_ALLTOALL || options.subtype == NBC_NHBR_GATHER ||
         options.subtype == NBC_NHBR_ALLTOALL ||
         options.subtype == NBC_SCATTER || options.subtype == ALL_GATHER ||
-        options.subtype == NBC_ALL_GATHER) {
+        options.subtype == NBC_ALL_GATHER || options.subtype == SCATTER_P ||
+        options.subtype == GATHER_P || options.subtype == ALLTOALL_P ||
+        options.subtype == ALL_GATHER_P) {
         if ((options.max_message_size * numprocs) > options.max_mem_limit) {
             options.max_message_size = options.max_mem_limit / numprocs;
             if (0 == rank) {
@@ -999,7 +655,10 @@ void check_mem_limit(int numprocs)
                options.subtype == REDUCE_SCATTER ||
                options.subtype == NBC_REDUCE_SCATTER ||
                options.subtype == ALL_REDUCE ||
-               options.subtype == NBC_ALL_REDUCE) {
+               options.subtype == NBC_ALL_REDUCE ||
+               options.subtype == ALL_REDUCE_P ||
+               options.subtype == REDUCE_SCATTER_P ||
+               options.subtype == REDUCE_P || options.subtype == BCAST_P) {
         if (options.max_message_size > options.max_mem_limit) {
             if (0 == rank) {
                 fprintf(stderr,
@@ -1014,10 +673,60 @@ void check_mem_limit(int numprocs)
     }
 }
 
+int omb_ascending_cmp_double(const void *a, const void *b)
+{
+    double v1 = *(const double *)a;
+    double v2 = *(const double *)b;
+    if (v1 < v2) {
+        return -1;
+    } else if (v1 > v2) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+struct omb_stat_t omb_get_stats(double *lat_arr)
+{
+    int rank = 0, comm_size = 0;
+    double avg_lat_arr[options.iterations];
+    int i = 0;
+    struct omb_stat_t omb_stats;
+
+    if (!options.omb_tail_lat) {
+        return omb_stats;
+    }
+    OMB_CHECK_NULL_AND_EXIT(lat_arr, "Passed array is NULL");
+    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+    MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &comm_size));
+    MPI_CHECK(MPI_Reduce(lat_arr, avg_lat_arr, options.iterations, MPI_DOUBLE,
+                         MPI_SUM, 0, MPI_COMM_WORLD));
+    return omb_calculate_tail_lat(avg_lat_arr, rank, comm_size);
+}
+
+struct omb_stat_t omb_calculate_tail_lat(double *avg_lat_arr, int rank,
+                                         int comm_size)
+{
+    struct omb_stat_t omb_stats;
+    if (0 != rank || !options.omb_tail_lat) {
+        return omb_stats;
+    }
+    qsort(avg_lat_arr, options.iterations, sizeof(double),
+          omb_ascending_cmp_double);
+    omb_stats.p50 =
+        avg_lat_arr[(int)round(options.iterations * 0.50) - 1] / comm_size;
+    omb_stats.p95 =
+        avg_lat_arr[(int)round(options.iterations * 0.95) - 1] / comm_size;
+    omb_stats.p99 =
+        avg_lat_arr[(int)round(options.iterations * 0.99) - 1] / comm_size;
+    return omb_stats;
+}
+
 double calculate_and_print_stats(int rank, int size, int numprocs, double timer,
                                  double latency, double test_time,
                                  double cpu_time, double wait_time,
-                                 double init_time, int errors)
+                                 double init_time, int errors,
+                                 struct omb_stat_t omb_stats)
 {
     double test_total = (test_time * 1e6) / options.iterations;
     double tcomp_total = (cpu_time * 1e6) / options.iterations;
@@ -1080,14 +789,14 @@ double calculate_and_print_stats(int rank, int size, int numprocs, double timer,
 
     print_stats_nbc(rank, size, overall_time, tcomp_total, avg_comm_time,
                     min_comm_time, max_comm_time, wait_total, init_total,
-                    test_total, errors);
+                    test_total, errors, omb_stats);
     return overall_time;
 }
 
 void print_stats_nbc(int rank, int size, double overall_time, double cpu_time,
                      double avg_comm_time, double min_comm_time,
                      double max_comm_time, double wait_time, double init_time,
-                     double test_time, int errors)
+                     double test_time, int errors, struct omb_stat_t omb_stats)
 {
     if (rank) {
         return;
@@ -1130,6 +839,11 @@ void print_stats_nbc(int rank, int size, double overall_time, double cpu_time,
     if (options.validate) {
         fprintf(stdout, "%*s", FIELD_WIDTH, VALIDATION_STATUS(errors));
     }
+    if (options.omb_tail_lat) {
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p50);
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p95);
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p99);
+    }
     if (!options.omb_enable_ddt) {
         fprintf(stdout, "\n");
     }
@@ -1138,7 +852,7 @@ void print_stats_nbc(int rank, int size, double overall_time, double cpu_time,
 }
 
 void print_stats(int rank, int size, double avg_time, double min_time,
-                 double max_time)
+                 double max_time, struct omb_stat_t omb_stats)
 {
     if (rank) {
         return;
@@ -1156,6 +870,11 @@ void print_stats(int rank, int size, double avg_time, double min_time,
                 min_time, FIELD_WIDTH, FLOAT_PRECISION, max_time, 12,
                 options.iterations);
     }
+    if (options.omb_tail_lat) {
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p50);
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p95);
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p99);
+    }
     if (!options.omb_enable_ddt) {
         fprintf(stdout, "\n");
     }
@@ -1163,7 +882,8 @@ void print_stats(int rank, int size, double avg_time, double min_time,
 }
 
 void print_stats_validate(int rank, int size, double avg_time, double min_time,
-                          double max_time, int errors)
+                          double max_time, int errors,
+                          struct omb_stat_t omb_stats)
 {
     if (rank) {
         return;
@@ -1182,6 +902,11 @@ void print_stats_validate(int rank, int size, double avg_time, double min_time,
                 options.iterations);
     }
     fprintf(stdout, "%*s", FIELD_WIDTH, VALIDATION_STATUS(errors));
+    if (options.omb_tail_lat) {
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p50);
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p95);
+        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p99);
+    }
     if (!options.omb_enable_ddt) {
         fprintf(stdout, "\n");
     }
@@ -1394,6 +1119,7 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
         case COLLECTIVE: {
             switch (options.subtype) {
                 case ALLTOALL:
+                case ALLTOALL_P:
                 case NBC_ALLTOALL: {
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1412,6 +1138,7 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                     }
                 } break;
                 case GATHER:
+                case GATHER_P:
                 case NBC_GATHER: {
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1420,19 +1147,20 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                         set_buffer_dtype(s_buf, 1, size, rank * numprocs, 1,
                                          type, iter, dtype,
                                          omb_buffer_sizes.sendbuf_size);
-                            set_buffer_dtype(r_buf, 0, size, rank, numprocs,
-                                             type, iter, dtype,
-                                             omb_buffer_sizes.recvbuf_size);
+                        set_buffer_dtype(r_buf, 0, size, rank, numprocs, type,
+                                         iter, dtype,
+                                         omb_buffer_sizes.recvbuf_size);
                     } else {
                         set_buffer_dtype(s_buf, 1, size, rank * numprocs, 1,
                                          type, iter, dtype,
                                          omb_buffer_sizes.sendbuf_size);
-                            set_buffer_dtype(r_buf, 0, size, rank * numprocs, 1,
-                                             type, iter, dtype,
-                                             omb_buffer_sizes.recvbuf_size);
+                        set_buffer_dtype(r_buf, 0, size, rank * numprocs, 1,
+                                         type, iter, dtype,
+                                         omb_buffer_sizes.recvbuf_size);
                     }
                 } break;
                 case ALL_GATHER:
+                case ALL_GATHER_P:
                 case NBC_ALL_GATHER: {
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1447,13 +1175,15 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                                              omb_buffer_sizes.recvbuf_size);
                         }
                     } else {
-                        set_buffer_dtype(
-                            r_buf, 1, size, rank * numprocs, 1, type, iter,
-                            dtype, omb_buffer_sizes.recvbuf_size);
+                        set_buffer_dtype(r_buf, 1, size, rank * numprocs, 1,
+                                         type, iter, dtype,
+                                         omb_buffer_sizes.recvbuf_size);
                     }
                 } break;
                 case REDUCE:
                 case ALL_REDUCE:
+                case REDUCE_P:
+                case ALL_REDUCE_P:
                 case NBC_REDUCE:
                 case NBC_ALL_REDUCE: {
                     int rank, numprocs;
@@ -1471,6 +1201,7 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                     break;
                 }
                 case SCATTER:
+                case SCATTER_P:
                 case NBC_SCATTER: {
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1489,6 +1220,7 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                     }
                 } break;
                 case REDUCE_SCATTER:
+                case REDUCE_SCATTER_P:
                 case NBC_REDUCE_SCATTER: {
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1504,6 +1236,7 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                     }
                 } break;
                 case BCAST:
+                case BCAST_P:
                 case NBC_BCAST: {
                     int rank, numprocs;
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1567,29 +1300,29 @@ void set_buffer_dtype_reduce(void *buffer, int is_send_buf, size_t size,
 
 void omb_assign_to_type(void *buf, int pos, int val, MPI_Datatype dtype)
 {
-  if (MPI_CHAR == dtype) {
-    ((char *)buf)[pos] =
-        (CHAR_VALIDATION_MULTIPLIER * (char)(val)) % CHAR_RANGE;
-  } else if (MPI_INT == dtype) {
-    ((int *)buf)[pos] = (int)val * INT_VALIDATION_MULTIPLIER;
-  } else if (MPI_FLOAT == dtype) {
-    ((float *)buf)[pos] = (float)val * FLOAT_VALIDATION_MULTIPLIER;
-  } else {
-    OMB_ERROR_EXIT("Invalid data type passed");
-  }
+    if (MPI_CHAR == dtype) {
+        ((char *)buf)[pos] =
+            (CHAR_VALIDATION_MULTIPLIER * (char)(val)) % CHAR_RANGE;
+    } else if (MPI_INT == dtype) {
+        ((int *)buf)[pos] = (int)val * INT_VALIDATION_MULTIPLIER;
+    } else if (MPI_FLOAT == dtype) {
+        ((float *)buf)[pos] = (float)val * FLOAT_VALIDATION_MULTIPLIER;
+    } else {
+        OMB_ERROR_EXIT("Invalid data type passed");
+    }
 }
 
 int omb_get_num_elements(size_t size, MPI_Datatype dtype)
 {
-  if (MPI_CHAR == dtype) {
-    return size / sizeof(ATOM_CTYPE_FOR_DMPI_CHAR);
-  } else if (MPI_FLOAT == dtype) {
-    return size / sizeof(ATOM_CTYPE_FOR_DMPI_FLOAT);
-  } else if (MPI_INT == dtype) {
-    return size / sizeof(ATOM_CTYPE_FOR_DMPI_INT);
-  } else {
-    OMB_ERROR_EXIT("Invalid datatype passed");
-  }
+    if (MPI_CHAR == dtype) {
+        return size / sizeof(ATOM_CTYPE_FOR_DMPI_CHAR);
+    } else if (MPI_FLOAT == dtype) {
+        return size / sizeof(ATOM_CTYPE_FOR_DMPI_FLOAT);
+    } else if (MPI_INT == dtype) {
+        return size / sizeof(ATOM_CTYPE_FOR_DMPI_INT);
+    } else {
+        OMB_ERROR_EXIT("Invalid datatype passed");
+    }
     return -1;
 }
 
@@ -1613,15 +1346,17 @@ void set_buffer_dtype(void *buffer, int is_send_buf, size_t size, int rank,
     OMB_CHECK_NULL_AND_EXIT(temp_buffer, "Unable to allocate memory");
 
     if (is_send_buf || GATHER == options.subtype ||
-        NBC_GATHER == options.subtype) {
+        GATHER_P == options.subtype || NBC_GATHER == options.subtype) {
         for (i = 0; i < num_procs; i++) {
             for (j = 0; j < num_elements; j++) {
                 val = (rank * num_procs + i +
                        ((iter + 1) * (rank * num_procs + 1) * (i + 1)));
                 if (1 == options.omb_enable_mpi_in_place &&
                     (ALL_GATHER == options.subtype ||
+                     ALL_GATHER_P == options.subtype ||
                      NBC_ALL_GATHER == options.subtype ||
                      (GATHER == options.subtype && 0 == is_send_buf) ||
+                     (GATHER_P == options.subtype && 0 == is_send_buf) ||
                      (NBC_GATHER == options.subtype && 0 == is_send_buf))) {
                     omb_assign_to_type(temp_buffer,
                                        (id % com_size) * num_elements +
@@ -1955,6 +1690,8 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
             switch (options.subtype) {
                 case REDUCE:
                 case ALL_REDUCE:
+                case REDUCE_P:
+                case ALL_REDUCE_P:
                 case NBC_REDUCE:
                 case NBC_ALL_REDUCE: {
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
@@ -1962,6 +1699,7 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
                                               options.accel, dtype);
                 } break;
                 case ALLTOALL:
+                case ALLTOALL_P:
                 case NBC_ALLTOALL: {
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1969,18 +1707,21 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
                                                type, iter, dtype);
                 } break;
                 case GATHER:
+                case GATHER_P:
                 case NBC_GATHER: {
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     return validate_collective(r_buf, size, 0, numprocs, type,
                                                iter, dtype);
                 } break;
                 case ALL_GATHER:
+                case ALL_GATHER_P:
                 case NBC_ALL_GATHER: {
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     return validate_collective(r_buf, size, 0, numprocs, type,
                                                iter, dtype);
                 } break;
                 case SCATTER:
+                case SCATTER_P:
                 case NBC_SCATTER: {
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -1988,12 +1729,14 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
                                                dtype);
                 } break;
                 case REDUCE_SCATTER:
+                case REDUCE_SCATTER_P:
                 case NBC_REDUCE_SCATTER: {
                     MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &numprocs));
                     return validate_reduction(r_buf, size, iter, numprocs,
                                               options.accel, dtype);
                 } break;
                 case BCAST:
+                case BCAST_P:
                 case NBC_BCAST: {
                     return validate_collective(r_buf, size, 1, 1, type, iter,
                                                dtype);
@@ -2086,8 +1829,9 @@ void set_buffer_nhbr_validation(void *s_buf, void *r_buf, int indegree,
 }
 
 int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
-                               int outdegree, size_t size, enum accel_type type,
-                               int iter, MPI_Datatype dtype)
+                                  int outdegree, size_t size,
+                                  enum accel_type type, int iter,
+                                  MPI_Datatype dtype)
 {
     int *sources = NULL, *sourceweights = NULL;
     int *destinations = NULL, *destweights = NULL;
@@ -2142,24 +1886,25 @@ int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
         for (l = 0; l < recv_numprocs; l++) {
             expected_value = (sources[l] + value1 + s + iter + 1);
             if (MPI_CHAR == dtype) {
-              if (((char *)
-                       temp_r_buf)[l * omb_get_num_elements(size, dtype) + s] !=
-                  (char)(CHAR_VALIDATION_MULTIPLIER * expected_value) %
-                      CHAR_RANGE) {
-                errors = 1;
-              }
+                if (((char *)temp_r_buf)[l * omb_get_num_elements(size, dtype) +
+                                         s] !=
+                    (char)(CHAR_VALIDATION_MULTIPLIER * expected_value) %
+                        CHAR_RANGE) {
+                    errors = 1;
+                }
             } else if (MPI_INT == dtype) {
-              if (((int *)
-                       temp_r_buf)[l * omb_get_num_elements(size, dtype) + s] !=
-                  (int)expected_value * INT_VALIDATION_MULTIPLIER) {
-                errors = 1;
-              }
+                if (((int *)temp_r_buf)[l * omb_get_num_elements(size, dtype) +
+                                        s] !=
+                    (int)expected_value * INT_VALIDATION_MULTIPLIER) {
+                    errors = 1;
+                }
             } else if (MPI_FLOAT == dtype) {
-              if (((float *)
-                       temp_r_buf)[l * omb_get_num_elements(size, dtype) + s] !=
-                  (float)expected_value * FLOAT_VALIDATION_MULTIPLIER) {
-                errors = 1;
-              }
+                if (((float *)
+                         temp_r_buf)[l * omb_get_num_elements(size, dtype) +
+                                     s] !=
+                    (float)expected_value * FLOAT_VALIDATION_MULTIPLIER) {
+                    errors = 1;
+                }
             }
         }
     }
@@ -2204,19 +1949,20 @@ int validate_reduce_scatter(void *buffer, size_t size, int *recvcounts,
         j = (i % 100);
         val = (j + 1) * (iter + 1) * num_procs;
         if (MPI_CHAR == dtype) {
-          if (((char *)temp_buffer)[i] !=
-              (char)(CHAR_VALIDATION_MULTIPLIER * val) % CHAR_RANGE) {
-            errors = 1;
-          }
+            if (((char *)temp_buffer)[i] !=
+                (char)(CHAR_VALIDATION_MULTIPLIER * val) % CHAR_RANGE) {
+                errors = 1;
+            }
         } else if (MPI_INT == dtype) {
-          if (((int *)temp_buffer)[i] != (int)val * INT_VALIDATION_MULTIPLIER) {
-            errors = 1;
-          }
+            if (((int *)temp_buffer)[i] !=
+                (int)val * INT_VALIDATION_MULTIPLIER) {
+                errors = 1;
+            }
         } else if (MPI_FLOAT == dtype) {
-          if (((float *)temp_buffer)[i] !=
-              (float)val * FLOAT_VALIDATION_MULTIPLIER) {
-            errors = 1;
-          }
+            if (((float *)temp_buffer)[i] !=
+                (float)val * FLOAT_VALIDATION_MULTIPLIER) {
+                errors = 1;
+            }
         }
     }
     free(expected_buffer);
@@ -2788,7 +2534,6 @@ void allocate_memory_one_sided(int rank, char **user_buf, char **win_base,
 {
     int page_size;
     int purehost = 0;
-    int mem_on_dev = 0;
 
     page_size = getpagesize();
     assert(page_size <= MAX_ALIGNMENT);
@@ -2797,18 +2542,19 @@ void allocate_memory_one_sided(int rank, char **user_buf, char **win_base,
         purehost = 1;
     }
 
-    if (rank == 0) {
-        mem_on_dev = ('H' == options.src) ? 0 : 1;
-    } else {
-        mem_on_dev = ('H' == options.dst) ? 0 : 1;
-    }
-
     /* always allocate device buffers explicitly since most MPI libraries do not
      * support allocating device buffers during window creation */
-    if (mem_on_dev) {
-        CHECK(allocate_device_buffer_one_sided(user_buf, size));
+    if ((0 == rank && 'D' == options.src) ||
+        (1 == rank && 'D' == options.dst)) {
+        CHECK(allocate_device_buffer(user_buf));
         set_device_memory(*user_buf, 'a', size);
-        CHECK(allocate_device_buffer_one_sided(win_base, size));
+        CHECK(allocate_device_buffer(win_base));
+        set_device_memory(*win_base, 'a', size);
+    } else if ((0 == rank && 'M' == options.src) ||
+               (1 == rank && 'M' == options.dst)) {
+        CHECK(allocate_managed_buffer_size(user_buf, size));
+        set_device_memory(*user_buf, 'a', size);
+        CHECK(allocate_managed_buffer_size(win_base, size));
         set_device_memory(*win_base, 'a', size);
     } else {
         CHECK(posix_memalign((void **)user_buf, page_size, size));
@@ -3133,7 +2879,6 @@ void free_device_arrays()
 }
 #endif
 
-
 void free_memory(void *sbuf, void *rbuf, int rank)
 {
     switch (rank) {
@@ -3429,7 +3174,6 @@ void allocate_atomic_memory(int rank, char **sbuf, char **tbuf, char **cbuf,
 {
     int page_size;
     int purehost = 0;
-    int mem_on_dev = 0;
 
     page_size = getpagesize();
     assert(page_size <= MAX_ALIGNMENT);
@@ -3438,13 +3182,8 @@ void allocate_atomic_memory(int rank, char **sbuf, char **tbuf, char **cbuf,
         purehost = 1;
     }
 
-    if (rank == 0) {
-        mem_on_dev = ('D' == options.src) ? 1 : 0;
-    } else {
-        mem_on_dev = ('D' == options.dst) ? 1 : 0;
-    }
-
-    if (mem_on_dev) {
+    if ((0 == rank && 'D' == options.src) ||
+        (1 == rank && 'D' == options.dst)) {
         CHECK(allocate_device_buffer(sbuf));
         set_device_memory(*sbuf, 'a', size);
         CHECK(allocate_device_buffer(win_base));
@@ -3453,6 +3192,18 @@ void allocate_atomic_memory(int rank, char **sbuf, char **tbuf, char **cbuf,
         set_device_memory(*tbuf, 'c', size);
         if (cbuf != NULL) {
             CHECK(allocate_device_buffer(cbuf));
+            set_device_memory(*cbuf, 'a', size);
+        }
+    } else if ((0 == rank && 'M' == options.src) ||
+               (1 == rank && 'M' == options.dst)) {
+        CHECK(allocate_managed_buffer(sbuf));
+        set_device_memory(*sbuf, 'a', size);
+        CHECK(allocate_managed_buffer(win_base));
+        set_device_memory(*win_base, 'b', size);
+        CHECK(allocate_managed_buffer(tbuf));
+        set_device_memory(*tbuf, 'c', size);
+        if (cbuf != NULL) {
+            CHECK(allocate_managed_buffer(cbuf));
             set_device_memory(*cbuf, 'a', size);
         }
     } else {
@@ -3515,16 +3266,12 @@ void allocate_atomic_memory(int rank, char **sbuf, char **tbuf, char **cbuf,
 void free_atomic_memory(void *sbuf, void *win_baseptr, void *tbuf, void *cbuf,
                         enum WINDOW win_type, MPI_Win win, int rank)
 {
-    int mem_on_dev = 0;
     MPI_CHECK(MPI_Win_free(&win));
 
-    if (rank == 0) {
-        mem_on_dev = ('D' == options.src) ? 1 : 0;
-    } else {
-        mem_on_dev = ('D' == options.dst) ? 1 : 0;
-    }
-
-    if (mem_on_dev) {
+    if ((0 == rank && 'D' == options.src) ||
+        (1 == rank && 'D' == options.dst) ||
+        (0 == rank && 'M' == options.src) ||
+        (1 == rank && 'M' == options.dst)) {
         free_device_buffer(sbuf);
         free_device_buffer(win_baseptr);
         free_device_buffer(tbuf);

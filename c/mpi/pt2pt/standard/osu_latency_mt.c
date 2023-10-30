@@ -346,6 +346,8 @@ void *send_thread(void *arg)
     omb_graph_data_t *omb_graph_data = NULL;
     MPI_Comm omb_comm = MPI_COMM_NULL;
     struct omb_buffer_sizes_t omb_buffer_sizes;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
     val = thread_id->id;
 
@@ -364,6 +366,10 @@ void *send_thread(void *arg)
                 myid, thread_id->id);
         *ret = '1';
         return ret;
+    }
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
     }
     omb_graph_options_init(&omb_graph_options);
     for (mpi_type_itr = 0; mpi_type_itr < options.omb_dtype_itr;
@@ -458,6 +464,10 @@ void *send_thread(void *arg)
                     if (i >= options.skip && j == options.warmup_validation) {
                         t_end = MPI_Wtime();
                         t_total += (t_end - t_start);
+                        if (options.omb_tail_lat) {
+                            omb_lat_arr[i - options.skip] =
+                                (t_end - t_start) * 1.0e6 / 2.0;
+                        }
                         if (options.graph) {
                             omb_graph_data->data[i - options.skip] =
                                 (t_end - t_start) * 1.0e6 / 2.0;
@@ -488,6 +498,15 @@ void *send_thread(void *arg)
                     fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
                             latency);
                 }
+                if (options.omb_tail_lat) {
+                    omb_stat = omb_calculate_tail_lat(omb_lat_arr, myid, 1);
+                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                            omb_stat.p50);
+                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                            omb_stat.p95);
+                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                            omb_stat.p99);
+                }
                 if (options.omb_enable_ddt) {
                     fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);
                 }
@@ -511,6 +530,7 @@ void *send_thread(void *arg)
     omb_graph_free_data_buffers(&omb_graph_options);
 
     free_memory(s_buf, r_buf, myid);
+    free(omb_lat_arr);
 
     if (0 != errors_reduced && options.validate && 0 == myid &&
         1 == flag_print) {

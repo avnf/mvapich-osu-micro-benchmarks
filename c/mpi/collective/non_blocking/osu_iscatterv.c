@@ -42,6 +42,8 @@ int main(int argc, char *argv[])
     struct omb_buffer_sizes_t omb_buffer_sizes;
     void *sendbuf_warmup = NULL, *recvbuf_warmup = NULL;
     int root_rank = 0;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
     set_header(HEADER);
     set_benchmark_name("osu_iscatterv");
@@ -95,22 +97,21 @@ int main(int argc, char *argv[])
     }
     check_mem_limit(numprocs);
     bufsize = options.max_message_size * numprocs;
-        if (allocate_memory_coll((void **)&sendcounts, numprocs * sizeof(int),
-                                 NONE)) {
-            fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
-            MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
-        }
-        if (allocate_memory_coll((void **)&sdispls, numprocs * sizeof(int),
-                                 NONE)) {
-            fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
-            MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
-        }
+    if (allocate_memory_coll((void **)&sendcounts, numprocs * sizeof(int),
+                             NONE)) {
+        fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
+    }
+    if (allocate_memory_coll((void **)&sdispls, numprocs * sizeof(int), NONE)) {
+        fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
+    }
 
-        if (allocate_memory_coll((void **)&sendbuf, bufsize, options.accel)) {
-            fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
-            MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
-        }
-        set_buffer(sendbuf, options.accel, 1, bufsize);
+    if (allocate_memory_coll((void **)&sendbuf, bufsize, options.accel)) {
+        fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
+        MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
+    }
+    set_buffer(sendbuf, options.accel, 1, bufsize);
     omb_buffer_sizes.sendbuf_size = bufsize;
     sendbuf_warmup = sendbuf;
     bufsize = options.max_message_size * numprocs;
@@ -127,6 +128,10 @@ int main(int argc, char *argv[])
         MPI_CHECK(MPI_Abort(omb_comm, EXIT_FAILURE));
     }
     set_buffer(recvbuf_warmup, options.accel, 0, options.max_message_size);
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
+    }
 
     print_preamble_nbc(rank);
     omb_papi_init(&papi_eventset);
@@ -158,12 +163,12 @@ int main(int argc, char *argv[])
                                num_elements) *
                 mpi_type_size;
             num_elements = omb_ddt_get_size(num_elements);
-                disp = 0;
-                for (i = 0; i < numprocs; i++) {
-                    sendcounts[i] = num_elements;
-                    sdispls[i] = disp;
-                    disp += num_elements;
-                }
+            disp = 0;
+            for (i = 0; i < numprocs; i++) {
+                sendcounts[i] = num_elements;
+                sdispls[i] = disp;
+                disp += num_elements;
+            }
 
             omb_graph_allocate_and_get_data_buffer(
                 &omb_graph_data, &omb_graph_options, size, options.iterations);
@@ -238,12 +243,12 @@ int main(int argc, char *argv[])
 
             init_arrays(latency_in_secs);
 
-                disp = 0;
-                for (i = 0; i < numprocs; i++) {
-                    sendcounts[i] = num_elements;
-                    sdispls[i] = disp;
-                    disp += num_elements;
-                }
+            disp = 0;
+            for (i = 0; i < numprocs; i++) {
+                sendcounts[i] = num_elements;
+                sdispls[i] = disp;
+                disp += num_elements;
+            }
 
             MPI_CHECK(MPI_Barrier(omb_comm));
 
@@ -314,6 +319,10 @@ int main(int argc, char *argv[])
                     test_total += test_time;
                     init_total += init_time;
                     wait_total += wait_time;
+                    if (options.omb_tail_lat) {
+                        omb_lat_arr[i - options.skip] =
+                            (t_stop - t_start) * 1e6;
+                    }
                     if (options.graph && 0 == rank) {
                         omb_graph_data->data[i - options.skip] =
                             (t_stop - t_start) * 1e6;
@@ -327,12 +336,13 @@ int main(int argc, char *argv[])
                                         MPI_SUM, omb_comm));
                 errors += errors_temp;
             }
+            omb_stat = omb_get_stats(omb_lat_arr);
 
             MPI_CHECK(MPI_Barrier(omb_comm));
 
             avg_time = calculate_and_print_stats(
                 rank, size, numprocs, timer, latency, test_total, tcomp_total,
-                wait_total, init_total, errors);
+                wait_total, init_total, errors, omb_stat);
             if (options.graph && 0 == rank) {
                 omb_graph_data->avg = avg_time;
             }
@@ -350,11 +360,12 @@ int main(int argc, char *argv[])
     omb_graph_free_data_buffers(&omb_graph_options);
     omb_papi_free(&papi_eventset);
 
-        free_buffer(sendcounts, NONE);
-        free_buffer(sdispls, NONE);
-        free_buffer(sendbuf, options.accel);
+    free_buffer(sendcounts, NONE);
+    free_buffer(sdispls, NONE);
+    free_buffer(sendbuf, options.accel);
     free_buffer(recvbuf, options.accel);
     free_buffer(recvbuf_warmup, options.accel);
+    free(omb_lat_arr);
     omb_mpi_finalize(omb_init_h);
 
     if (NONE != options.accel) {

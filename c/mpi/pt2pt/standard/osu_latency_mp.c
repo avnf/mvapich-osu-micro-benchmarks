@@ -167,12 +167,18 @@ void communicate(int myid)
     MPI_Datatype mpi_type_list[OMB_NUM_DATATYPES];
     int papi_eventset = OMB_PAPI_NULL;
     struct omb_buffer_sizes_t omb_buffer_sizes;
+    double *omb_lat_arr = NULL;
+    struct omb_stat_t omb_stat;
 
     omb_populate_mpi_type_list(mpi_type_list);
     if (allocate_memory_pt2pt(&s_buf, &r_buf, myid)) {
         /* Error allocating memory */
         omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
+    }
+    if (options.omb_tail_lat) {
+        omb_lat_arr = malloc(options.iterations * sizeof(double));
+        OMB_CHECK_NULL_AND_EXIT(omb_lat_arr, "Unable to allocate memory");
     }
     omb_graph_options_init(&omb_graph_options);
     omb_papi_init(&papi_eventset);
@@ -237,6 +243,10 @@ void communicate(int myid)
                             j == options.warmup_validation) {
                             t_end = MPI_Wtime();
                             t_total += (t_end - t_start);
+                            if (options.omb_tail_lat) {
+                                omb_lat_arr[i - options.skip] =
+                                    (t_end - t_start) * 1e6 / 2.0;
+                            }
                             if (options.graph) {
                                 omb_graph_data->data[i - options.skip] =
                                     (t_end - t_start) * 1e6 / 2.0;
@@ -291,6 +301,15 @@ void communicate(int myid)
                 } else {
                     fprintf(stdout, "%*.*f", 10, FLOAT_PRECISION, latency);
                 }
+                if (options.omb_tail_lat) {
+                    omb_stat = omb_calculate_tail_lat(omb_lat_arr, myid, 1);
+                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                            omb_stat.p50);
+                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                            omb_stat.p95);
+                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                            omb_stat.p99);
+                }
                 if (options.omb_enable_ddt) {
                     fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);
                 }
@@ -315,6 +334,7 @@ void communicate(int myid)
     omb_graph_free_data_buffers(&omb_graph_options);
     omb_papi_free(&papi_eventset);
     free_memory(s_buf, r_buf, myid);
+    free(omb_lat_arr);
     if (0 != errors && options.validate && 0 == myid) {
         fprintf(stdout,
                 "DATA VALIDATION ERROR: %s exited with status %d on"
