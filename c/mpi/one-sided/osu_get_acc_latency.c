@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI_Get_accumulate latency Test"
 /*
- * Copyright (C) 2003-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2003-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -546,12 +546,7 @@ void run_get_acc_with_fence(int rank, enum WINDOW type)
             fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                     (t_end - t_start) * 1.0e6 / options.iterations / 2);
             if (options.omb_tail_lat) {
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p50);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p95);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p99);
+                OMB_ITR_PRINT_STAT(omb_stat.res_arr);
             }
             fprintf(stdout, "\n");
             fflush(stdout);
@@ -672,12 +667,7 @@ void run_get_acc_with_pscw(int rank, enum WINDOW type)
             fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                     (t_end - t_start) * 1.0e6 / options.iterations / 2);
             if (options.omb_tail_lat) {
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p50);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p95);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p99);
+                OMB_ITR_PRINT_STAT(omb_stat.res_arr);
             }
             fprintf(stdout, "\n");
             fflush(stdout);
@@ -735,15 +725,22 @@ void allocate_memory_get_acc_lat(int rank, char *rbuf, int size,
 
 void print_header_get_acc_lat(int rank, enum WINDOW win, enum SYNC sync)
 {
+    int itr = 0;
     if (rank == 0) {
         fprintf(stdout, HEADER);
         fprintf(stdout, "# Window creation: %s\n", win_info[win]);
         fprintf(stdout, "# Synchronization: %s\n", sync_info[sync]);
         fprintf(stdout, "%-*s%*s", 10, "# Size", FIELD_WIDTH, "Latency (us)");
         if (options.omb_tail_lat) {
-            fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail Lat(us)");
-            fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail Lat(us)");
-            fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail Lat(us)");
+            itr = 0;
+            while (itr < OMB_STAT_MAX_NUM &&
+                   -1 != options.omb_stat_percentiles[itr]) {
+                fprintf(stdout, "%*sP%d Tail Lat(us)",
+                        FIELD_WIDTH - strlen("Px Tail Lat(us)") -
+                            (options.omb_stat_percentiles[itr] > 9),
+                        "", options.omb_stat_percentiles[itr]);
+                itr++;
+            }
         }
         fprintf(stdout, "\n");
         fflush(stdout);
@@ -756,12 +753,7 @@ void print_latency_get_acc_lat(int rank, int size, struct omb_stat_t omb_stat)
         fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                 (t_end - t_start) * 1.0e6 / options.iterations);
         if (options.omb_tail_lat) {
-            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                    omb_stat.p50);
-            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                    omb_stat.p95);
-            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                    omb_stat.p99);
+            OMB_ITR_PRINT_STAT(omb_stat.res_arr);
         }
         fprintf(stdout, "\n");
         fflush(stdout);

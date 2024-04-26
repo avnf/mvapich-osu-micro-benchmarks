@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -48,7 +48,7 @@ void omb_graph_allocate_data_buffer(omb_graph_options_t *graph_options,
     int rank = -1;
 
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
-    if (!options.graph || 0 != rank) {
+    if (!options.graph) {
         return;
     }
     OMB_CHECK_NULL_AND_EXIT(graph_options, "NULL pointer received");
@@ -73,7 +73,7 @@ int omb_graph_free_data_buffers(omb_graph_options_t *graph_options)
     int rank = -1;
 
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
-    if (!options.graph || 0 != rank) {
+    if (!options.graph || NULL == graph_options) {
         return 0;
     }
     for (i = 0; i < graph_options->number_of_graphs; i++) {
@@ -136,7 +136,8 @@ void omb_graph_plot(omb_graph_options_t *graph_options, const char *filename)
         }
         terminal_size = omb_get_terminal_size();
         fprintf(graph_options->gnuplot_pointer, "set style data dots\n");
-        if ((options.bench == MBW_MR) || (options.subtype == BW)) {
+        if ((MBW_MR == options.bench) || (BW == options.subtype) ||
+            (CONG_BW == options.subtype)) {
             fprintf(graph_options->gnuplot_pointer, "set ylabel \"BW(MB/s)\""
                                                     " offset character 3,0\n");
         } else {
@@ -235,7 +236,8 @@ void omb_graph_combined_plot(omb_graph_options_t *graph_options,
                     png_file_name);
             fprintf(graph_options->gnuplot_pointer, "set title \"%s\"\n",
                     (i == 0) ? "Small Message Size" : "Large Message Size");
-            if (options.bench == MBW_MR || options.subtype == BW) {
+            if (MBW_MR == options.bench || BW == options.subtype ||
+                CONG_BW == options.subtype) {
                 fprintf(
                     graph_options->gnuplot_pointer,
                     "set zlabel rotate"
@@ -356,6 +358,20 @@ void omb_graph_allocate_and_get_data_buffer(omb_graph_data_t **graph_data,
 
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
     if (options.graph && 0 == rank) {
+        omb_graph_allocate_data_buffer(graph_options, message_size, length);
+        *graph_data =
+            graph_options->graph_datas[graph_options->number_of_graphs - 1];
+    }
+}
+
+void omb_graph_allocate_and_get_data_buffer_cus_rank(
+    omb_graph_data_t **graph_data, omb_graph_options_t *graph_options,
+    size_t message_size, size_t length, int cus_rank)
+{
+    int rank = -1;
+
+    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+    if (options.graph && cus_rank == rank) {
         omb_graph_allocate_data_buffer(graph_options, message_size, length);
         *graph_data =
             graph_options->graph_datas[graph_options->number_of_graphs - 1];

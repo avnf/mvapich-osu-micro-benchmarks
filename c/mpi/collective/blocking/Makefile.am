@@ -11,7 +11,7 @@ block_colldir = $(pkglibexecdir)/mpi/collective
 block_coll_PROGRAMS = osu_alltoallv osu_alltoallw osu_allgatherv osu_scatterv \
 					  osu_gatherv osu_reduce_scatter osu_barrier osu_reduce \
 					  osu_allreduce osu_alltoall osu_bcast osu_gather \
-					  osu_allgather osu_scatter
+					  osu_allgather osu_scatter osu_reduce_scatter_block
 AM_CFLAGS = -I${top_srcdir}/c/util
 
 UTILITIES = ../../../util/osu_util.c ../../../util/osu_util.h \
@@ -31,6 +31,7 @@ osu_scatterv_SOURCES = osu_scatterv.c $(UTILITIES)
 osu_gather_SOURCES = osu_gather.c $(UTILITIES)
 osu_gatherv_SOURCES = osu_gatherv.c $(UTILITIES)
 osu_reduce_scatter_SOURCES = osu_reduce_scatter.c $(UTILITIES)
+osu_reduce_scatter_block_SOURCES = osu_reduce_scatter_block.c $(UTILITIES)
 osu_barrier_SOURCES = osu_barrier.c $(UTILITIES)
 osu_reduce_SOURCES = osu_reduce.c $(UTILITIES)
 osu_allreduce_SOURCES = osu_allreduce.c $(UTILITIES)

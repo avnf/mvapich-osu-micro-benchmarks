@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -25,32 +25,12 @@ struct bad_usage_t bad_usage;
 
 void print_header(int rank, int full)
 {
+    int itr = 0;
+
     switch (options.bench) {
         case MBW_MR:
         case PT2PT:
             if (0 == rank) {
-                if (options.omb_enable_ddt) {
-                    fprintf(stdout,
-                            "# Set Derived DataTypes block_length to"
-                            " %zu, stride to %zu\n",
-                            options.ddt_type_parameters.block_length,
-                            options.ddt_type_parameters.stride);
-                }
-                switch (options.accel) {
-                    case CUDA:
-                        printf(benchmark_header, "-CUDA");
-                        break;
-                    case OPENACC:
-                        printf(benchmark_header, "-OPENACC");
-                        break;
-                    case ROCM:
-                        printf(benchmark_header, "-ROCM");
-                        break;
-                    default:
-                        printf(benchmark_header, "");
-                        break;
-                }
-
                 switch (options.accel) {
                     case CUDA:
                     case OPENACC:
@@ -69,7 +49,9 @@ void print_header(int rank, int full)
                                 ('D' == options.dst ? "DEVICE (D)" :
                                                       "HOST (H)"));
                     default:
-                        if (options.subtype == BW && options.bench != MBW_MR) {
+                        if ((BW == options.subtype ||
+                             CONG_BW == options.subtype) &&
+                            MBW_MR != options.bench) {
                             fprintf(stdout, "%-*s%*s", 10, "# Size",
                                     FIELD_WIDTH, "Bandwidth (MB/s)");
                         } else if (options.subtype == LAT) {
@@ -87,20 +69,27 @@ void print_header(int rank, int full)
                             fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
                         }
                         if (options.omb_tail_lat) {
-                            if (options.subtype == BW) {
-                                fprintf(stdout, "%*s", FIELD_WIDTH,
-                                        "P50 Tail BW(MB/s)");
-                                fprintf(stdout, "%*s", FIELD_WIDTH,
-                                        "P95 Tail BW(MB/s)");
-                                fprintf(stdout, "%*s", FIELD_WIDTH,
-                                        "P99 Tail BW(MB/s)");
-                            } else {
-                                fprintf(stdout, "%*s", FIELD_WIDTH,
-                                        "P50 Tail Lat(us)");
-                                fprintf(stdout, "%*s", FIELD_WIDTH,
-                                        "P95 Tail Lat(us)");
-                                fprintf(stdout, "%*s", FIELD_WIDTH,
-                                        "P99 Tail Lat(us)");
+                            itr = 0;
+                            while (itr < OMB_STAT_MAX_NUM &&
+                                   -1 != options.omb_stat_percentiles[itr]) {
+                                if (BW == options.subtype) {
+                                    fprintf(
+                                        stdout, "%*sP%d Tail BW(MB/s)",
+                                        FIELD_WIDTH -
+                                            strlen("Px Tail BW(MB/s)") -
+                                            (options.omb_stat_percentiles[itr] >
+                                             9),
+                                        "", options.omb_stat_percentiles[itr]);
+                                } else {
+                                    fprintf(
+                                        stdout, "%*sP%d Tail Lat(us)",
+                                        FIELD_WIDTH -
+                                            strlen("Px Tail Lat(us)") -
+                                            (options.omb_stat_percentiles[itr] >
+                                             9),
+                                        "", options.omb_stat_percentiles[itr]);
+                                }
+                                itr++;
                             }
                         }
                         if (options.omb_enable_ddt &&
@@ -447,11 +436,14 @@ int process_options(int argc, char *argv[])
 {
     extern char *optarg;
     extern int optind, optopt;
+    int itr = 0;
     char optstring_buf[80];
     int c, ret = PO_OKAY;
     int option_index = 0;
     char *graph_term_type = NULL;
+    char *validation_log_option = NULL;
     char *root_rank_type = NULL;
+    char *strtok_parsed = NULL;
     static struct option long_options[OMB_LONG_OPTIONS_ARRAY_SIZE];
 
     enable_accel_support();
@@ -468,6 +460,9 @@ int process_options(int argc, char *argv[])
                 break;
             case LAT_MT:
                 OMBOP_OPTSTR_BLK(PT2PT, LAT_MT);
+                break;
+            case CONG_BW:
+                OMBOP_OPTSTR_BLK(PT2PT, CONG_BW);
                 break;
             default:
                 OMB_ERROR_EXIT("Unknown subtype");
@@ -589,7 +584,7 @@ int process_options(int argc, char *argv[])
     } else if (options.bench == ONE_SIDED) {
         int jchar = 0;
 
-        jchar = sprintf(&optstring_buf[jchar], "%s", "+:w:s:hvm:x:i:G:Iz");
+        jchar = sprintf(&optstring_buf[jchar], "%s", "+:w:s:hvm:x:i:G:Iz::");
         if (options.subtype == BW) {
             jchar += sprintf(&optstring_buf[jchar], "%s", "W:");
         }
@@ -601,7 +596,7 @@ int process_options(int argc, char *argv[])
         if (options.show_validation) {
             jchar += sprintf(&optstring_buf[jchar], "%s", "cT:");
         }
-        options.optstring = malloc(strlen(optstring_buf) * sizeof(char));
+        options.optstring = malloc(strlen(optstring_buf) * sizeof(char) + 1);
         OMB_CHECK_NULL_AND_EXIT(options.optstring,
                                 "Unable to allocated memory");
         strcpy((char *)options.optstring, optstring_buf);
@@ -628,6 +623,7 @@ int process_options(int argc, char *argv[])
     options.window_varied = 0;
     options.print_rate = 1;
     options.validate = 0;
+    options.log_validation = 0;
     options.papi_enabled = 0;
     options.buf_num = SINGLE;
     options.omb_enable_ddt = 0;
@@ -650,9 +646,13 @@ int process_options(int argc, char *argv[])
     options.omb_enable_mpi_in_place = 0;
     options.omb_root_rank = 0;
     options.omb_tail_lat = 0;
+    for (itr = 0; itr < OMB_STAT_MAX_NUM; itr++) {
+        options.omb_stat_percentiles[itr] = -1;
+    }
 
     switch (options.subtype) {
         case BW:
+        case CONG_BW:
             options.iterations = BW_LOOP_SMALL;
             options.skip = BW_SKIP_SMALL;
             options.iterations_large = BW_LOOP_LARGE;
@@ -828,6 +828,27 @@ int process_options(int argc, char *argv[])
                 break;
             case 'z':
                 options.omb_tail_lat = 1;
+                if (NULL == optarg) {
+                    options.omb_stat_percentiles[0] = 50;
+                    options.omb_stat_percentiles[1] = 90;
+                    options.omb_stat_percentiles[2] = 99;
+                    break;
+                }
+                strtok_parsed = strtok(optarg, ",");
+                itr = 0;
+                while (NULL != strtok_parsed) {
+                    options.omb_stat_percentiles[itr] = atoi(strtok_parsed);
+                    if (options.omb_stat_percentiles[itr] < 0 ||
+                        options.omb_stat_percentiles[itr] > 100) {
+                        bad_usage.message =
+                            "Percentile range must be in between 0 and 100";
+                        bad_usage.optarg = optarg;
+
+                        return PO_BAD_USAGE;
+                    }
+                    strtok_parsed = strtok(NULL, ",");
+                    itr++;
+                }
                 break;
             case 'M':
                 /*
@@ -934,6 +955,49 @@ int process_options(int argc, char *argv[])
                                         " validation";
                     bad_usage.optarg = optarg;
                     return PO_BAD_USAGE;
+                }
+                if (NULL != optarg) {
+                    validation_log_option = strtok(optarg, ":");
+                    if (0 == strcmp("log", validation_log_option)) {
+                        options.log_validation = 1;
+                        validation_log_option = strtok(NULL, ":");
+                        if (NULL != validation_log_option) {
+                            if (OMB_FILE_PATH_MAX_LENGTH <
+                                strlen(validation_log_option)) {
+                                fprintf(stderr,
+                                        "ERROR: Max allowed size for filepath "
+                                        "is:%d\n"
+                                        "To increase the max allowed filepath "
+                                        "limit, update"
+                                        " OMB_FILE_PATH_MAX_LENGTH in "
+                                        "c/util/osu_util.h.\n",
+                                        OMB_FILE_PATH_MAX_LENGTH);
+                                fflush(stderr);
+                                bad_usage.message =
+                                    "Filepath exceeds maximum length"
+                                    " allowed";
+                                bad_usage.optarg = optarg;
+                                return PO_BAD_USAGE;
+                            }
+                            strcpy(options.log_validation_dir_path,
+                                   validation_log_option);
+                        } else {
+                            strcpy(options.log_validation_dir_path,
+                                   OMB_VALIDATION_LOG_DIR_PATH);
+                        }
+                        if (0 ==
+                            access(options.log_validation_dir_path, F_OK)) {
+                            fprintf(
+                                stderr,
+                                "ERROR: \"%s\" already exists. Set validation "
+                                "log directory using \"-clog:<dir>\n",
+                                options.log_validation_dir_path);
+                            fflush(stderr);
+                            bad_usage.message = "Directory already exists.";
+                            bad_usage.optarg = optarg;
+                            return PO_BAD_USAGE;
+                        }
+                    }
                 }
                 break;
             case 'P':
@@ -1115,7 +1179,7 @@ int process_options(int argc, char *argv[])
             if (options.src == 'M') {
 #ifdef _ENABLE_CUDA_KERNEL_
                 options.MMsrc = argv[optind][1];
-                if (options.MMsrc == '\0') {
+                if (options.MMsrc == '\0' && ONE_SIDED != options.bench) {
                     fprintf(stderr,
                             "The M flag for destination buffer is "
                             "deprecated. Please use MD or MH to set the "
@@ -1123,7 +1187,8 @@ int process_options(int argc, char *argv[])
                             "to be device or host respectively. Currently M "
                             "flag is considered as MH\n");
                     options.MMsrc = 'H';
-                } else if (options.MMsrc != 'D' && options.MMsrc != 'H') {
+                } else if (options.MMsrc != 'D' && options.MMsrc != 'H' &&
+                           ONE_SIDED != options.bench) {
                     fprintf(stderr,
                             "Please use MD or MH to set the effective "
                             "location of CUDA Unified Memory buffers to be "
@@ -1140,7 +1205,7 @@ int process_options(int argc, char *argv[])
             if (options.dst == 'M') {
 #ifdef _ENABLE_CUDA_KERNEL_
                 options.MMdst = argv[optind + 1][1];
-                if (options.MMdst == '\0') {
+                if (options.MMdst == '\0' && ONE_SIDED != options.bench) {
                     fprintf(stderr,
                             "The M flag for destination buffer is "
                             "deprecated. Please use MD or MH to set the "
@@ -1148,7 +1213,8 @@ int process_options(int argc, char *argv[])
                             "to be device or host respectively. Currently M "
                             "flag is considered as MH\n");
                     options.MMdst = 'H';
-                } else if (options.MMdst != 'D' && options.MMdst != 'H') {
+                } else if (options.MMdst != 'D' && options.MMdst != 'H' &&
+                           ONE_SIDED != options.bench) {
                     fprintf(stderr,
                             "Please use MD or MH to set the effective "
                             "location of CUDA Unified Memory buffers to be "

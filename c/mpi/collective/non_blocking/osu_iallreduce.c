@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Non-blocking Allreduce Latency Test"
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -151,6 +151,9 @@ int main(int argc, char *argv[])
 
             timer = 0.0;
 
+            if (1 == options.omb_enable_mpi_in_place) {
+                sendbuf = MPI_IN_PLACE;
+            }
             for (i = 0; i < options.iterations + options.skip; i++) {
                 if (i == options.skip) {
                     omb_papi_start(&papi_eventset);

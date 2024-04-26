@@ -95,7 +95,7 @@ nonblk_coll_PROGRAMS = osu_iallgather$(EXEEXT) osu_ibcast$(EXEEXT) \
 	osu_iallgatherv$(EXEEXT) osu_ialltoallv$(EXEEXT) \
 	osu_ialltoallw$(EXEEXT) osu_ireduce$(EXEEXT) \
 	osu_iallreduce$(EXEEXT) osu_ireduce_scatter$(EXEEXT) \
-	osu_ireduce_scatter$(EXEEXT)
+	osu_ireduce_scatter_block$(EXEEXT)
 @CUDA_KERNELS_TRUE@am__append_1 = ../../../util/kernel.cu
 @BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_2 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
 @OPENACC_TRUE@am__append_3 = -acc -ta=tesla:nordc
@@ -227,6 +227,17 @@ am_osu_ireduce_scatter_OBJECTS = osu_ireduce_scatter.$(OBJEXT) \
 	$(am__objects_2)
 osu_ireduce_scatter_OBJECTS = $(am_osu_ireduce_scatter_OBJECTS)
 osu_ireduce_scatter_LDADD = $(LDADD)
+am__osu_ireduce_scatter_block_SOURCES_DIST =  \
+	osu_ireduce_scatter_block.c ../../../util/osu_util.c \
+	../../../util/osu_util.h ../../../util/osu_util_mpi.c \
+	../../../util/osu_util_mpi.h ../../../util/osu_util_graph.c \
+	../../../util/osu_util_graph.h ../../../util/osu_util_papi.c \
+	../../../util/osu_util_papi.h ../../../util/kernel.cu
+am_osu_ireduce_scatter_block_OBJECTS =  \
+	osu_ireduce_scatter_block.$(OBJEXT) $(am__objects_2)
+osu_ireduce_scatter_block_OBJECTS =  \
+	$(am_osu_ireduce_scatter_block_OBJECTS)
+osu_ireduce_scatter_block_LDADD = $(LDADD)
 am__osu_iscatter_SOURCES_DIST = osu_iscatter.c \
 	../../../util/osu_util.c ../../../util/osu_util.h \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
@@ -271,6 +282,7 @@ am__depfiles_remade = ../../../util/$(DEPDIR)/kernel.Po \
 	./$(DEPDIR)/osu_ibarrier.Po ./$(DEPDIR)/osu_ibcast.Po \
 	./$(DEPDIR)/osu_igather.Po ./$(DEPDIR)/osu_igatherv.Po \
 	./$(DEPDIR)/osu_ireduce.Po ./$(DEPDIR)/osu_ireduce_scatter.Po \
+	./$(DEPDIR)/osu_ireduce_scatter_block.Po \
 	./$(DEPDIR)/osu_iscatter.Po ./$(DEPDIR)/osu_iscatterv.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -315,7 +327,8 @@ SOURCES = $(osu_iallgather_SOURCES) $(osu_iallgatherv_SOURCES) \
 	$(osu_ibarrier_SOURCES) $(osu_ibcast_SOURCES) \
 	$(osu_igather_SOURCES) $(osu_igatherv_SOURCES) \
 	$(osu_ireduce_SOURCES) $(osu_ireduce_scatter_SOURCES) \
-	$(osu_iscatter_SOURCES) $(osu_iscatterv_SOURCES)
+	$(osu_ireduce_scatter_block_SOURCES) $(osu_iscatter_SOURCES) \
+	$(osu_iscatterv_SOURCES)
 DIST_SOURCES = $(am__osu_iallgather_SOURCES_DIST) \
 	$(am__osu_iallgatherv_SOURCES_DIST) \
 	$(am__osu_iallreduce_SOURCES_DIST) \
@@ -327,6 +340,7 @@ DIST_SOURCES = $(am__osu_iallgather_SOURCES_DIST) \
 	$(am__osu_igatherv_SOURCES_DIST) \
 	$(am__osu_ireduce_SOURCES_DIST) \
 	$(am__osu_ireduce_scatter_SOURCES_DIST) \
+	$(am__osu_ireduce_scatter_block_SOURCES_DIST) \
 	$(am__osu_iscatter_SOURCES_DIST) \
 	$(am__osu_iscatterv_SOURCES_DIST)
 am__can_run_installinfo = \
@@ -507,6 +521,7 @@ osu_iscatterv_SOURCES = osu_iscatterv.c $(UTILITIES)
 osu_ireduce_SOURCES = osu_ireduce.c $(UTILITIES)
 osu_iallreduce_SOURCES = osu_iallreduce.c $(UTILITIES)
 osu_ireduce_scatter_SOURCES = osu_ireduce_scatter.c $(UTILITIES)
+osu_ireduce_scatter_block_SOURCES = osu_ireduce_scatter_block.c $(UTILITIES)
 @EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_2) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
@@ -660,6 +675,10 @@ osu_ireduce_scatter$(EXEEXT): $(osu_ireduce_scatter_OBJECTS) $(osu_ireduce_scatt
 	@rm -f osu_ireduce_scatter$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(osu_ireduce_scatter_OBJECTS) $(osu_ireduce_scatter_LDADD) $(LIBS)
 
+osu_ireduce_scatter_block$(EXEEXT): $(osu_ireduce_scatter_block_OBJECTS) $(osu_ireduce_scatter_block_DEPENDENCIES) $(EXTRA_osu_ireduce_scatter_block_DEPENDENCIES) 
+	@rm -f osu_ireduce_scatter_block$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(osu_ireduce_scatter_block_OBJECTS) $(osu_ireduce_scatter_block_LDADD) $(LIBS)
+
 osu_iscatter$(EXEEXT): $(osu_iscatter_OBJECTS) $(osu_iscatter_DEPENDENCIES) $(EXTRA_osu_iscatter_DEPENDENCIES) 
 	@rm -f osu_iscatter$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(osu_iscatter_OBJECTS) $(osu_iscatter_LDADD) $(LIBS)
@@ -692,6 +711,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_igatherv.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_ireduce.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_ireduce_scatter.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_ireduce_scatter_block.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_iscatter.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_iscatterv.Po@am__quote@ # am--include-marker
 
@@ -902,6 +922,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/osu_igatherv.Po
 	-rm -f ./$(DEPDIR)/osu_ireduce.Po
 	-rm -f ./$(DEPDIR)/osu_ireduce_scatter.Po
+	-rm -f ./$(DEPDIR)/osu_ireduce_scatter_block.Po
 	-rm -f ./$(DEPDIR)/osu_iscatter.Po
 	-rm -f ./$(DEPDIR)/osu_iscatterv.Po
 	-rm -f Makefile
@@ -966,6 +987,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/osu_igatherv.Po
 	-rm -f ./$(DEPDIR)/osu_ireduce.Po
 	-rm -f ./$(DEPDIR)/osu_ireduce_scatter.Po
+	-rm -f ./$(DEPDIR)/osu_ireduce_scatter_block.Po
 	-rm -f ./$(DEPDIR)/osu_iscatter.Po
 	-rm -f ./$(DEPDIR)/osu_iscatterv.Po
 	-rm -f Makefile

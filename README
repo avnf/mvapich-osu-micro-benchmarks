@@ -1418,13 +1418,15 @@ The following benchmarks have been extended which an option to set root rank.
 
 Option to print tail latencies/bandwidth
 -----------------------------------------
-Benchmarks have been extended to support the following additional metrics,
+Benchmarks have been extended to support the following additional metrics by
+default,
     * 50th percentile tail latency/bandwidth
     * 95th percentile tail latency/bandwidth
     * 99th percentile tail latency/bandwidth
 
 The benchmarks offer following options:
-    * "-z" option can be used to print tail latencies/bandwith.
+    * "-z" Outputs P99, P90, P50 percentiles"
+    * "-z<1-99,1-99,1-99..>" Comma seperated percentile range
 
 Building with MPI-4 support
 --------------------------------------
@@ -1434,3 +1436,26 @@ configuration, OMB will automatically detect and build with MPI-4 support.
 
 OMB can also be forced to build with MPI-4 support by passing "--enable-mpi4"
 during configure time.
+
+
+Congestion Benchmarks
+-----------------------------------
+osu_bw_fan_out.c - benchmark to measure send bandwidth.
+    * The fan out congestion bandwidth test evaluates the aggregate
+    * uni-directional bandwidth between multiple pairs of process across nodes.
+    * Each of the sending processes on one node sends a fixed number of
+    * messages (the window size) back-to-back to the paired receiving
+    * processies on k nodes before waiting for a reply from the receiver.
+    * This process is repeated for several iterations. The objective of this
+    * benchmark is to determine the achieved bandwidth with configurable
+    * number of processes running on each node.
+
+osu_bw_fan_in.c - benchmark to measure receive bandwidth.
+    * The fan in congestion bandwidth test evaluates the aggregate
+    * uni-directional bandwidth between multiple pairs of process across nodes.
+    * Each of the sending processes on k nodes sends a fixed number of
+    * messages (the window size) back-to-back to the paired receiving
+    * processies on 1 node before waiting for a reply from the receiver.
+    * This process is repeated for several iterations. The objective of this
+    * benchmark is to determine the achieved bandwidth with configurable
+    * number of processes running on each node.

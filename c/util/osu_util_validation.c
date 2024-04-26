@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 the Network-Based Computing Laboratory
+ * Copyright (c) 2023-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -54,7 +54,11 @@ static int set_hmem_buffer(void *dst, void *src, size_t size)
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
         case CUDA:
-            CUDA_CHECK(cudaMemcpy(dst, src, size, cudaMemcpyHostToDevice));
+            if (buf_type == 'M') {
+                memcpy(dst, src, size);
+            } else {
+                CUDA_CHECK(cudaMemcpy(dst, src, size, cudaMemcpyHostToDevice));
+            }
             CUDA_CHECK(cudaDeviceSynchronize());
             break;
 #endif
@@ -75,7 +79,11 @@ static int get_hmem_buffer(void *dst, void *src, size_t size)
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
         case CUDA:
-            CUDA_CHECK(cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost));
+            if (rank_buffer_type == 'M') {
+                memcpy(dst, src, size);
+            } else {
+                CUDA_CHECK(cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost));
+            }
             CUDA_CHECK(cudaDeviceSynchronize());
             break;
 #endif
@@ -418,8 +426,8 @@ int atomic_data_validation_check(MPI_Datatype datatype, MPI_Op op, int jrank,
     char expected_local_addr[MAX_ATOM_BYTES], dummy_remote_addr[MAX_ATOM_BYTES];
     char expected_local_result[MAX_ATOM_BYTES];
 
-    char local_addr_in_sysmem[buf_size];
-    char local_result_in_sysmem[buf_size];
+    char *local_addr_in_sysmem = NULL;
+    char *local_result_in_sysmem = NULL;
     int dtype_size;
     size_t natoms;
     int jatom;
@@ -432,6 +440,11 @@ int atomic_data_validation_check(MPI_Datatype datatype, MPI_Op op, int jrank,
 
     natoms = buf_size / dtype_size;
     natoms = 1;
+    local_addr_in_sysmem = malloc(buf_size);
+    OMB_CHECK_NULL_AND_EXIT(local_addr_in_sysmem, "Unable to allocate memory");
+    local_result_in_sysmem = malloc(buf_size);
+    OMB_CHECK_NULL_AND_EXIT(local_result_in_sysmem,
+                            "Unable to allocate memory");
 
     /* setup initial conditions so we can mock the test */
     err = validation_input_value(datatype, jrank, local_addr);
@@ -516,13 +529,19 @@ int atomic_data_validation_check(MPI_Datatype datatype, MPI_Op op, int jrank,
     atomic_dv_record(datatype, op, any_errors, 1);
     if (any_errors)
         *validation_results |= 1;
+    free(local_result_in_sysmem);
+    free(local_addr_in_sysmem);
     return 0;
 
 nocheck:
     atomic_dv_record(datatype, op, 0, 0);
     *validation_results |= 2;
+    free(local_result_in_sysmem);
+    free(local_addr_in_sysmem);
     return 0;
 error:
     atomic_dv_record(datatype, op, 0, 0);
+    free(local_result_in_sysmem);
+    free(local_addr_in_sysmem);
     return err;
 }

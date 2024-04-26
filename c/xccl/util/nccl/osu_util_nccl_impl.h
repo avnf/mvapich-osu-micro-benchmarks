@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -21,6 +21,6 @@ static void _destroy_comm();
 static void _deallocate_stream();
 static void _synchronize_stream();
 static ncclResult_t _ncclAllToAll_shim(OSU_NCCL_ALLTOALL_PARAM);
-int _numprocs; /* for AlltoAll shim */
+extern int _numprocs; /* for AlltoAll shim */
 
 #endif /* OSU_UTIL_NCCL_IMPL_H */

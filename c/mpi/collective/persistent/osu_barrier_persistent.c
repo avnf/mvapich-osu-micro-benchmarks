@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Barrier Persistent Latency Test"
 /*
- * Copyright (C) 2023-2024 the Network-Based Computing Laboratory
+ * Copyright (c) 2023-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     MPI_Request request;
 
     set_header(HEADER);
-    set_benchmark_name("osu_barrier");
+    set_benchmark_name("osu_barrier_persistent");
     po_ret = process_options(argc, argv);
 
     if (PO_OKAY == po_ret && NONE != options.accel) {

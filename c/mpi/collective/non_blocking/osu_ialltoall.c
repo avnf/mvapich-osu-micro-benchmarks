@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Non-blocking All-to-All Latency Test"
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -160,6 +160,9 @@ int main(int argc, char *argv[])
                                num_elements) *
                 mpi_type_size;
             num_elements = omb_ddt_get_size(num_elements);
+            if (1 == options.omb_enable_mpi_in_place) {
+                sendbuf = MPI_IN_PLACE;
+            }
             for (i = 0; i < options.iterations + options.skip; i++) {
                 if (i == options.skip) {
                     omb_papi_start(&papi_eventset);
@@ -168,9 +171,6 @@ int main(int argc, char *argv[])
                     set_buffer_validation(sendbuf, recvbuf, size, options.accel,
                                           i, omb_curr_datatype,
                                           omb_buffer_sizes);
-                    if (1 == options.omb_enable_mpi_in_place) {
-                        sendbuf = MPI_IN_PLACE;
-                    }
                     for (j = 0; j < options.warmup_validation; j++) {
                         MPI_CHECK(MPI_Barrier(omb_comm));
                         MPI_CHECK(MPI_Ialltoall(

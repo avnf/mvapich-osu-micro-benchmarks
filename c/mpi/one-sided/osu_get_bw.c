@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI_Get%s Bandwidth Test"
 /*
- * Copyright (C) 2003-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2003-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -167,12 +167,7 @@ void print_bw(int rank, int size, double t, struct omb_stat_t omb_stat)
         fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                 tmp / t);
         if (options.omb_tail_lat) {
-            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                    omb_stat.p50);
-            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                    omb_stat.p95);
-            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                    omb_stat.p99);
+            OMB_ITR_PRINT_STAT(omb_stat.res_arr);
         }
         fprintf(stdout, "\n");
         fflush(stdout);

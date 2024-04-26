@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Reduce Latency Test"
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -155,9 +155,9 @@ int main(int argc, char *argv[])
                                           omb_buffer_sizes);
                     for (j = 0; j < options.warmup_validation; j++) {
                         MPI_CHECK(MPI_Barrier(omb_comm));
-                        MPI_CHECK(MPI_Reduce(sendbuf, recvbuf, num_elements,
-                                             omb_curr_datatype, MPI_SUM,
-                                             root_rank, omb_comm));
+                        MPI_CHECK(MPI_Reduce(sendbuf_warmup, recvbuf_warmup,
+                                             num_elements, omb_curr_datatype,
+                                             MPI_SUM, root_rank, omb_comm));
                     }
                 }
                 MPI_CHECK(MPI_Barrier(omb_comm));

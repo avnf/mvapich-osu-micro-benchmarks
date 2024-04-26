@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Reduce Persistent Latency Test"
 /*
- * Copyright (C) 2023-2024 the Network-Based Computing Laboratory
+ * Copyright (c) 2023-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     int papi_eventset = OMB_PAPI_NULL;
 
     set_header(HEADER);
-    set_benchmark_name("osu_reduce");
+    set_benchmark_name("osu_reduce_persistent");
 
     options.bench = COLLECTIVE;
     options.subtype = REDUCE_P;

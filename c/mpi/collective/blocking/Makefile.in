@@ -94,7 +94,7 @@ block_coll_PROGRAMS = osu_alltoallv$(EXEEXT) osu_alltoallw$(EXEEXT) \
 	osu_barrier$(EXEEXT) osu_reduce$(EXEEXT) \
 	osu_allreduce$(EXEEXT) osu_alltoall$(EXEEXT) \
 	osu_bcast$(EXEEXT) osu_gather$(EXEEXT) osu_allgather$(EXEEXT) \
-	osu_scatter$(EXEEXT)
+	osu_scatter$(EXEEXT) osu_reduce_scatter_block$(EXEEXT)
 @CUDA_KERNELS_TRUE@am__append_1 = ../../../util/kernel.cu
 @BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_2 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
 @OPENACC_TRUE@am__append_3 = -acc -ta=tesla:nordc
@@ -229,6 +229,18 @@ am_osu_reduce_scatter_OBJECTS = osu_reduce_scatter.$(OBJEXT) \
 	$(am__objects_2)
 osu_reduce_scatter_OBJECTS = $(am_osu_reduce_scatter_OBJECTS)
 osu_reduce_scatter_LDADD = $(LDADD)
+am__osu_reduce_scatter_block_SOURCES_DIST =  \
+	osu_reduce_scatter_block.c ../../../util/osu_util.c \
+	../../../util/osu_util.h ../../../util/osu_util_mpi.c \
+	../../../util/osu_util_mpi.h ../../../util/osu_util_graph.c \
+	../../../util/osu_util_graph.h ../../../util/osu_util_papi.c \
+	../../../util/osu_util_papi.h \
+	../../../util/osu_util_validation.c ../../../util/kernel.cu
+am_osu_reduce_scatter_block_OBJECTS =  \
+	osu_reduce_scatter_block.$(OBJEXT) $(am__objects_2)
+osu_reduce_scatter_block_OBJECTS =  \
+	$(am_osu_reduce_scatter_block_OBJECTS)
+osu_reduce_scatter_block_LDADD = $(LDADD)
 am__osu_scatter_SOURCES_DIST = osu_scatter.c ../../../util/osu_util.c \
 	../../../util/osu_util.h ../../../util/osu_util_mpi.c \
 	../../../util/osu_util_mpi.h ../../../util/osu_util_graph.c \
@@ -274,6 +286,7 @@ am__depfiles_remade = ../../../util/$(DEPDIR)/kernel.Po \
 	./$(DEPDIR)/osu_barrier.Po ./$(DEPDIR)/osu_bcast.Po \
 	./$(DEPDIR)/osu_gather.Po ./$(DEPDIR)/osu_gatherv.Po \
 	./$(DEPDIR)/osu_reduce.Po ./$(DEPDIR)/osu_reduce_scatter.Po \
+	./$(DEPDIR)/osu_reduce_scatter_block.Po \
 	./$(DEPDIR)/osu_scatter.Po ./$(DEPDIR)/osu_scatterv.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -318,7 +331,8 @@ SOURCES = $(osu_allgather_SOURCES) $(osu_allgatherv_SOURCES) \
 	$(osu_barrier_SOURCES) $(osu_bcast_SOURCES) \
 	$(osu_gather_SOURCES) $(osu_gatherv_SOURCES) \
 	$(osu_reduce_SOURCES) $(osu_reduce_scatter_SOURCES) \
-	$(osu_scatter_SOURCES) $(osu_scatterv_SOURCES)
+	$(osu_reduce_scatter_block_SOURCES) $(osu_scatter_SOURCES) \
+	$(osu_scatterv_SOURCES)
 DIST_SOURCES = $(am__osu_allgather_SOURCES_DIST) \
 	$(am__osu_allgatherv_SOURCES_DIST) \
 	$(am__osu_allreduce_SOURCES_DIST) \
@@ -329,6 +343,7 @@ DIST_SOURCES = $(am__osu_allgather_SOURCES_DIST) \
 	$(am__osu_gather_SOURCES_DIST) $(am__osu_gatherv_SOURCES_DIST) \
 	$(am__osu_reduce_SOURCES_DIST) \
 	$(am__osu_reduce_scatter_SOURCES_DIST) \
+	$(am__osu_reduce_scatter_block_SOURCES_DIST) \
 	$(am__osu_scatter_SOURCES_DIST) \
 	$(am__osu_scatterv_SOURCES_DIST)
 am__can_run_installinfo = \
@@ -500,6 +515,7 @@ osu_scatterv_SOURCES = osu_scatterv.c $(UTILITIES)
 osu_gather_SOURCES = osu_gather.c $(UTILITIES)
 osu_gatherv_SOURCES = osu_gatherv.c $(UTILITIES)
 osu_reduce_scatter_SOURCES = osu_reduce_scatter.c $(UTILITIES)
+osu_reduce_scatter_block_SOURCES = osu_reduce_scatter_block.c $(UTILITIES)
 osu_barrier_SOURCES = osu_barrier.c $(UTILITIES)
 osu_reduce_SOURCES = osu_reduce.c $(UTILITIES)
 osu_allreduce_SOURCES = osu_allreduce.c $(UTILITIES)
@@ -665,6 +681,10 @@ osu_reduce_scatter$(EXEEXT): $(osu_reduce_scatter_OBJECTS) $(osu_reduce_scatter_
 	@rm -f osu_reduce_scatter$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(osu_reduce_scatter_OBJECTS) $(osu_reduce_scatter_LDADD) $(LIBS)
 
+osu_reduce_scatter_block$(EXEEXT): $(osu_reduce_scatter_block_OBJECTS) $(osu_reduce_scatter_block_DEPENDENCIES) $(EXTRA_osu_reduce_scatter_block_DEPENDENCIES) 
+	@rm -f osu_reduce_scatter_block$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(osu_reduce_scatter_block_OBJECTS) $(osu_reduce_scatter_block_LDADD) $(LIBS)
+
 osu_scatter$(EXEEXT): $(osu_scatter_OBJECTS) $(osu_scatter_DEPENDENCIES) $(EXTRA_osu_scatter_DEPENDENCIES) 
 	@rm -f osu_scatter$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(osu_scatter_OBJECTS) $(osu_scatter_LDADD) $(LIBS)
@@ -698,6 +718,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_gatherv.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_reduce.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_reduce_scatter.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_reduce_scatter_block.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_scatter.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_scatterv.Po@am__quote@ # am--include-marker
 
@@ -909,6 +930,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/osu_gatherv.Po
 	-rm -f ./$(DEPDIR)/osu_reduce.Po
 	-rm -f ./$(DEPDIR)/osu_reduce_scatter.Po
+	-rm -f ./$(DEPDIR)/osu_reduce_scatter_block.Po
 	-rm -f ./$(DEPDIR)/osu_scatter.Po
 	-rm -f ./$(DEPDIR)/osu_scatterv.Po
 	-rm -f Makefile
@@ -974,6 +996,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/osu_gatherv.Po
 	-rm -f ./$(DEPDIR)/osu_reduce.Po
 	-rm -f ./$(DEPDIR)/osu_reduce_scatter.Po
+	-rm -f ./$(DEPDIR)/osu_reduce_scatter_block.Po
 	-rm -f ./$(DEPDIR)/osu_scatter.Po
 	-rm -f ./$(DEPDIR)/osu_scatterv.Po
 	-rm -f Makefile

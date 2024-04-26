@@ -1,3 +1,71 @@
+OSU Micro Benchmarks v7.4 (4/26/2024)
+
+* New Features & Enhancements
+    - Add support for new benchmarks to measure network congestion
+        * osu_bw_fan_in, osu_bw_fan_out
+    - Add new collective benchmarks
+        * osu_reduce_scatter_block, osu_ireduce_scatter_block
+    - Add support for custom percentile values to evaluate benchmark performance
+    - Add support to log validation failures to following benchmarks
+        * Point-to-point benchmarks
+            * osu_bibw, osu_bw, osu_mbw_mr, osu_latency, osu_multi_lat,
+            * osu_latency_mp, osu_latency_mt, osu_bw_persistent,
+            * osu_bibw_persistent, osu_latency_persistent
+        * Blocking collective benchmarks
+            * osu_allgather, osu_allgatherv, osu_alltoall, osu_allreduce,
+            * osu_alltoallv, osu_alltoallw, osu_bcast, osu_barrier, osu_gather,
+            * osu_gatherv, osu_reduce, osu_reduce_scatter, osu_scatter,
+            * osu_scatterv, osu_reduce_scatter_block
+        * Non-Blocking collective benchmarks
+            * osu_iallgather, osu_iallgatherv, osu_iallreduce, osu_ialltoall,
+            * osu_ialltoallv, osu_ialltoallw, osu_ibcast, osu_ibarrier,
+            * osu_igather, osu_igatherv, osu_ireduce, osu_iscatter,
+            * osu_iscatterv, osu_ireduce_scatter, osu_ireduce_scatter_block
+        * Neighborhood collective benchmarks
+            * osu_neighbor_allgather, osu_neighbor_allgatherv,
+            * osu_neighbor_alltoall,osu_neighbor_alltoallv,
+            * osu_neighbor_alltoallw, osu_ineighbor_allgatherv,
+            * osu_ineighbor_allgatherv, osu_ineighbor_alltoall,
+            * osu_ineighbor_alltoallv, osu_ineighbor_alltoallw
+        * Persistent collective benchmarks
+            * osu_allgather_persistent, osu_allgatherv_persistent,
+            * osu_allreduce_persistent, osu_alltoall_persistent,
+            * osu_alltoallv_persistent, osu_alltoallw_persistent,
+            * osu_barrier_persistent, osu_bcast_persistent,
+            * osu_gather_persistent, osu_gatherv_persistent,
+            * osu_reduce_persistent, osu_reduce_scatter_persistent,
+            * osu_scatter_persistent, osu_scatterv_persistent,
+
+* Bug Fixes
+    - Fixed time measurement in osu_mbw_mr and osu_multi_lat benchmarks to
+      consider execution time across all sender ranks.
+    - Fixed validation failure when using managed device buffers.
+        * Thanks to Van Man Nguyen @Eviden for report.
+    - Fixed time measurement in osu_mbw_mr and osu_multi_lat benchmarks to
+      consider execution time across all sender ranks.
+    - Fixed multiple definition error when building with NCCL support.
+        * Thanks to Klaus Noelp @FU Hagen for report.
+    - Fixed bugs causing display of multiple/incorrect headers.
+    - Fixed hang issue in benchmarks using multiple buffers when validation
+      is enabled.
+        * Thanks to Van Man Nguyen @Eviden for the report.
+    - Fixed issue in osu_cas_latency benchmark that led to segmentation fault.
+        * Thanks to Julien Duprat @Eviden for the report.
+    - Fixed configure time failure while building with latest ROCm.
+        * Thanks to Mahdieh Ghazimirsaeed @AMD for the report and patch.
+    - Fixed device and managed memory allocation in one-sided benchmarks.
+        * Thanks to Mikhail Brinskii @NVIDIA for the report.
+    - Fixed bug in Reduce-Scatter benchmarks that led to data validation of
+      only a part of the receive buffer.
+    - Fixed NULL pointer error in device based one-sided benchmarks.
+    - Fixed data validation issue with Reduce, Allreduce, Reduce_scatter
+      benchmarks.
+    - Updated configure help for "--enable-mpi4" to state that the MPI-4
+      features are auto enabled.
+        * Thanks to Antoine Morvan @Eviden for the report.
+    - Fixed a bug in benchmarks that led to MPI_IN_PLACE support getting enabled
+      only when validation is enabled.
+
 OSU Micro Benchmarks v7.3 (10/30/2023)
 
 * New Features & Enhancements
@@ -22,7 +90,7 @@ OSU Micro Benchmarks v7.3 (10/30/2023)
         * 99th percentile tail latency/bandwidth
 
 * Bug Fixes
-    - Fixed acknowledgement buffer memory allocation issue in bandwidth related 
+    - Fixed acknowledgement buffer memory allocation issue in bandwidth related
       benchmarks
         * Thanks to Emmanuel BRELLE @Eviden for report and patch.
     - Fixed validation issue in osu_fop_latency.

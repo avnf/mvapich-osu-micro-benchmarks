@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI Multiple Bandwidth / Message Rate Test"
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -24,12 +24,6 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
                char **r_buf, int mpi_type_itr, int num_elements,
                int mpi_type_size);
 
-#ifdef _ENABLE_CUDA_KERNEL_
-double measure_kernel_lo(char **, int, int);
-void touch_managed_src(char **, int, int);
-void touch_managed_dst(char **, int, int);
-#endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
-
 double calculate_total(double, double, double, int);
 
 int errors_reduced = 0;
@@ -46,6 +40,7 @@ int main(int argc, char *argv[])
 {
     char **s_buf, **r_buf;
     int numprocs, rank;
+    int itr = 0;
     int c, curr_size;
     set_header(HEADER);
     set_benchmark_name("osu_mbw_mr");
@@ -160,7 +155,6 @@ int main(int argc, char *argv[])
 
     if (rank == 0) {
         fprintf(stdout, HEADER);
-        print_header(rank, BW);
 
         if (options.window_varied) {
             fprintf(stdout, "# [ pairs: %d ] [ window size: varied ]\n",
@@ -171,28 +165,6 @@ int main(int argc, char *argv[])
         else {
             fprintf(stdout, "# [ pairs: %d ] [ window size: %d ]\n",
                     options.pairs, options.window_size);
-
-            if (options.print_rate) {
-                fprintf(stdout, "%-*s%*s%*s", 10, "# Size", FIELD_WIDTH, "MB/s",
-                        FIELD_WIDTH, "Messages/s");
-            }
-
-            else {
-                fprintf(stdout, "%-*s%*s", 10, "# Size", FIELD_WIDTH, "MB/s");
-            }
-
-            if (options.validate) {
-                fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
-            }
-            if (options.omb_tail_lat) {
-                fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail BW(MB/s)");
-                fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail BW(MB/s)");
-                fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail BW(MB/s)");
-            }
-            if (options.omb_enable_ddt) {
-                fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
-            }
-            fprintf(stdout, "\n");
         }
 
         fflush(stdout);
@@ -206,11 +178,40 @@ int main(int argc, char *argv[])
                                     mpi_type_name_str, &mpi_type_name_length));
         if (0 == rank) {
             fprintf(stdout, "# Datatype: %s.\n", mpi_type_name_str);
+            if (0 == options.window_varied) {
+                if (options.print_rate) {
+                    fprintf(stdout, "%-*s%*s%*s", 10, "# Size", FIELD_WIDTH,
+                            "MB/s", FIELD_WIDTH, "Messages/s");
+                }
+
+                else {
+                    fprintf(stdout, "%-*s%*s", 10, "# Size", FIELD_WIDTH,
+                            "MB/s");
+                }
+
+                if (options.validate) {
+                    fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
+                }
+                if (options.omb_tail_lat) {
+                    itr = 0;
+                    while (itr < OMB_STAT_MAX_NUM &&
+                           -1 != options.omb_stat_percentiles[itr]) {
+                        if (BW == options.subtype) {
+                            fprintf(stdout, "%*sP%d Tail BW(MB/s)",
+                                    FIELD_WIDTH - strlen("Px Tail BW(MB/s)") -
+                                        (options.omb_stat_percentiles[itr] > 9),
+                                    "", options.omb_stat_percentiles[itr]);
+                        }
+                        itr++;
+                    }
+                }
+                if (options.omb_enable_ddt) {
+                    fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
+                }
+                fprintf(stdout, "\n");
+            }
         }
         fflush(stdout);
-        if (1 <= mpi_type_itr) {
-            print_only_header(rank);
-        }
         if (options.window_varied) {
             int window_array[] = WINDOW_SIZES;
             double **bandwidth_results;
@@ -382,12 +383,7 @@ int main(int argc, char *argv[])
                         }
                     }
                     if (options.omb_tail_lat) {
-                        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                                omb_stat.p50);
-                        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                                omb_stat.p95);
-                        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                                omb_stat.p99);
+                        OMB_ITR_PRINT_STAT(omb_stat.res_arr);
                     }
                     if (options.omb_enable_ddt) {
                         fprintf(stdout, "%*zu", FIELD_WIDTH,
@@ -451,6 +447,8 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
     MPI_Datatype omb_curr_datatype = mpi_type_list[mpi_type_itr];
     omb_graph_data_t *omb_graph_data = NULL;
     struct omb_buffer_sizes_t omb_buffer_sizes;
+    MPI_Comm barrier_comm;
+    double temp_t_reduce = 0.0;
 
     omb_ddt_transmit_size =
         omb_ddt_assign(&omb_curr_datatype, mpi_type_list[mpi_type_itr],
@@ -464,7 +462,7 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
 
 #ifdef _ENABLE_CUDA_KERNEL_
     if (options.dst == 'M' && options.MMdst == 'D') {
-        t_lo = measure_kernel_lo(s_buf, size, window_size);
+        t_lo = measure_kernel_lo_window(s_buf, size, window_size);
     }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
@@ -487,6 +485,7 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
     omb_graph_allocate_and_get_data_buffer(&omb_graph_data, &omb_graph_op, size,
                                            options.iterations);
     MPI_CHECK(MPI_Barrier(omb_comm));
+    MPI_CHECK(MPI_Comm_split(omb_comm, rank < num_pairs, 0, &barrier_comm));
 
     for (i = 0; i < options.iterations + options.skip; i++) {
         if (i == options.skip) {
@@ -500,8 +499,8 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
             if (options.buf_num == MULTIPLE) {
                 for (j = 0; j < window_size; j++) {
                     set_buffer_validation(s_buf[j], r_buf[j], size,
-                                          options.accel, j, omb_curr_datatype,
-                                          omb_buffer_sizes);
+                                          options.accel, i + j,
+                                          omb_curr_datatype, omb_buffer_sizes);
                 }
             }
         }
@@ -512,13 +511,14 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
             target = rank + num_pairs;
 
             for (k = 0; k <= options.warmup_validation; k++) {
+                MPI_CHECK(MPI_Barrier(omb_comm));
                 if (i >= options.skip && k == options.warmup_validation) {
                     t_start = MPI_Wtime();
                 }
 
 #ifdef _ENABLE_CUDA_KERNEL_
                 if (options.src == 'M') {
-                    touch_managed_src(s_buf, size, window_size);
+                    touch_managed_src_window(s_buf, size, window_size, ADD);
                 }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
@@ -539,7 +539,7 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
 
 #ifdef _ENABLE_CUDA_KERNEL_
                 if (options.src == 'M') {
-                    touch_managed_src(r_buf, size, window_size);
+                    touch_managed_src_window(r_buf, size, window_size, SUB);
                 }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
                 if (i >= options.skip && k == options.warmup_validation) {
@@ -563,6 +563,12 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
                             calculate_total(t_start, t_end, t_lo, window_size);
                     }
                 }
+#ifdef _ENABLE_CUDA_KERNEL_
+                if (options.src == 'M' && options.MMsrc == 'D' &&
+                    options.validate) {
+                    touch_managed_src_window(s_buf, size, window_size, SUB);
+                }
+#endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
             }
             if (options.validate) {
                 MPI_CHECK(MPI_Reduce(&errors, &error_temp, 1, MPI_INT, MPI_SUM,
@@ -573,9 +579,10 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
         } else if (rank < num_pairs * 2) {
             target = rank - num_pairs;
             for (k = 0; k <= options.warmup_validation; k++) {
+                MPI_CHECK(MPI_Barrier(omb_comm));
 #ifdef _ENABLE_CUDA_KERNEL_
                 if (options.dst == 'M') {
-                    touch_managed_dst(s_buf, size, window_size);
+                    touch_managed_dst_window(s_buf, size, window_size, ADD);
                 }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
@@ -594,12 +601,29 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
 
 #ifdef _ENABLE_CUDA_KERNEL_
                 if (options.dst == 'M') {
-                    touch_managed_dst(r_buf, size, window_size);
+                    touch_managed_dst_window(r_buf, size, window_size, SUB);
                 }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
                 MPI_CHECK(
                     MPI_Send(s_buf[0], 1, MPI_CHAR, target, 101, omb_comm));
             }
+#ifdef _ENABLE_CUDA_KERNEL_
+            if (options.validate &&
+                !(options.src == 'M' && options.MMsrc == 'D' &&
+                  options.dst == 'M' && options.MMdst == 'D')) {
+                if (options.src == 'M' && options.MMsrc == 'D') {
+                    for (j = 0; j < window_size; j++) {
+                        touch_managed(r_buf[j], size, SUB);
+                        synchronize_stream();
+                    }
+                } else if (options.dst == 'M' && options.MMdst == 'D') {
+                    for (j = 0; j < window_size; j++) {
+                        touch_managed(r_buf[j], size, ADD);
+                        synchronize_stream();
+                    }
+                }
+            }
+#endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
             if (options.validate) {
                 if (options.buf_num == SINGLE) {
                     errors = validate_data(r_buf[0], size, 1, options.accel, i,
@@ -607,7 +631,7 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
                 } else {
                     for (j = 0; j < window_size; j++) {
                         errors = validate_data(r_buf[j], size, 1, options.accel,
-                                               j, omb_curr_datatype);
+                                               i + j, omb_curr_datatype);
                     }
                 }
                 MPI_CHECK(MPI_Reduce(&errors, &error_temp, 1, MPI_INT, MPI_SUM,
@@ -629,6 +653,9 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
     }
 
     omb_ddt_free(&omb_curr_datatype);
+    MPI_CHECK(MPI_Reduce(&t, &temp_t_reduce, 1, MPI_DOUBLE, MPI_SUM, 0,
+                         barrier_comm));
+    t = temp_t_reduce / num_pairs;
     if (rank == 0) {
         if (options.omb_enable_ddt) {
             tmp_total = omb_ddt_transmit_size / 1e6 * num_pairs;
@@ -645,79 +672,6 @@ double calc_bw(int rank, int size, int num_pairs, int window_size, char **s_buf,
 
     return 0;
 }
-
-#ifdef _ENABLE_CUDA_KERNEL_
-double measure_kernel_lo(char **buf, int size, int window_size)
-{
-    int i;
-    double t_lo = 0.0, t_start, t_end;
-
-    for (i = 0; i < 10; i++) {
-        launch_empty_kernel(buf[i % window_size], size);
-    }
-
-    for (i = 0; i < 1000; i++) {
-        t_start = MPI_Wtime();
-        launch_empty_kernel(buf[i % window_size], size);
-        synchronize_stream();
-        t_end = MPI_Wtime();
-        t_lo = t_lo + (t_end - t_start);
-    }
-
-    t_lo = t_lo / 1000;
-    return t_lo;
-}
-
-void touch_managed_src(char **buf, int size, int window_size)
-{
-    int j;
-
-    if (options.src == 'M') {
-        if (options.MMsrc == 'D') {
-            for (j = 0; j < window_size; j++) {
-                touch_managed(buf[j], size);
-                synchronize_stream();
-            }
-        } else if ((options.MMsrc == 'H') && size > PREFETCH_THRESHOLD) {
-            for (j = 0; j < window_size; j++) {
-                prefetch_data(buf[j], size, -1);
-                synchronize_stream();
-            }
-        } else {
-            if (!options.validate) {
-                for (j = 0; j < window_size; j++) {
-                    memset(buf[j], 'c', size);
-                }
-            }
-        }
-    }
-}
-
-void touch_managed_dst(char **buf, int size, int window_size)
-{
-    int j;
-
-    if (options.dst == 'M') {
-        if (options.MMdst == 'D') {
-            for (j = 0; j < window_size; j++) {
-                touch_managed(buf[j], size);
-                synchronize_stream();
-            }
-        } else if ((options.MMdst == 'H') && size > PREFETCH_THRESHOLD) {
-            for (j = 0; j < window_size; j++) {
-                prefetch_data(buf[j], size, -1);
-                synchronize_stream();
-            }
-        } else {
-            if (!options.validate) {
-                for (j = 0; j < window_size; j++) {
-                    memset(buf[j], 'c', size);
-                }
-            }
-        }
-    }
-}
-#endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
 double calculate_total(double t_start, double t_end, double t_lo,
                        int window_size)

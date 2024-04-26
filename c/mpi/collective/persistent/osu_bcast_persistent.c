@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Broadcast Persistent Latency Test"
 /*
- * Copyright (C) 2023-2024 the Network-Based Computing Laboratory
+ * Copyright (c) 2023-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     MPI_Request request;
 
     set_header(HEADER);
-    set_benchmark_name("osu_bcast");
+    set_benchmark_name("osu_bcast_persistent");
     po_ret = process_options(argc, argv);
     omb_populate_mpi_type_list(mpi_type_list);
 

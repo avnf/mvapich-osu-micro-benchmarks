@@ -1,15 +1,18 @@
 /*
  * Copyright (c) 2002-2023 the network-based computing laboratory
- * (nbcl), the ohio state university.
+ * (NBCL), The Ohio State University.
  *
- * contact: dr. d. k. panda (panda@cse.ohio-state.edu)
+ * Contact: dr. D. K. Panda (panda@cse.ohio-state.edu)
  *
- * for detailed copyright and licensing information, please refer to the
+ * For detailed copyright and licensing information, please refer to the
  * copyright file copyright in the top level omb directory.
  */
 #include "osu_util_xccl_interface.h"
 #include "rccl/osu_util_rccl_impl.h"
 #include "nccl/osu_util_nccl_impl.h"
+
+ncclComm_t nccl_comm;
+OMB_ACC_STREAM nccl_stream;
 
 omb_xccl_int_t *omb_xccl_interface_inject()
 {

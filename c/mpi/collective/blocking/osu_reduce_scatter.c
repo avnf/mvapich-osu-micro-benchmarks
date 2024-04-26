@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Reduce_scatter Latency Test"
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
             for (i = 0; i < numprocs; i++) {
                 recvcounts[i] = 0;
                 if (num_elements < numprocs) {
-                    if (i < size)
+                    if (i < num_elements)
                         recvcounts[i] = 1;
                 } else {
                     if ((remainder != 0) && (i < remainder)) {
@@ -165,6 +165,9 @@ int main(int argc, char *argv[])
 
             timer = 0.0;
 
+            if (1 == options.omb_enable_mpi_in_place) {
+                sendbuf = MPI_IN_PLACE;
+            }
             for (i = 0; i < options.iterations + options.skip; i++) {
                 if (i == options.skip) {
                     omb_papi_start(&papi_eventset);
@@ -173,9 +176,6 @@ int main(int argc, char *argv[])
                     set_buffer_validation(sendbuf, recvbuf, size, options.accel,
                                           i, omb_curr_datatype,
                                           omb_buffer_sizes);
-                    if (1 == options.omb_enable_mpi_in_place) {
-                        sendbuf = MPI_IN_PLACE;
-                    }
                     for (j = 0; j < options.warmup_validation; j++) {
                         MPI_CHECK(MPI_Barrier(omb_comm));
                         MPI_CHECK(MPI_Reduce_scatter(

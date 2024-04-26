@@ -2,7 +2,7 @@
     "OSU " OMB_XCCL_TYPE_STR "%s All-to-All Personalized Exchange Latency "    \
     "Test"
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)

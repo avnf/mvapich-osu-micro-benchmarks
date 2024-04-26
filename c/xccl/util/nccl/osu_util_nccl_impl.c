@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -9,6 +9,9 @@
  */
 
 #include "osu_util_nccl_impl.h"
+
+int _numprocs = 0;
+
 omb_xccl_int_t *omb_nccl_impl_inject()
 {
     omb_xccl_int_t *omb_xccl_int = omb_xccl_interface_alloc();

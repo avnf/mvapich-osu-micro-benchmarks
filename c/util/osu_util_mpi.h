@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2022 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2022 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -28,6 +28,17 @@
         stmt;                                                                  \
     }
 
+#define OMB_ITR_PRINT_STAT(_stat_arr)                                          \
+    {                                                                          \
+        int _itr = 0;                                                          \
+        while (_itr < OMB_STAT_MAX_NUM &&                                      \
+               -1 != options.omb_stat_percentiles[_itr]) {                     \
+            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,             \
+                    _stat_arr[_itr]);                                          \
+            _itr++;                                                            \
+        }                                                                      \
+    }
+
 extern MPI_Aint disp_remote;
 extern MPI_Aint disp_local;
 
@@ -50,7 +61,15 @@ void free_device_arrays();
  * Managed Memory
  */
 #ifdef _ENABLE_CUDA_KERNEL_
-void touch_managed(char *buf, size_t length);
+#define PREFETCH_THRESHOLD 131072
+enum op_type { ADD, SUB };
+void touch_managed(char *buf, size_t length, enum op_type type);
+double measure_kernel_lo_window(char **, int, int);
+double measure_kernel_lo_no_window(char *, int);
+void touch_managed_src_window(char **, int, int, enum op_type);
+void touch_managed_dst_window(char **, int, int, enum op_type);
+void touch_managed_src_no_window(char *, int, enum op_type);
+void touch_managed_dst_no_window(char *, int, enum op_type);
 void launch_empty_kernel(char *buf, size_t length);
 void create_cuda_stream();
 void destroy_cuda_stream();
@@ -62,19 +81,18 @@ void destroy_cuda_event();
 void event_record_start();
 void event_record_stop();
 void event_elapsed_time(float *);
-extern void call_touch_managed_kernel(char *buf, size_t length,
-                                      cudaStream_t *stream);
+extern void call_touch_managed_kernel_add(char *buf, size_t length,
+                                          cudaStream_t *stream);
+extern void call_touch_managed_kernel_sub(char *buf, size_t length,
+                                          cudaStream_t *stream);
 extern void call_empty_kernel(char *buf, size_t length, cudaStream_t *stream);
-#define PREFETCH_THRESHOLD 131072
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
 /*
  * Print Information
  */
 typedef struct omb_stat_t {
-    double p50;
-    double p95;
-    double p99;
+    double res_arr[OMB_STAT_MAX_NUM];
 } omb_stat_t;
 
 void print_bad_usage_message(int rank);
@@ -186,6 +204,8 @@ int validate_collective(void *buffer, size_t size, int value1, int value2,
 int validate_reduce_scatter(void *buffer, size_t size, int *recvcounts,
                             int rank, int num_procs, enum accel_type type,
                             int iter, MPI_Datatype dtype);
+void validation_log(void *buffer, void *expected_buffer, size_t size,
+                    size_t num_elements, MPI_Datatype dtype, int itr);
 int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
                                   int outdegree, size_t size,
                                   enum accel_type type, int iter,

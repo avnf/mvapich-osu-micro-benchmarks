@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -144,10 +144,12 @@ void usage_one_sided(char const *name)
         fprintf(
             stdout,
             "SRC and DST are buffer types for the source and destination\n");
-        fprintf(stdout,
-                "SRC and DST may be `D' or `H' which specifies whether\n"
-                "the buffer is allocated on the accelerator device or host\n"
-                "memory for each mpi rank\n\n");
+        fprintf(
+            stdout,
+            "SRC and DST may be `D', `H', or 'M' which specifies whether\n"
+            "the buffer is allocated on the accelerator device memory, host\n"
+            "memory or using CUDA Unified memory respectively for each mpi "
+            "rank\n\n");
     } else {
         fprintf(stdout, "Usage: %s [options]\n", name);
     }
@@ -338,6 +340,8 @@ void print_header_one_sided(int rank, enum WINDOW win, enum SYNC sync,
 {
     char dtype_name_str[OMB_DATATYPE_STR_MAX_LEN];
     int dtype_name_size = 0;
+    int itr = 0;
+
     if (rank == 0) {
         switch (options.accel) {
             case CUDA:
@@ -382,17 +386,21 @@ void print_header_one_sided(int rank, enum WINDOW win, enum SYNC sync,
                     fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
                 }
                 if (options.omb_tail_lat) {
-                    if (options.subtype == BW) {
-                        fprintf(stdout, "%*s", FIELD_WIDTH,
-                                "P50 Tail BW(MB/s)");
-                        fprintf(stdout, "%*s", FIELD_WIDTH,
-                                "P95 Tail BW(MB/s)");
-                        fprintf(stdout, "%*s", FIELD_WIDTH,
-                                "P99 Tail BW(MB/s)");
-                    } else {
-                        fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail Lat(us)");
-                        fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail Lat(us)");
-                        fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail Lat(us)");
+                    itr = 0;
+                    while (itr < OMB_STAT_MAX_NUM &&
+                           -1 != options.omb_stat_percentiles[itr]) {
+                        if (BW == options.subtype) {
+                            fprintf(stdout, "%*sP%d Tail BW(MB/s)",
+                                    FIELD_WIDTH - strlen("Px Tail BW(MB/s)") -
+                                        (options.omb_stat_percentiles[itr] > 9),
+                                    "", options.omb_stat_percentiles[itr]);
+                        } else {
+                            fprintf(stdout, "%*sP%d Tail Lat(us)",
+                                    FIELD_WIDTH - strlen("Px Tail Lat(us)") -
+                                        (options.omb_stat_percentiles[itr] > 9),
+                                    "", options.omb_stat_percentiles[itr]);
+                        }
+                        itr++;
                     }
                 }
                 fprintf(stdout, "\n");
@@ -462,6 +470,8 @@ void print_preamble_nbc(int rank)
 
 void print_only_header_nbc(int rank)
 {
+    int itr = 0;
+
     if (rank) {
         return;
     }
@@ -492,10 +502,17 @@ void print_only_header_nbc(int rank)
         fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
     }
     if (options.omb_tail_lat) {
-        fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail Lat(us)");
-        fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail Lat(us)");
-        fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail Lat(us)");
+        itr = 0;
+        while (itr < OMB_STAT_MAX_NUM &&
+               -1 != options.omb_stat_percentiles[itr]) {
+            fprintf(stdout, "%*sP%d Tail Lat(us)",
+                    FIELD_WIDTH - strlen("Px Tail Lat(us)") -
+                        (options.omb_stat_percentiles[itr] > 9),
+                    "", options.omb_stat_percentiles[itr]);
+            itr++;
+        }
     }
+
     if (options.omb_enable_ddt) {
         fprintf(stdout, "%*s", FIELD_WIDTH, "Transmit Size");
     }
@@ -548,14 +565,38 @@ void print_preamble(int rank)
 
 void print_only_header(int rank)
 {
+    int itr = 0;
+
     if (rank) {
         return;
     }
     if (options.show_size) {
         fprintf(stdout, "%-*s", 10, "# Size");
-        fprintf(stdout, "%*s", FIELD_WIDTH, "Avg Latency(us)");
+        if (BW == options.subtype && MBW_MR != options.bench) {
+            fprintf(stdout, "%*s", FIELD_WIDTH, "Bandwidth (MB/s)");
+        } else if (MBW_MR == options.bench) {
+            if (options.print_rate) {
+                fprintf(stdout, "%*s%*s", FIELD_WIDTH, "MB/s", FIELD_WIDTH,
+                        "Messages/s");
+            } else {
+                fprintf(stdout, "%*s", FIELD_WIDTH, "MB/s");
+            }
+        } else {
+            fprintf(stdout, "%*s", FIELD_WIDTH, "Avg Latency(us)");
+        }
     } else {
-        fprintf(stdout, "# Avg Latency(us)");
+        if (BW == options.subtype && MBW_MR != options.bench) {
+            fprintf(stdout, "# Bandwidth (MB/s)");
+        } else if (MBW_MR == options.bench) {
+            if (options.print_rate) {
+                fprintf(stdout, "# %*s%*s", FIELD_WIDTH, "MB/s", FIELD_WIDTH,
+                        "Messages/s");
+            } else {
+                fprintf(stdout, "# %*s", FIELD_WIDTH, "MB/s");
+            }
+        } else {
+            fprintf(stdout, "# Avg Latency(us)");
+        }
     }
 
     if (options.show_full) {
@@ -567,14 +608,21 @@ void print_only_header(int rank)
     if (options.validate)
         fprintf(stdout, "%*s", FIELD_WIDTH, "Validation");
     if (options.omb_tail_lat) {
-        if (options.subtype == BW) {
-            fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail BW(MB/s)");
-            fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail BW(MB/s)");
-            fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail BW(MB/s)");
-        } else {
-            fprintf(stdout, "%*s", FIELD_WIDTH, "P50 Tail Lat(us)");
-            fprintf(stdout, "%*s", FIELD_WIDTH, "P95 Tail Lat(us)");
-            fprintf(stdout, "%*s", FIELD_WIDTH, "P99 Tail Lat(us)");
+        itr = 0;
+        while (itr < OMB_STAT_MAX_NUM &&
+               -1 != options.omb_stat_percentiles[itr]) {
+            if (BW == options.subtype) {
+                fprintf(stdout, "%*sP%d Tail BW(MB/s)",
+                        FIELD_WIDTH - strlen("Px Tail BW(MB/s)") -
+                            (options.omb_stat_percentiles[itr] > 9),
+                        "", options.omb_stat_percentiles[itr]);
+            } else {
+                fprintf(stdout, "%*sP%d Tail Lat(us)",
+                        FIELD_WIDTH - strlen("Px Tail Lat(us)") -
+                            (options.omb_stat_percentiles[itr] > 9),
+                        "", options.omb_stat_percentiles[itr]);
+            }
+            itr++;
         }
     }
     if (options.omb_enable_ddt) {
@@ -708,17 +756,22 @@ struct omb_stat_t omb_calculate_tail_lat(double *avg_lat_arr, int rank,
                                          int comm_size)
 {
     struct omb_stat_t omb_stats;
+    int itr = 0;
+
     if (0 != rank || !options.omb_tail_lat) {
         return omb_stats;
     }
     qsort(avg_lat_arr, options.iterations, sizeof(double),
           omb_ascending_cmp_double);
-    omb_stats.p50 =
-        avg_lat_arr[(int)round(options.iterations * 0.50) - 1] / comm_size;
-    omb_stats.p95 =
-        avg_lat_arr[(int)round(options.iterations * 0.95) - 1] / comm_size;
-    omb_stats.p99 =
-        avg_lat_arr[(int)round(options.iterations * 0.99) - 1] / comm_size;
+    itr = 0;
+    while (itr < OMB_STAT_MAX_NUM && -1 != options.omb_stat_percentiles[itr]) {
+        omb_stats.res_arr[itr] =
+            avg_lat_arr[(int)round(options.iterations *
+                                   options.omb_stat_percentiles[itr] / 100) -
+                        1] /
+            comm_size;
+        itr++;
+    }
     return omb_stats;
 }
 
@@ -798,6 +851,8 @@ void print_stats_nbc(int rank, int size, double overall_time, double cpu_time,
                      double max_comm_time, double wait_time, double init_time,
                      double test_time, int errors, struct omb_stat_t omb_stats)
 {
+    int itr = 0;
+
     if (rank) {
         return;
     }
@@ -840,9 +895,13 @@ void print_stats_nbc(int rank, int size, double overall_time, double cpu_time,
         fprintf(stdout, "%*s", FIELD_WIDTH, VALIDATION_STATUS(errors));
     }
     if (options.omb_tail_lat) {
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p50);
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p95);
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p99);
+        itr = 0;
+        while (itr < OMB_STAT_MAX_NUM &&
+               -1 != options.omb_stat_percentiles[itr]) {
+            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                    omb_stats.res_arr[itr]);
+            itr++;
+        }
     }
     if (!options.omb_enable_ddt) {
         fprintf(stdout, "\n");
@@ -854,6 +913,8 @@ void print_stats_nbc(int rank, int size, double overall_time, double cpu_time,
 void print_stats(int rank, int size, double avg_time, double min_time,
                  double max_time, struct omb_stat_t omb_stats)
 {
+    int itr = 0;
+
     if (rank) {
         return;
     }
@@ -871,9 +932,13 @@ void print_stats(int rank, int size, double avg_time, double min_time,
                 options.iterations);
     }
     if (options.omb_tail_lat) {
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p50);
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p95);
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p99);
+        itr = 0;
+        while (itr < OMB_STAT_MAX_NUM &&
+               -1 != options.omb_stat_percentiles[itr]) {
+            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                    omb_stats.res_arr[itr]);
+            itr++;
+        }
     }
     if (!options.omb_enable_ddt) {
         fprintf(stdout, "\n");
@@ -885,6 +950,8 @@ void print_stats_validate(int rank, int size, double avg_time, double min_time,
                           double max_time, int errors,
                           struct omb_stat_t omb_stats)
 {
+    int itr = 0;
+
     if (rank) {
         return;
     }
@@ -903,9 +970,13 @@ void print_stats_validate(int rank, int size, double avg_time, double min_time,
     }
     fprintf(stdout, "%*s", FIELD_WIDTH, VALIDATION_STATUS(errors));
     if (options.omb_tail_lat) {
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p50);
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p95);
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION, omb_stats.p99);
+        itr = 0;
+        while (itr < OMB_STAT_MAX_NUM &&
+               -1 != options.omb_stat_percentiles[itr]) {
+            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
+                    omb_stats.res_arr[itr]);
+            itr++;
+        }
     }
     if (!options.omb_enable_ddt) {
         fprintf(stdout, "\n");
@@ -966,6 +1037,7 @@ void set_buffer_pt2pt(void *buffer, int rank, enum accel_type type, int data,
 {
     char buf_type = 'H';
 
+    OMB_CHECK_NULL_AND_EXIT(buffer, "NULL passed for buffer");
     if (options.bench == MBW_MR) {
         buf_type = (rank < options.pairs) ? options.src : options.dst;
     } else {
@@ -1612,7 +1684,7 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
 {
     void *temp_r_buf = NULL;
     int numprocs = 0;
-    int rank = 0;
+    int rank = 0, error = 0;
 
     MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
     switch (options.bench) {
@@ -1672,19 +1744,20 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
                     j = (i % 100);
                     if (abs(((float *)temp_r_buf)[i] -
                             ((float *)expected_buffer)[i]) > ERROR_DELTA) {
-                        free(expected_buffer);
-                        free(temp_r_buf);
-                        return 1;
+                        error = 1;
+                        break;
                     }
                 }
             } else if (memcmp(temp_r_buf, expected_buffer, num_elements)) {
-                free(expected_buffer);
-                free(temp_r_buf);
-                return 1;
+                error = 1;
+            }
+            if (1 == error && options.log_validation) {
+                validation_log(temp_r_buf, expected_buffer, size, num_elements,
+                               dtype, iter);
             }
             free(expected_buffer);
             free(temp_r_buf);
-            return 0;
+            return error;
         } break;
         case COLLECTIVE:
             switch (options.subtype) {
@@ -1841,6 +1914,9 @@ int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
     int s = 0;
     int expected_value = 0;
     int value1 = 0, recv_numprocs = 0;
+    void *log_buffer = NULL, *expected_buffer = NULL;
+    int i = 0;
+    int num_elements = 0;
 
     temp_r_buf = malloc(size * indegree);
     OMB_CHECK_NULL_AND_EXIT(temp_r_buf, "Unable to allocate memory");
@@ -1882,10 +1958,22 @@ int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
                 "Accelerators not yet supported for neighborhood benchmarks.");
             break;
     }
+    num_elements = omb_get_num_elements(size, dtype);
+    log_buffer = malloc(size * recv_numprocs);
+    OMB_CHECK_NULL_AND_EXIT(log_buffer, "Unable to allocate memory");
+    expected_buffer = malloc(size * recv_numprocs);
+    OMB_CHECK_NULL_AND_EXIT(expected_buffer, "Unable to allocate memory");
+    i = 0;
     for (s = 0; s < omb_get_num_elements(size, dtype); s++) {
         for (l = 0; l < recv_numprocs; l++) {
             expected_value = (sources[l] + value1 + s + iter + 1);
             if (MPI_CHAR == dtype) {
+                ((char *)log_buffer)[i] =
+                    ((char *)
+                         temp_r_buf)[l * omb_get_num_elements(size, dtype) + s];
+                ((char *)expected_buffer)[i] =
+                    (char)(CHAR_VALIDATION_MULTIPLIER * expected_value) %
+                    CHAR_RANGE;
                 if (((char *)temp_r_buf)[l * omb_get_num_elements(size, dtype) +
                                          s] !=
                     (char)(CHAR_VALIDATION_MULTIPLIER * expected_value) %
@@ -1893,12 +1981,22 @@ int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
                     errors = 1;
                 }
             } else if (MPI_INT == dtype) {
+                ((int *)log_buffer)[i] =
+                    ((int *)
+                         temp_r_buf)[l * omb_get_num_elements(size, dtype) + s];
+                ((int *)expected_buffer)[i] =
+                    (int)expected_value * INT_VALIDATION_MULTIPLIER;
                 if (((int *)temp_r_buf)[l * omb_get_num_elements(size, dtype) +
                                         s] !=
                     (int)expected_value * INT_VALIDATION_MULTIPLIER) {
                     errors = 1;
                 }
             } else if (MPI_FLOAT == dtype) {
+                ((float *)log_buffer)[i] =
+                    ((float *)
+                         temp_r_buf)[l * omb_get_num_elements(size, dtype) + s];
+                ((float *)expected_buffer)[i] =
+                    (float)expected_value * FLOAT_VALIDATION_MULTIPLIER;
                 if (((float *)
                          temp_r_buf)[l * omb_get_num_elements(size, dtype) +
                                      s] !=
@@ -1906,8 +2004,14 @@ int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
                     errors = 1;
                 }
             }
+            i++;
         }
     }
+    if (1 == errors && options.log_validation) {
+        validation_log(log_buffer, expected_buffer, size, i, dtype, iter);
+    }
+    free(log_buffer);
+    free(expected_buffer);
     free(sources);
     free(sourceweights);
     free(destinations);
@@ -1920,10 +2024,11 @@ int validate_reduce_scatter(void *buffer, size_t size, int *recvcounts,
                             int rank, int num_procs, enum accel_type type,
                             int iter, MPI_Datatype dtype)
 {
-    int i = 0, j = 0, k = 0, errors = 0;
+    int i = 0, j = 0, k = 0, l = 0, m = 0, errors = 0;
     void *expected_buffer = malloc(size);
     void *temp_buffer = malloc(size);
     int val = 0;
+    void *log_buffer = NULL;
 
     switch (type) {
         case NONE:
@@ -1940,31 +2045,44 @@ int validate_reduce_scatter(void *buffer, size_t size, int *recvcounts,
         default:
             break;
     }
-
-    i = 0;
     for (k = 0; k < rank; k++) {
-        i += recvcounts[k] + 1;
+        m += recvcounts[k];
     }
-    for (i = i; i < recvcounts[k]; i++) {
+    log_buffer = malloc(size);
+    OMB_CHECK_NULL_AND_EXIT(log_buffer, "Unable to allocate buffer");
+    for (i = m, l = 0; i < recvcounts[rank]; i++, l++) {
         j = (i % 100);
         val = (j + 1) * (iter + 1) * num_procs;
         if (MPI_CHAR == dtype) {
+            ((char *)expected_buffer)[l] =
+                (char)(CHAR_VALIDATION_MULTIPLIER * val) % CHAR_RANGE;
+            ((char *)log_buffer)[l] = ((char *)temp_buffer)[i];
             if (((char *)temp_buffer)[i] !=
                 (char)(CHAR_VALIDATION_MULTIPLIER * val) % CHAR_RANGE) {
                 errors = 1;
             }
         } else if (MPI_INT == dtype) {
+            ((int *)expected_buffer)[l] = (int)val * INT_VALIDATION_MULTIPLIER;
+            ((int *)log_buffer)[l] = ((int *)temp_buffer)[i];
             if (((int *)temp_buffer)[i] !=
                 (int)val * INT_VALIDATION_MULTIPLIER) {
                 errors = 1;
             }
         } else if (MPI_FLOAT == dtype) {
+            ((float *)expected_buffer)[l] =
+                (float)val * FLOAT_VALIDATION_MULTIPLIER;
+            ((float *)log_buffer)[l] = ((float *)temp_buffer)[i];
             if (((float *)temp_buffer)[i] !=
                 (float)val * FLOAT_VALIDATION_MULTIPLIER) {
                 errors = 1;
             }
         }
     }
+    if (1 == errors && options.log_validation) {
+        validation_log(log_buffer, expected_buffer, size, recvcounts[k], dtype,
+                       iter);
+    }
+    free(log_buffer);
     free(expected_buffer);
     free(temp_buffer);
     return errors;
@@ -1993,11 +2111,28 @@ int validate_reduction(void *buffer, size_t size, int iter, int num_procs,
         default:
             break;
     }
-
-    for (i = 1; i < num_elements; i++) {
+    for (i = 0; i < num_elements; i++) {
         j = (i % 100);
         val = (j + 1) * (iter + 1) * num_procs;
         omb_assign_to_type(expected_buffer, i, val, dtype);
+    }
+    if (dtype == MPI_FLOAT) {
+        for (i = 0; i < num_elements; i++) {
+            j = (i % 100);
+            if (abs(((float *)temp_buffer)[i] - ((float *)expected_buffer)[i]) >
+                ERROR_DELTA) {
+                errors = 1;
+                break;
+            }
+        }
+    } else {
+        if (memcmp(temp_buffer, expected_buffer, size) != 0) {
+            errors = 1;
+        }
+    }
+    if (1 == errors && options.log_validation) {
+        validation_log(temp_buffer, expected_buffer, size, num_elements, dtype,
+                       iter);
     }
     free(expected_buffer);
     free(temp_buffer);
@@ -2057,9 +2192,75 @@ int validate_collective(void *buffer, size_t size, int value1, int value2,
             errors = 1;
         }
     }
+    if (1 == errors && options.log_validation) {
+        validation_log(temp_buffer, expected_buffer, size, num_elements, dtype,
+                       itr);
+    }
     free(expected_buffer);
     free(temp_buffer);
     return errors;
+}
+
+void validation_log(void *buffer, void *expected_buffer, size_t size,
+                    size_t num_elements, MPI_Datatype dtype, int itr)
+{
+    int rank = 0, i = 0;
+    char *log_file_loc = NULL;
+    FILE *log_file_fp = NULL;
+
+    if (0 != mkdir(options.log_validation_dir_path, 0744)) {
+        if (0 != access(options.log_validation_dir_path, F_OK)) {
+            OMB_ERROR_EXIT("Unable to create directory");
+        }
+    }
+    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+    log_file_loc = malloc(OMB_FILE_PATH_MAX_LENGTH * sizeof(char));
+    OMB_CHECK_NULL_AND_EXIT(log_file_loc, "Unable to allocate memory.");
+    sprintf(log_file_loc, "%s/log-%d.log", options.log_validation_dir_path,
+            rank);
+    log_file_fp = fopen(log_file_loc, "a");
+    OMB_CHECK_NULL_AND_EXIT(log_file_loc, "Unable to open file.");
+    fprintf(log_file_fp, "Size: %d, Iteration:%d, ", size, itr);
+    if (MPI_FLOAT == dtype) {
+        fprintf(log_file_fp, "Datatype: MPI_FLOAT\n");
+    } else if (MPI_INT == dtype) {
+        fprintf(log_file_fp, "Datatype: MPI_INT\n");
+    } else if (MPI_CHAR == dtype) {
+        fprintf(log_file_fp, "Datatype: MPI_CHAR\n");
+    } else {
+        OMB_ERROR_EXIT("Invalid MPI Datatype.");
+    }
+    fprintf(log_file_fp, "%-*s%*s%*s\n", 10, "Position", FIELD_WIDTH,
+            "Expected", FIELD_WIDTH, "Actual");
+
+    if (dtype == MPI_FLOAT) {
+        for (i = 0; i < num_elements; i++) {
+            if (abs(((float *)buffer)[i] - ((float *)expected_buffer)[i]) >
+                ERROR_DELTA) {
+                fprintf(log_file_fp, "%-*d%*f%*f\n", 10, i, FIELD_WIDTH,
+                        ((float *)expected_buffer)[i], FIELD_WIDTH,
+                        ((float *)buffer)[i]);
+            }
+        }
+    } else if (dtype == MPI_INT) {
+        for (i = 0; i < num_elements; i++) {
+            if (((int *)buffer)[i] != ((int *)expected_buffer)[i]) {
+                fprintf(log_file_fp, "%-*d%*d%*d\n", 10, i, FIELD_WIDTH,
+                        ((int *)expected_buffer)[i], FIELD_WIDTH,
+                        ((int *)buffer)[i]);
+            }
+        }
+    } else if (dtype == MPI_CHAR) {
+        if (((char *)buffer)[i] != ((char *)expected_buffer)[i]) {}
+        for (i = 0; i < num_elements; i++) {
+            if (((char *)buffer)[i] != ((char *)expected_buffer)[i]) {
+                fprintf(log_file_fp, "%-*d%*d%*d\n", 10, i, FIELD_WIDTH,
+                        ((char *)expected_buffer)[i], FIELD_WIDTH,
+                        ((char *)buffer)[i]);
+            }
+        }
+    }
+    fclose(log_file_fp);
 }
 
 int allocate_memory_coll(void **buffer, size_t size, enum accel_type type)
@@ -2130,16 +2331,29 @@ int allocate_device_buffer(char **buffer)
     return 0;
 }
 
-int allocate_device_buffer_one_sided(char **buffer, size_t size)
+int allocate_managed_buffer(char **buffer)
+{
+    switch (options.accel) {
+#ifdef _ENABLE_CUDA_
+        case CUDA:
+            CUDA_CHECK(cudaMallocManaged((void **)buffer,
+                                         options.max_message_size,
+                                         cudaMemAttachGlobal));
+            break;
+#endif
+        default:
+            fprintf(stderr, "Could not allocate managed/unified memory\n");
+            return 1;
+    }
+    return 0;
+}
+
+int allocate_device_buffer_size(char **buffer, size_t size)
 {
     switch (options.accel) {
 #ifdef _ENABLE_CUDA_
         case CUDA:
             CUDA_CHECK(cudaMalloc((void **)buffer, size));
-            break;
-        case MANAGED:
-            CUDA_CHECK(
-                cudaMallocManaged((void **)buffer, size, cudaMemAttachGlobal));
             break;
 #endif
 #ifdef _ENABLE_OPENACC_
@@ -2164,23 +2378,6 @@ int allocate_device_buffer_one_sided(char **buffer, size_t size)
     return 0;
 }
 
-int allocate_managed_buffer(char **buffer)
-{
-    switch (options.accel) {
-#ifdef _ENABLE_CUDA_
-        case CUDA:
-            CUDA_CHECK(cudaMallocManaged((void **)buffer,
-                                         options.max_message_size,
-                                         cudaMemAttachGlobal));
-            break;
-#endif
-        default:
-            fprintf(stderr, "Could not allocate managed/unified memory\n");
-            return 1;
-    }
-    return 0;
-}
-
 int allocate_managed_buffer_size(char **buffer, size_t size)
 {
     switch (options.accel) {
@@ -2194,6 +2391,23 @@ int allocate_managed_buffer_size(char **buffer, size_t size)
             fprintf(stderr, "Could not allocate managed memory\n");
             return 1;
     }
+    return 0;
+}
+
+int allocate_device_buffer_one_sided(char **buffer, size_t size, char dev)
+{
+    if ('D' == dev) {
+        if (allocate_device_buffer_size(buffer, size)) {
+            fprintf(stderr, "Error allocating cuda memory\n");
+            return 1;
+        }
+    } else if ('M' == dev) {
+        if (allocate_managed_buffer_size(buffer, size)) {
+            fprintf(stderr, "Error allocating cuda unified memory\n");
+            return 1;
+        }
+    }
+
     return 0;
 }
 
@@ -2534,6 +2748,7 @@ void allocate_memory_one_sided(int rank, char **user_buf, char **win_base,
 {
     int page_size;
     int purehost = 0;
+    int mem_on_dev = 0;
 
     page_size = getpagesize();
     assert(page_size <= MAX_ALIGNMENT);
@@ -2542,28 +2757,41 @@ void allocate_memory_one_sided(int rank, char **user_buf, char **win_base,
         purehost = 1;
     }
 
-    /* always allocate device buffers explicitly since most MPI libraries do not
-     * support allocating device buffers during window creation */
-    if ((0 == rank && 'D' == options.src) ||
-        (1 == rank && 'D' == options.dst)) {
-        CHECK(allocate_device_buffer(user_buf));
-        set_device_memory(*user_buf, 'a', size);
-        CHECK(allocate_device_buffer(win_base));
-        set_device_memory(*win_base, 'a', size);
-    } else if ((0 == rank && 'M' == options.src) ||
-               (1 == rank && 'M' == options.dst)) {
-        CHECK(allocate_managed_buffer_size(user_buf, size));
-        set_device_memory(*user_buf, 'a', size);
-        CHECK(allocate_managed_buffer_size(win_base, size));
-        set_device_memory(*win_base, 'a', size);
+    if (0 == rank) {
+        /* always allocate device buffers explicitly since most MPI libraries do
+         * not support allocating device buffers during window creation */
+        if ('H' != options.src) {
+            CHECK(
+                allocate_device_buffer_one_sided(user_buf, size, options.src));
+            set_device_memory(*user_buf, 'a', size);
+            CHECK(
+                allocate_device_buffer_one_sided(win_base, size, options.src));
+            set_device_memory(*win_base, 'a', size);
+        } else {
+            CHECK(posix_memalign((void **)user_buf, page_size, size));
+            memset(*user_buf, 'a', size);
+            if (type != WIN_ALLOCATE || !purehost) {
+                CHECK(posix_memalign((void **)win_base, page_size, size));
+                memset(*win_base, 'a', size);
+            }
+        }
     } else {
-        CHECK(posix_memalign((void **)user_buf, page_size, size));
-        memset(*user_buf, 'a', size);
-        /* only explicitly allocate buffer for win_base when NOT using
-         * MPI_Win_allocate */
-        if (type != WIN_ALLOCATE) {
-            CHECK(posix_memalign((void **)win_base, page_size, size));
-            memset(*win_base, 'a', size);
+        /* always allocate device buffers explicitly since most MPI libraries do
+         * not support allocating device buffers during window creation */
+        if ('H' != options.dst) {
+            CHECK(
+                allocate_device_buffer_one_sided(user_buf, size, options.dst));
+            set_device_memory(*user_buf, 'a', size);
+            CHECK(
+                allocate_device_buffer_one_sided(win_base, size, options.dst));
+            set_device_memory(*win_base, 'a', size);
+        } else {
+            CHECK(posix_memalign((void **)user_buf, page_size, size));
+            memset(*user_buf, 'a', size);
+            if (type != WIN_ALLOCATE || !purehost) {
+                CHECK(posix_memalign((void **)win_base, page_size, size));
+                memset(*win_base, 'a', size);
+            }
         }
     }
 
@@ -2935,13 +3163,18 @@ void free_memory_pt2pt_mul(void *sbuf, void *rbuf, int rank, int pairs)
 void free_memory_one_sided(void *user_buf, void *win_baseptr,
                            enum WINDOW win_type, MPI_Win win, int rank)
 {
+    int purehost = 0;
+
+    if ('H' == options.src && 'H' == options.dst) {
+        purehost = 1;
+    }
     MPI_CHECK(MPI_Win_free(&win));
     /* if MPI_Win_allocate is specified, win_baseptr would be freed by
      * MPI_Win_free, so only need to free the user_buf */
-    if (win_type == WIN_ALLOCATE) {
-        free_memory(user_buf, NULL, rank);
-    } else {
+    if (win_type != WIN_ALLOCATE || !purehost) {
         free_memory(user_buf, win_baseptr, rank);
+    } else {
+        free_memory(user_buf, NULL, rank);
     }
 }
 
@@ -3019,9 +3252,13 @@ void prefetch_data(char *buf, size_t length, int devid)
     CUDA_CHECK(cudaMemPrefetchAsync(buf, length, devid, um_stream));
 }
 
-void touch_managed(char *buf, size_t length)
+void touch_managed(char *buf, size_t length, enum op_type type)
 {
-    call_touch_managed_kernel(buf, length, &um_stream);
+    if (ADD == type) {
+        call_touch_managed_kernel_add(buf, length, &um_stream);
+    } else if (SUB == type) {
+        call_touch_managed_kernel_sub(buf, length, &um_stream);
+    }
 }
 
 void launch_empty_kernel(char *buf, size_t length)
@@ -3174,6 +3411,7 @@ void allocate_atomic_memory(int rank, char **sbuf, char **tbuf, char **cbuf,
 {
     int page_size;
     int purehost = 0;
+    int mem_on_dev = 0;
 
     page_size = getpagesize();
     assert(page_size <= MAX_ALIGNMENT);
@@ -3181,43 +3419,57 @@ void allocate_atomic_memory(int rank, char **sbuf, char **tbuf, char **cbuf,
     if ('H' == options.src && 'H' == options.dst) {
         purehost = 1;
     }
-
-    if ((0 == rank && 'D' == options.src) ||
-        (1 == rank && 'D' == options.dst)) {
-        CHECK(allocate_device_buffer(sbuf));
-        set_device_memory(*sbuf, 'a', size);
-        CHECK(allocate_device_buffer(win_base));
-        set_device_memory(*win_base, 'b', size);
-        CHECK(allocate_device_buffer(tbuf));
-        set_device_memory(*tbuf, 'c', size);
-        if (cbuf != NULL) {
-            CHECK(allocate_device_buffer(cbuf));
-            set_device_memory(*cbuf, 'a', size);
-        }
-    } else if ((0 == rank && 'M' == options.src) ||
-               (1 == rank && 'M' == options.dst)) {
-        CHECK(allocate_managed_buffer(sbuf));
-        set_device_memory(*sbuf, 'a', size);
-        CHECK(allocate_managed_buffer(win_base));
-        set_device_memory(*win_base, 'b', size);
-        CHECK(allocate_managed_buffer(tbuf));
-        set_device_memory(*tbuf, 'c', size);
-        if (cbuf != NULL) {
-            CHECK(allocate_managed_buffer(cbuf));
-            set_device_memory(*cbuf, 'a', size);
-        }
-    } else {
-        CHECK(posix_memalign((void **)sbuf, page_size, size));
-        memset(*sbuf, 'a', size);
-        if (type != WIN_ALLOCATE) {
+    if (0 == rank) {
+        if ('H' != options.src) {
+            CHECK(allocate_device_buffer_one_sided(sbuf, size, options.src));
+            set_device_memory(*sbuf, 'a', size);
+            CHECK(
+                allocate_device_buffer_one_sided(win_base, size, options.src));
+            set_device_memory(*win_base, 'b', size);
+            CHECK(allocate_device_buffer_one_sided(tbuf, size, options.src));
+            set_device_memory(*tbuf, 'c', size);
+            if (cbuf != NULL) {
+                CHECK(
+                    allocate_device_buffer_one_sided(cbuf, size, options.src));
+                set_device_memory(*cbuf, 'a', size);
+            }
+        } else {
+            CHECK(posix_memalign((void **)sbuf, page_size, size));
+            memset(*sbuf, 'a', size);
             CHECK(posix_memalign((void **)win_base, page_size, size));
             memset(*win_base, 'b', size);
+            CHECK(posix_memalign((void **)tbuf, page_size, size));
+            memset(*tbuf, 'c', size);
+            if (cbuf != NULL) {
+                CHECK(posix_memalign((void **)cbuf, page_size, size));
+                memset(*cbuf, 'a', size);
+            }
         }
-        CHECK(posix_memalign((void **)tbuf, page_size, size));
-        memset(*tbuf, 'c', size);
-        if (cbuf != NULL) {
-            CHECK(posix_memalign((void **)cbuf, page_size, size));
-            memset(*cbuf, 'a', size);
+    } else {
+        if ('H' != options.dst) {
+            CHECK(allocate_device_buffer_one_sided(sbuf, size, options.dst));
+            set_device_memory(*sbuf, 'a', size);
+            CHECK(
+                allocate_device_buffer_one_sided(win_base, size, options.dst));
+            set_device_memory(*win_base, 'b', size);
+            CHECK(allocate_device_buffer_one_sided(tbuf, size, options.dst));
+            set_device_memory(*tbuf, 'c', size);
+            if (cbuf != NULL) {
+                CHECK(
+                    allocate_device_buffer_one_sided(cbuf, size, options.dst));
+                set_device_memory(*cbuf, 'a', size);
+            }
+        } else {
+            CHECK(posix_memalign((void **)sbuf, page_size, size));
+            memset(*sbuf, 'a', size);
+            CHECK(posix_memalign((void **)win_base, page_size, size));
+            memset(*win_base, 'b', size);
+            CHECK(posix_memalign((void **)tbuf, page_size, size));
+            memset(*tbuf, 'c', size);
+            if (cbuf != NULL) {
+                CHECK(posix_memalign((void **)cbuf, page_size, size));
+                memset(*cbuf, 'a', size);
+            }
         }
     }
 
@@ -3266,26 +3518,44 @@ void allocate_atomic_memory(int rank, char **sbuf, char **tbuf, char **cbuf,
 void free_atomic_memory(void *sbuf, void *win_baseptr, void *tbuf, void *cbuf,
                         enum WINDOW win_type, MPI_Win win, int rank)
 {
+    int mem_on_dev = 0;
     MPI_CHECK(MPI_Win_free(&win));
 
-    if ((0 == rank && 'D' == options.src) ||
-        (1 == rank && 'D' == options.dst) ||
-        (0 == rank && 'M' == options.src) ||
-        (1 == rank && 'M' == options.dst)) {
-        free_device_buffer(sbuf);
-        free_device_buffer(win_baseptr);
-        free_device_buffer(tbuf);
-        if (cbuf != NULL) {
-            free_device_buffer(cbuf);
+    if (0 == rank) {
+        if ('H' != options.src) {
+            free_device_buffer(sbuf);
+            free_device_buffer(win_baseptr);
+            free_device_buffer(tbuf);
+            if (NULL != cbuf) {
+                free_device_buffer(cbuf);
+            }
+        } else {
+            free(sbuf);
+            if (NULL == win_baseptr) {
+                free(win_baseptr);
+            }
+            free(tbuf);
+            if (NULL != cbuf) {
+                free(cbuf);
+            }
         }
     } else {
-        free(sbuf);
-        if (win_type != WIN_ALLOCATE) {
-            free(win_baseptr);
-        }
-        free(tbuf);
-        if (cbuf != NULL) {
-            free(cbuf);
+        if ('H' != options.dst) {
+            free_device_buffer(sbuf);
+            free_device_buffer(win_baseptr);
+            free_device_buffer(tbuf);
+            if (NULL != cbuf) {
+                free_device_buffer(cbuf);
+            }
+        } else {
+            free(sbuf);
+            if (NULL == win_baseptr) {
+                free(win_baseptr);
+            }
+            free(tbuf);
+            if (NULL != cbuf) {
+                free(cbuf);
+            }
         }
     }
 }
@@ -3353,5 +3623,134 @@ void allocate_device_arrays(int n)
     CUDA_CHECK(cudaMemset(d_y, 2.0f, n));
     is_alloc = 1;
 }
-#endif
+
+double measure_kernel_lo_window(char **buf, int size, int window_size)
+{
+    int i = 0;
+    double t_lo = 0.0, t_start = 0.0, t_end = 0.0;
+
+    for (i = 0; i < 10; i++) {
+        launch_empty_kernel(buf[i % window_size], size); // Warmup
+    }
+
+    for (i = 0; i < 1000; i++) {
+        t_start = MPI_Wtime();
+        launch_empty_kernel(buf[i % window_size], size);
+        synchronize_stream();
+        t_end = MPI_Wtime();
+        t_lo = t_lo + (t_end - t_start);
+    }
+
+    t_lo = t_lo / 1000; // Averaging the kernel launch overhead
+    return t_lo;
+}
+
+double measure_kernel_lo_no_window(char *buf, int size)
+{
+    int i = 0;
+    double t_lo = 0.0, t_start = 0.0, t_end = 0.0;
+
+    for (i = 0; i < 10; i++) {
+        launch_empty_kernel(buf, size);
+    }
+
+    for (i = 0; i < 1000; i++) {
+        t_start = MPI_Wtime();
+        launch_empty_kernel(buf, size);
+        synchronize_stream();
+        t_end = MPI_Wtime();
+        t_lo = t_lo + (t_end - t_start);
+    }
+
+    t_lo = t_lo / 1000;
+    return t_lo;
+}
+
+void touch_managed_src_window(char **buf, int size, int window_size,
+                              enum op_type type)
+{
+    int j = 0;
+
+    if (options.src == 'M') {
+        if (options.MMsrc == 'D') {
+            for (j = 0; j < window_size; j++) {
+                touch_managed(buf[j], size, type);
+                synchronize_stream();
+            }
+        } else if ((options.MMsrc == 'H') && size > PREFETCH_THRESHOLD) {
+            for (j = 0; j < window_size; j++) {
+                prefetch_data(buf[j], size, -1);
+                synchronize_stream();
+            }
+        } else {
+            if (!options.validate) {
+                for (j = 0; j < window_size; j++) {
+                    memset(buf[j], 'c', size);
+                }
+            }
+        }
+    }
+}
+
+void touch_managed_dst_window(char **buf, int size, int window_size,
+                              enum op_type type)
+{
+    int j = 0;
+
+    if (options.dst == 'M') {
+        if (options.MMdst == 'D') {
+            for (j = 0; j < window_size; j++) {
+                touch_managed(buf[j], size, type);
+                synchronize_stream();
+            }
+        } else if ((options.MMdst == 'H') && size > PREFETCH_THRESHOLD) {
+            for (j = 0; j < window_size; j++) {
+                prefetch_data(buf[j], size, -1);
+                synchronize_stream();
+            }
+        } else {
+            if (!options.validate) {
+                for (j = 0; j < window_size; j++) {
+                    memset(buf[j], 'c', size);
+                }
+            }
+        }
+    }
+}
+
+void touch_managed_src_no_window(char *buf, int size, enum op_type type)
+{
+    if (options.src == 'M') {
+        if (options.MMsrc == 'D') {
+            touch_managed(buf, size, type);
+            synchronize_stream();
+        } else if ((options.MMsrc == 'H') && size > PREFETCH_THRESHOLD) {
+            prefetch_data(buf, size, cudaCpuDeviceId);
+            synchronize_stream();
+        } else {
+            if (!options.validate) {
+                memset(buf, 'c', size);
+            }
+        }
+    }
+}
+
+void touch_managed_dst_no_window(char *buf, int size, enum op_type type)
+{
+    if (options.dst == 'M') {
+        if (options.MMdst == 'D') {
+            touch_managed(buf, size, type);
+            synchronize_stream();
+        } else if ((options.MMdst == 'H') && size > PREFETCH_THRESHOLD) {
+            prefetch_data(buf, size, -1);
+            synchronize_stream();
+        } else {
+            if (!options.validate) {
+                memset(buf, 'c', size);
+            }
+        }
+    }
+}
+#endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
+
 /* vi:set sw=4 sts=4 tw=80: */

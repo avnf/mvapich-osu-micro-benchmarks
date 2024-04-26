@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI_Get%s latency Test"
 /*
- * Copyright (C) 2003-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2003-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -165,12 +165,7 @@ void print_latency(int rank, int size, struct omb_stat_t omb_stat)
         fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                 (t_end - t_start) * 1.0e6 / options.iterations);
         if (options.omb_tail_lat) {
-            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                    omb_stat.p50);
-            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                    omb_stat.p95);
-            fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                    omb_stat.p99);
+            OMB_ITR_PRINT_STAT(omb_stat.res_arr);
         }
         fprintf(stdout, "\n");
         fflush(stdout);
@@ -584,12 +579,7 @@ void run_get_with_fence(int rank, enum WINDOW type)
             fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                     (t_end - t_start) * 1.0e6 / options.iterations / 2);
             if (options.omb_tail_lat) {
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p50);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p95);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p99);
+                OMB_ITR_PRINT_STAT(omb_stat.res_arr);
             }
             fprintf(stdout, "\n");
             fflush(stdout);
@@ -712,12 +702,7 @@ void run_get_with_pscw(int rank, enum WINDOW type)
             fprintf(stdout, "%-*d%*.*f", 10, size, FIELD_WIDTH, FLOAT_PRECISION,
                     (t_end - t_start) * 1.0e6 / options.iterations / 2);
             if (options.omb_tail_lat) {
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p50);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p95);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p99);
+                OMB_ITR_PRINT_STAT(omb_stat.res_arr);
             }
             fprintf(stdout, "\n");
             fflush(stdout);

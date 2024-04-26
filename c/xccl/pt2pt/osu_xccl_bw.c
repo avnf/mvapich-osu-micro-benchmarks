@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU " OMB_XCCL_TYPE_STR "%s Bandwidth Test"
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -168,12 +168,7 @@ int main(int argc, char *argv[])
                     tmp / t_total);
             if (options.omb_tail_lat) {
                 omb_stat = omb_calculate_tail_lat(omb_lat_arr, myid, 1);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p50);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p95);
-                fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                        omb_stat.p99);
+                OMB_ITR_PRINT_STAT(omb_stat.res_arr);
             }
             fprintf(stdout, "\n");
             fflush(stdout);

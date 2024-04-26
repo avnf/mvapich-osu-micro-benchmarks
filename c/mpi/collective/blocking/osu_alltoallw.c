@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s All-to-Allw Personalized Exchange Latency Test"
 /*
- * Copyright (C) 2021-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2021-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -193,14 +193,14 @@ int main(int argc, char *argv[])
             MPI_CHECK(MPI_Barrier(omb_comm));
             timer = 0.0;
 
+            if (1 == options.omb_enable_mpi_in_place) {
+                sendbuf = MPI_IN_PLACE;
+            }
             for (i = 0; i < options.iterations + options.skip; i++) {
                 if (options.validate) {
                     set_buffer_validation(sendbuf, recvbuf, size, options.accel,
                                           i, omb_curr_datatype,
                                           omb_buffer_sizes);
-                    if (1 == options.omb_enable_mpi_in_place) {
-                        sendbuf = MPI_IN_PLACE;
-                    }
                     for (j = 0; j < options.warmup_validation; j++) {
                         MPI_CHECK(MPI_Barrier(omb_comm));
                         MPI_CHECK(MPI_Alltoallw(sendbuf_warmup, sendcounts,

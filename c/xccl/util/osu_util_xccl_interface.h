@@ -1,10 +1,10 @@
 /*
  * Copyright (c) 2002-2023 the network-based computing laboratory
- * (nbcl), the ohio state university.
+ * (NBCL), The Ohio State University.
  *
- * contact: dr. d. k. panda (panda@cse.ohio-state.edu)
+ * Contact: dr. D. K. Panda (panda@cse.ohio-state.edu)
  *
- * for detailed copyright and licensing information, please refer to the
+ * For detailed copyright and licensing information, please refer to the
  * copyright file copyright in the top level omb directory.
  */
 #ifndef OSU_UTIL_NCCL_INTERFACE_H
@@ -111,6 +111,6 @@ void omb_force_accelerator();
 
 /* ============================================================ */
 /* Core variables */
-OMB_ACC_STREAM nccl_stream;
-ncclComm_t nccl_comm;
+extern OMB_ACC_STREAM nccl_stream;
+extern ncclComm_t nccl_comm;
 #endif

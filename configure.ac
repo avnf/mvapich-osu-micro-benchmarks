@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [7.3], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [7.4], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([c/mpi/pt2pt/standard/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -76,8 +76,8 @@ AC_ARG_ENABLE([papi],
 
 AC_ARG_ENABLE([mpi4],
               [AS_HELP_STRING([--enable-mpi4],
-			      [Enables MPI4 support and features for benchmarks (default is
-                   false)])
+			      [Enables MPI4 support and features for benchmarks (Auto enabled
+                   by default)])
               ],
               [AS_CASE([$enableval],
                        [yes], [mpi4_library=true],
@@ -243,7 +243,7 @@ AS_IF([test "x$enable_ncclomb" = xyes], [
       ])
 
 AS_IF([test "x$enable_rcclomb" = xyes], [
-       AC_DEFINE([__HIP_PLATFORM_HCC__])
+       AC_DEFINE([__HIP_PLATFORM_AMD__])
        AC_CHECK_HEADERS([rccl.h], [],
                       [AC_MSG_ERROR([cannot include rccl.h])])
        AC_SEARCH_LIBS([ncclGetUniqueId], [nccl], [],
@@ -260,7 +260,7 @@ AS_IF([test "x$enable_openacc" = xyes], [
        ])
 
 AS_IF([test "x$enable_rocm" = xyes], [
-       AC_DEFINE([__HIP_PLATFORM_HCC__])
+       AC_DEFINE([__HIP_PLATFORM_AMD__])
        AC_CHECK_HEADERS([hip/hip_runtime_api.h], [],
                         [AC_MSG_ERROR([cannot include hip/hip_runtime_api.h])])
        AC_SEARCH_LIBS([hipFree], [amdhip64], [],
@@ -340,6 +340,7 @@ AC_CONFIG_FILES([Makefile c/Makefile c/mpi/Makefile c/mpi/pt2pt/Makefile
                  c/mpi/collective/non_blocking/Makefile
                  c/mpi/collective/neighborhood/Makefile
                  c/mpi/collective/persistent/Makefile
+                 c/mpi/pt2pt/congestion/Makefile
                ])
 
 AC_OUTPUT

@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Latency Test"
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -10,11 +10,6 @@
  */
 #include <osu_util_mpi.h>
 
-#ifdef _ENABLE_CUDA_KERNEL_
-double measure_kernel_lo(char *, int);
-void touch_managed_src(char *, int);
-void touch_managed_dst(char *, int);
-#endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 double calculate_total(double, double, double);
 
 int main(int argc, char *argv[])
@@ -125,7 +120,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    print_header(myid, LAT);
+    print_preamble(myid);
     omb_papi_init(&papi_eventset);
 
     /* Latency test */
@@ -139,9 +134,7 @@ int main(int argc, char *argv[])
             fprintf(stdout, "# Datatype: %s.\n", mpi_type_name_str);
         }
         fflush(stdout);
-        if (1 <= mpi_type_itr) {
-            print_only_header(myid);
-        }
+        print_only_header(myid);
         for (size = options.min_message_size; size <= options.max_message_size;
              size = (size ? size * 2 : 1)) {
             num_elements = size / mpi_type_size;
@@ -172,7 +165,7 @@ int main(int argc, char *argv[])
 #ifdef _ENABLE_CUDA_KERNEL_
             if ((options.src == 'M' && options.MMsrc == 'D') ||
                 (options.dst == 'M' && options.MMdst == 'D')) {
-                t_lo = measure_kernel_lo(s_buf, size);
+                t_lo = measure_kernel_lo_no_window(s_buf, size);
             }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
@@ -198,7 +191,7 @@ int main(int argc, char *argv[])
                         }
 #ifdef _ENABLE_CUDA_KERNEL_
                         if (options.src == 'M') {
-                            touch_managed_src(s_buf, size);
+                            touch_managed_src_no_window(s_buf, size, ADD);
                         }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
                         MPI_CHECK(MPI_Send(s_buf, num_elements,
@@ -208,7 +201,7 @@ int main(int argc, char *argv[])
                                            &reqstat));
 #ifdef _ENABLE_CUDA_KERNEL_
                         if (options.src == 'M') {
-                            touch_managed_src(r_buf, size);
+                            touch_managed_src_no_window(r_buf, size, SUB);
                         }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
                         if (i >= options.skip &&
@@ -226,6 +219,12 @@ int main(int argc, char *argv[])
                                     1e6 / 2.0;
                             }
                         }
+#ifdef _ENABLE_CUDA_KERNEL_
+                        if (options.src == 'M' && options.MMsrc == 'D' &&
+                            options.validate) {
+                            touch_managed_src_no_window(s_buf, size, SUB);
+                        }
+#endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
                     }
                     if (options.validate) {
                         int errors_recv = 0;
@@ -237,7 +236,7 @@ int main(int argc, char *argv[])
                     for (j = 0; j <= options.warmup_validation; j++) {
 #ifdef _ENABLE_CUDA_KERNEL_
                         if (options.dst == 'M') {
-                            touch_managed_dst(s_buf, size);
+                            touch_managed_dst_no_window(s_buf, size, ADD);
                         }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
                         MPI_CHECK(MPI_Recv(r_buf, num_elements,
@@ -245,12 +244,25 @@ int main(int argc, char *argv[])
                                            &reqstat));
 #ifdef _ENABLE_CUDA_KERNEL_
                         if (options.dst == 'M') {
-                            touch_managed_dst(r_buf, size);
+                            touch_managed_dst_no_window(r_buf, size, SUB);
                         }
 #endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
                         MPI_CHECK(MPI_Send(s_buf, num_elements,
                                            omb_curr_datatype, 0, 1, omb_comm));
                     }
+#ifdef _ENABLE_CUDA_KERNEL_
+                    if (options.validate &&
+                        !(options.src == 'M' && options.MMsrc == 'D' &&
+                          options.dst == 'M' && options.MMdst == 'D')) {
+                        if (options.src == 'M' && options.MMsrc == 'D') {
+                            touch_managed(r_buf, size, SUB);
+                            synchronize_stream();
+                        } else if (options.dst == 'M' && options.MMdst == 'D') {
+                            touch_managed(r_buf, size, ADD);
+                            synchronize_stream();
+                        }
+                    }
+#endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
                     if (options.validate) {
                         errors = validate_data(r_buf, size, 1, options.accel, i,
                                                omb_curr_datatype);
@@ -274,12 +286,7 @@ int main(int argc, char *argv[])
                 }
                 if (options.omb_tail_lat) {
                     omb_stat = omb_calculate_tail_lat(omb_lat_arr, myid, 1);
-                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                            omb_stat.p50);
-                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                            omb_stat.p95);
-                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                            omb_stat.p99);
+                    OMB_ITR_PRINT_STAT(omb_stat.res_arr);
                 }
                 if (options.omb_enable_ddt) {
                     fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);
@@ -331,63 +338,6 @@ int main(int argc, char *argv[])
     }
     return EXIT_SUCCESS;
 }
-
-#ifdef _ENABLE_CUDA_KERNEL_
-double measure_kernel_lo(char *buf, int size)
-{
-    int i;
-    double t_lo = 0.0, t_start, t_end;
-
-    for (i = 0; i < 10; i++) {
-        launch_empty_kernel(buf, size);
-    }
-
-    for (i = 0; i < 1000; i++) {
-        t_start = MPI_Wtime();
-        launch_empty_kernel(buf, size);
-        synchronize_stream();
-        t_end = MPI_Wtime();
-        t_lo = t_lo + (t_end - t_start);
-    }
-
-    t_lo = t_lo / 1000;
-    return t_lo;
-}
-
-void touch_managed_src(char *buf, int size)
-{
-    if (options.src == 'M') {
-        if (options.MMsrc == 'D') {
-            touch_managed(buf, size);
-            synchronize_stream();
-        } else if ((options.MMsrc == 'H') && size > PREFETCH_THRESHOLD) {
-            prefetch_data(buf, size, cudaCpuDeviceId);
-            synchronize_stream();
-        } else {
-            if (!options.validate) {
-                memset(buf, 'c', size);
-            }
-        }
-    }
-}
-
-void touch_managed_dst(char *buf, int size)
-{
-    if (options.dst == 'M') {
-        if (options.MMdst == 'D') {
-            touch_managed(buf, size);
-            synchronize_stream();
-        } else if ((options.MMdst == 'H') && size > PREFETCH_THRESHOLD) {
-            prefetch_data(buf, size, -1);
-            synchronize_stream();
-        } else {
-            if (!options.validate) {
-                memset(buf, 'c', size);
-            }
-        }
-    }
-}
-#endif /* #ifdef _ENABLE_CUDA_KERNEL_ */
 
 double calculate_total(double t_start, double t_end, double t_lo)
 {

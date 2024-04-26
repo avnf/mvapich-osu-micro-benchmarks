@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s Multi-threaded Latency Test"
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
                "%d\n",
                num_threads_sender, options.num_threads);
 
-        print_header(myid, LAT_MT);
+        print_preamble(myid);
 
         for (i = 0; i < num_threads_sender; i++) {
             tags[i].id = i;
@@ -382,9 +382,7 @@ void *send_thread(void *arg)
             fprintf(stdout, "# Datatype: %s.\n", mpi_type_name_str);
         }
         fflush(stdout);
-        if (1 <= mpi_type_itr) {
-            print_only_header(myid);
-        }
+        print_only_header(myid);
         for (size = options.min_message_size, iter = 0;
              size <= options.max_message_size; size = (size ? size * 2 : 1)) {
             num_elements = size / mpi_type_size;
@@ -500,12 +498,7 @@ void *send_thread(void *arg)
                 }
                 if (options.omb_tail_lat) {
                     omb_stat = omb_calculate_tail_lat(omb_lat_arr, myid, 1);
-                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                            omb_stat.p50);
-                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                            omb_stat.p95);
-                    fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                            omb_stat.p99);
+                    OMB_ITR_PRINT_STAT(omb_stat.res_arr);
                 }
                 if (options.omb_enable_ddt) {
                     fprintf(stdout, "%*zu", FIELD_WIDTH, omb_ddt_transmit_size);

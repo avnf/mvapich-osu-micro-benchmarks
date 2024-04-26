@@ -12,7 +12,8 @@ nonblk_coll_PROGRAMS = osu_iallgather osu_ibcast osu_ialltoall osu_ibarrier    \
 					   osu_igather osu_iscatter osu_iscatterv osu_igatherv     \
 					   osu_iallgatherv osu_ialltoallv osu_ialltoallw           \
 					   osu_ireduce osu_iallreduce osu_ireduce_scatter          \
-					   osu_ireduce_scatter
+					   osu_ireduce_scatter_block
+
 AM_CFLAGS = -I${top_srcdir}/c/util
 
 UTILITIES = ../../../util/osu_util.c ../../../util/osu_util.h \
@@ -40,6 +41,7 @@ osu_iscatterv_SOURCES = osu_iscatterv.c $(UTILITIES)
 osu_ireduce_SOURCES = osu_ireduce.c $(UTILITIES)
 osu_iallreduce_SOURCES = osu_iallreduce.c $(UTILITIES)
 osu_ireduce_scatter_SOURCES = osu_ireduce_scatter.c $(UTILITIES)
+osu_ireduce_scatter_block_SOURCES = osu_ireduce_scatter_block.c $(UTILITIES)
 
 if EMBEDDED_BUILD
     AM_LDFLAGS =

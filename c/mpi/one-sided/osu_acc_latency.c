@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI_Accumulate%s latency Test"
 /*
- * Copyright (C) 2003-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2003-2023 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -184,6 +184,7 @@ void print_latency(int rank, int size, float latency_factor,
                    struct omb_stat_t omb_stat)
 {
     char *validation_string;
+
     if (rank != 0)
         return;
     if (options.validate) {
@@ -204,12 +205,7 @@ void print_latency(int rank, int size, float latency_factor,
                     options.iterations);
     }
     if (options.omb_tail_lat) {
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                omb_stat.p50 * latency_factor);
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                omb_stat.p95 * latency_factor);
-        fprintf(stdout, "%*.*f", FIELD_WIDTH, FLOAT_PRECISION,
-                omb_stat.p99 * latency_factor);
+        OMB_ITR_PRINT_STAT(omb_stat.res_arr);
     }
     fprintf(stdout, "\n");
     fflush(stdout);

@@ -1,5 +1,5 @@
 /*
- *Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ *Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  *(NBCL), The Ohio State University.
  *
  *Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -68,3 +68,6 @@ void omb_graph_close(omb_graph_options_t *graph_options);
 void omb_graph_allocate_and_get_data_buffer(omb_graph_data_t **graph_data,
                                             omb_graph_options_t *graph_options,
                                             size_t message_size, size_t length);
+void omb_graph_allocate_and_get_data_buffer_cus_rank(
+    omb_graph_data_t **graph_data, omb_graph_options_t *graph_options,
+    size_t message_size, size_t length, int cus_rank);

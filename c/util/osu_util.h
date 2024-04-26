@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -31,6 +31,7 @@
 #include <sys/time.h>
 #include <limits.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <ctype.h>
 #include "osu_util_options.h"
 
@@ -191,6 +192,7 @@ enum mpi_req { MAX_REQ_NUM = 1000 };
 #define OMB_FILE_PATH_MAX_LENGTH        1024
 #define OMB_NHBRHD_FILE_PATH_MAX_LENGTH OMB_FILE_PATH_MAX_LENGTH
 #define OMB_DDT_FILE_PATH_MAX_LENGTH    OMB_FILE_PATH_MAX_LENGTH
+#define OMB_VALIDATION_LOG_DIR_PATH     "validation_output"
 #define MAX_MESSAGE_SIZE                (1 << 22)
 #define MAX_MSG_SIZE_PT2PT              (1 << 20)
 #define MAX_MSG_SIZE_COLL               (1 << 20)
@@ -207,6 +209,7 @@ enum mpi_req { MAX_REQ_NUM = 1000 };
 #define OMB_NUM_DATATYPES               3
 #define OMB_DATATYPE_STR_MAX_LEN        128
 #define OMB_ROOT_ROTATE_VAL             -1
+#define OMB_STAT_MAX_NUM                5
 
 enum po_ret_type {
     PO_CUDA_NOT_AVAIL,
@@ -268,7 +271,8 @@ enum test_subtype {
     SCATTER_P,
     REDUCE_P,
     ALL_REDUCE_P,
-    BCAST_P
+    BCAST_P,
+    CONG_BW
 };
 
 enum test_synctype { ALL_SYNC, ACTIVE_SYNC };
@@ -380,6 +384,9 @@ struct options_t {
     int omb_enable_mpi_in_place;
     int omb_root_rank;
     int omb_tail_lat;
+    int log_validation;
+    char log_validation_dir_path[OMB_FILE_PATH_MAX_LENGTH];
+    int omb_stat_percentiles[OMB_STAT_MAX_NUM];
 };
 
 struct help_msg_t {
