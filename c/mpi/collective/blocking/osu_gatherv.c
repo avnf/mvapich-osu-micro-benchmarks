@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
         omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
-    check_mem_limit(numprocs);
     bufsize = options.max_message_size * numprocs;
     if (allocate_memory_coll((void **)&recvcounts, numprocs * sizeof(int),
                              NONE)) {

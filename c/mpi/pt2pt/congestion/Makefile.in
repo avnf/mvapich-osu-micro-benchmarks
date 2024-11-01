@@ -89,9 +89,10 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 congestion_PROGRAMS = osu_bw_fan_out$(EXEEXT) osu_bw_fan_in$(EXEEXT)
-@CUDA_KERNELS_TRUE@am__append_1 = ../../../util/kernel.cu
-@BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_2 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
-@OPENACC_TRUE@am__append_3 = -acc -ta=tesla:nordc
+@SYCL_TRUE@am__append_1 = ../../../util/osu_util_sycl.cpp ../../../util/osu_util_sycl.hpp
+@CUDA_KERNELS_TRUE@am__append_2 = ../../../util/kernel.cu
+@BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_3 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
+@OPENACC_TRUE@am__append_4 = -acc -ta=tesla:nordc
 subdir = c/mpi/pt2pt/congestion
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -109,15 +110,18 @@ am__osu_bw_fan_in_SOURCES_DIST = osu_bw_fan_in.c \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
 	./utils/osu_bw_fan_util.c ./utils/osu_bw_fan_util.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am__dirstamp = $(am__leading_dot)dirstamp
-@CUDA_KERNELS_TRUE@am__objects_1 = ../../../util/kernel.$(OBJEXT)
-am__objects_2 = ../../../util/osu_util.$(OBJEXT) \
+@SYCL_TRUE@am__objects_1 = ../../../util/osu_util_sycl.$(OBJEXT)
+@CUDA_KERNELS_TRUE@am__objects_2 = ../../../util/kernel.$(OBJEXT)
+am__objects_3 = ../../../util/osu_util.$(OBJEXT) \
 	../../../util/osu_util_mpi.$(OBJEXT) \
 	../../../util/osu_util_graph.$(OBJEXT) \
 	../../../util/osu_util_papi.$(OBJEXT) \
-	./utils/osu_bw_fan_util.$(OBJEXT) $(am__objects_1)
-am_osu_bw_fan_in_OBJECTS = osu_bw_fan_in.$(OBJEXT) $(am__objects_2)
+	./utils/osu_bw_fan_util.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2)
+am_osu_bw_fan_in_OBJECTS = osu_bw_fan_in.$(OBJEXT) $(am__objects_3)
 osu_bw_fan_in_OBJECTS = $(am_osu_bw_fan_in_OBJECTS)
 osu_bw_fan_in_LDADD = $(LDADD)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -130,8 +134,9 @@ am__osu_bw_fan_out_SOURCES_DIST = osu_bw_fan_out.c \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
 	./utils/osu_bw_fan_util.c ./utils/osu_bw_fan_util.h \
-	../../../util/kernel.cu
-am_osu_bw_fan_out_OBJECTS = osu_bw_fan_out.$(OBJEXT) $(am__objects_2)
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
+am_osu_bw_fan_out_OBJECTS = osu_bw_fan_out.$(OBJEXT) $(am__objects_3)
 osu_bw_fan_out_OBJECTS = $(am_osu_bw_fan_out_OBJECTS)
 osu_bw_fan_out_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -154,6 +159,7 @@ am__depfiles_remade = ../../../util/$(DEPDIR)/kernel.Po \
 	../../../util/$(DEPDIR)/osu_util_graph.Po \
 	../../../util/$(DEPDIR)/osu_util_mpi.Po \
 	../../../util/$(DEPDIR)/osu_util_papi.Po \
+	../../../util/$(DEPDIR)/osu_util_sycl.Po \
 	./$(DEPDIR)/osu_bw_fan_in.Po ./$(DEPDIR)/osu_bw_fan_out.Po \
 	./utils/$(DEPDIR)/osu_bw_fan_util.Po
 am__mv = mv -f
@@ -274,6 +280,7 @@ MKDIR_P = @MKDIR_P@
 MPILIBNAME = @MPILIBNAME@
 NM = @NM@
 NMEDIT = @NMEDIT@
+NVCC = @NVCC@
 NVCCFLAGS = @NVCCFLAGS@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
@@ -348,24 +355,23 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-NVCC = nvcc
 NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX) $(NVCCFLAGS)
 SUFFIXES = .cu .cpp
 congestiondir = $(pkglibexecdir)/mpi/congestion
 AM_CFLAGS = -I${top_srcdir}/c/util \
-	-I${top_srcdir}/c/mpi/pt2pt/congestion/utils $(am__append_3)
+	-I${top_srcdir}/c/mpi/pt2pt/congestion/utils $(am__append_4)
 UTILITIES = ../../../util/osu_util.c ../../../util/osu_util.h \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
 	./utils/osu_bw_fan_util.c ./utils/osu_bw_fan_util.h \
-	$(am__append_1)
+	$(am__append_1) $(am__append_2)
 @CUDA_KERNELS_TRUE@CLEANFILES = ../../../util/kernel.cpp
 @BUILD_USE_PGI_TRUE@@CUDA_KERNELS_TRUE@AM_CXXFLAGS = --nvcchost --no_preincludes
 @OPENACC_TRUE@AM_CXXFLAGS = -acc -ta=tesla:nordc
 osu_bw_fan_in_SOURCES = osu_bw_fan_in.c $(UTILITIES)
 osu_bw_fan_out_SOURCES = osu_bw_fan_out.c $(UTILITIES)
-@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_2) \
+@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_3) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
 @EMBEDDED_BUILD_TRUE@		  -I${top_srcdir}/util \
@@ -475,6 +481,8 @@ utils/$(DEPDIR)/$(am__dirstamp):
 	@: > utils/$(DEPDIR)/$(am__dirstamp)
 ./utils/osu_bw_fan_util.$(OBJEXT): utils/$(am__dirstamp) \
 	utils/$(DEPDIR)/$(am__dirstamp)
+../../../util/osu_util_sycl.$(OBJEXT): ../../../util/$(am__dirstamp) \
+	../../../util/$(DEPDIR)/$(am__dirstamp)
 ../../../util/kernel.$(OBJEXT): ../../../util/$(am__dirstamp) \
 	../../../util/$(DEPDIR)/$(am__dirstamp)
 
@@ -499,6 +507,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@../../../util/$(DEPDIR)/osu_util_graph.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@../../../util/$(DEPDIR)/osu_util_mpi.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@../../../util/$(DEPDIR)/osu_util_papi.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@../../../util/$(DEPDIR)/osu_util_sycl.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_bw_fan_in.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_bw_fan_out.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./utils/$(DEPDIR)/osu_bw_fan_util.Po@am__quote@ # am--include-marker
@@ -701,6 +710,7 @@ distclean: distclean-am
 	-rm -f ../../../util/$(DEPDIR)/osu_util_graph.Po
 	-rm -f ../../../util/$(DEPDIR)/osu_util_mpi.Po
 	-rm -f ../../../util/$(DEPDIR)/osu_util_papi.Po
+	-rm -f ../../../util/$(DEPDIR)/osu_util_sycl.Po
 	-rm -f ./$(DEPDIR)/osu_bw_fan_in.Po
 	-rm -f ./$(DEPDIR)/osu_bw_fan_out.Po
 	-rm -f ./utils/$(DEPDIR)/osu_bw_fan_util.Po
@@ -754,6 +764,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ../../../util/$(DEPDIR)/osu_util_graph.Po
 	-rm -f ../../../util/$(DEPDIR)/osu_util_mpi.Po
 	-rm -f ../../../util/$(DEPDIR)/osu_util_papi.Po
+	-rm -f ../../../util/$(DEPDIR)/osu_util_sycl.Po
 	-rm -f ./$(DEPDIR)/osu_bw_fan_in.Po
 	-rm -f ./$(DEPDIR)/osu_bw_fan_out.Po
 	-rm -f ./utils/$(DEPDIR)/osu_bw_fan_util.Po

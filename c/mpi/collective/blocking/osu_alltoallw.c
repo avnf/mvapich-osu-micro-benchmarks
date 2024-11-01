@@ -1,6 +1,6 @@
 #define BENCHMARK "OSU MPI%s All-to-Allw Personalized Exchange Latency Test"
 /*
- * Copyright (c) 2021-2023 the Network-Based Computing Laboratory
+ * Copyright (c) 2021-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -89,7 +89,6 @@ int main(int argc, char *argv[])
         omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
-    check_mem_limit(numprocs);
     bufsize = options.max_message_size * numprocs;
 
     if (allocate_memory_coll((void **)&recvcounts, numprocs * sizeof(int),

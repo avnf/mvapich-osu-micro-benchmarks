@@ -100,7 +100,6 @@ int main(int argc, char *argv[])
         omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
-    check_mem_limit(numprocs);
     if (allocate_memory_coll((void **)&recvcounts, numprocs * sizeof(int),
                              NONE)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);

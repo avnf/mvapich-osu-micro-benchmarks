@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2022 the Network-Based Computing Laboratory
+ * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
@@ -144,7 +144,6 @@ void set_buffer_dtype(void *buffer, int is_send_buf, size_t size, int rank,
 void set_buffer_dtype_reduce(void *buffer, int is_send_buf, size_t size,
                              int iter, enum accel_type type,
                              MPI_Datatype dtype);
-void check_mem_limit(int numprocs);
 
 /*
  * CUDA Context Management
@@ -256,6 +255,22 @@ int atomic_data_validation_print_summary();
  * Data Types
  */
 void omb_populate_mpi_type_list(MPI_Datatype *mpi_type_list);
+
+/*
+ * Per MPI forum documentation "Signed Characters and Reductions":
+ *  The types MPI_SIGNED_CHAR and MPI_UNSIGNED_CHAR can be
+ *  used in reduction operations. MPI_CHAR, MPI_WCHAR, and
+ *  MPI_CHARACTER (which represent printable characters) cannot be used
+ *  in reduction operations. In a heterogeneous environment, MPI_CHAR,
+ *  MPI_WCHAR, and MPI_CHARACTER will be translated so as to preserve
+ *  the printable character, whereas MPI_SIGNED_CHAR and
+ *  MPI_UNSIGNED_CHAR will be translated so as to preserve the integer
+ *  value.
+ */
+#define OMB_MPI_REDUCE_CHAR_CHECK(dt)                                          \
+    if (MPI_CHAR == dt) {                                                      \
+        dt = MPI_SIGNED_CHAR;                                                  \
+    }
 
 /*
  * Session

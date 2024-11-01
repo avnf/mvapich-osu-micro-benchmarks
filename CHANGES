@@ -1,3 +1,71 @@
+OSU Micro Benchmarks v7.5 (11/01/2024)
+
+* New Features & Enhancements
+    - New OpenSHMEM benchmarks
+        * osu_oshm_get_bw, osu_oshm_get_nb_bw
+        * osu_oshm_put_bw, osu_oshm_put_nb_bw
+        * osu_oshm_get_overlap
+    - New partitioned point-to-point benchmkark
+        * osu_partitioned_latency
+    - Add NVIDIA, AMD, and Intel GPU support for neighborhood collective
+      benchmarks
+        * osu_neighbor_allgather, osu_neighbor_allgatherv,
+        * osu_neighbor_alltoall, osu_neighbor_alltoallv,
+        * osu_neighbor_alltoallw, osu_ineighbor_allgatherv,
+        * osu_ineighbor_allgatherv, osu_ineighbor_alltoall,
+        * osu_ineighbor_alltoallv, osu_ineighbor_alltoallw
+    - Add Intel GPU support for the following benchmarks
+        * Point-to-point benchmarks
+            * osu_bibw, osu_bw, osu_mbw_mr, osu_latency, osu_multi_lat,
+            * osu_latency_mp, osu_latency_mt, osu_bw_persistent,
+            * osu_bibw_persistent, osu_latency_persistent,
+            * osu_partitioned_latency
+        * Network congestion benchmarks
+            * osu_bw_fan_in, osu_bw_fan_out
+        * Blocking collective benchmarks
+            * osu_allgather, osu_allgatherv, osu_alltoall, osu_allreduce,
+            * osu_alltoallv, osu_alltoallw, osu_bcast, osu_barrier, osu_gather,
+            * osu_gatherv, osu_reduce, osu_reduce_scatter, osu_scatter,
+            * osu_scatterv, osu_reduce_scatter_block
+        * Non-Blocking collective benchmarks
+            * osu_iallgather, osu_iallgatherv, osu_iallreduce, osu_ialltoall,
+            * osu_ialltoallv, osu_ialltoallw, osu_ibcast, osu_ibarrier,
+            * osu_igather, osu_igatherv, osu_ireduce, osu_iscatter,
+            * osu_iscatterv, osu_ireduce_scatter, osu_ireduce_scatter_block
+        * Persistent collective benchmarks
+            * osu_allgather_persistent, osu_allgatherv_persistent,
+            * osu_allreduce_persistent, osu_alltoall_persistent,
+            * osu_alltoallv_persistent, osu_alltoallw_persistent,
+            * osu_barrier_persistent, osu_bcast_persistent,
+            * osu_gather_persistent, osu_gatherv_persistent,
+            * osu_reduce_persistent, osu_reduce_scatter_persistent,
+            * osu_scatter_persistent, osu_scatterv_persistent
+        * One-sided benchmarks
+            * osu_acc_latency, osu_cas_latency, osu_fop_latency, osu_get_bw,
+            * osu_get_latency, osu_put_bibw, osu_put_bw, osu_put_latency,
+            * osu_get_acc_latency
+    - Changed default MPI_TYPE of reduce benchmarks to MPI_INT.
+            * osu_reduce, osu_allreduce, osu_reduce_scatter, osu_reduce_scatter_block
+
+* Bug Fixes
+    - Fixed RCCL build in ROCm 6 due to installation path changes.
+    - Fixed a bug leading to nvcc command not found error when builing with NCCL
+      support.
+        * Thanks to Raghu Raja @Amazon for report.
+    - Resolved a bug in the maximum memory limit check, which previously
+      considered only the memory allocated by a single buffer. This check and
+      command line option 'M' no longer exists.
+        * Thanks to Van Man Nguyen @Eviden for report and patch.
+    - Fixed bug while printing validation results in some collective benchmarks.
+    - Updated reduction benchmarks to use MPI_SIGNED_CHAR instead of MPI_CHAR.
+        * Thanks to Rémi Dehenne @CEA for report and patch.
+    - Fixed a bug in Reduce, Reduce-Scatter benchmarks that caused validation
+      to fail when running with ROCM support.
+        * Thanks to Anton Daumen @Eviden for report and patch.
+        * Thanks to Edgar Gabriel @AMD and Mustafa Abduljabbar @AMD for report.
+    - Fixed RCCL check in configure script.
+        * Thanks to Anton Daumen @Eviden for report.
+
 OSU Micro Benchmarks v7.4 (4/26/2024)
 
 * New Features & Enhancements

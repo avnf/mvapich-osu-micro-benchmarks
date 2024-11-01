@@ -94,7 +94,10 @@ openshmem_PROGRAMS = osu_oshm_get$(EXEEXT) osu_oshm_put$(EXEEXT) \
 	osu_oshm_collect$(EXEEXT) osu_oshm_fcollect$(EXEEXT) \
 	osu_oshm_reduce$(EXEEXT) osu_oshm_get_nb$(EXEEXT) \
 	osu_oshm_put_nb$(EXEEXT) osu_oshm_put_overlap$(EXEEXT) \
-	osu_oshm_get_mr_nb$(EXEEXT) osu_oshm_put_mr_nb$(EXEEXT)
+	osu_oshm_get_mr_nb$(EXEEXT) osu_oshm_put_mr_nb$(EXEEXT) \
+	osu_oshm_get_bw$(EXEEXT) osu_oshm_get_nb_bw$(EXEEXT) \
+	osu_oshm_put_bw$(EXEEXT) osu_oshm_put_nb_bw$(EXEEXT) \
+	osu_oshm_get_overlap$(EXEEXT)
 subdir = c/openshmem
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -136,6 +139,10 @@ osu_oshm_fcollect_LDADD = $(LDADD)
 am_osu_oshm_get_OBJECTS = osu_oshm_get.$(OBJEXT) $(am__objects_1)
 osu_oshm_get_OBJECTS = $(am_osu_oshm_get_OBJECTS)
 osu_oshm_get_LDADD = $(LDADD)
+am_osu_oshm_get_bw_OBJECTS = osu_oshm_get_bw.$(OBJEXT) \
+	$(am__objects_1)
+osu_oshm_get_bw_OBJECTS = $(am_osu_oshm_get_bw_OBJECTS)
+osu_oshm_get_bw_LDADD = $(LDADD)
 am_osu_oshm_get_mr_nb_OBJECTS = osu_oshm_get_mr_nb.$(OBJEXT) \
 	$(am__objects_1)
 osu_oshm_get_mr_nb_OBJECTS = $(am_osu_oshm_get_mr_nb_OBJECTS)
@@ -144,9 +151,21 @@ am_osu_oshm_get_nb_OBJECTS = osu_oshm_get_nb.$(OBJEXT) \
 	$(am__objects_1)
 osu_oshm_get_nb_OBJECTS = $(am_osu_oshm_get_nb_OBJECTS)
 osu_oshm_get_nb_LDADD = $(LDADD)
+am_osu_oshm_get_nb_bw_OBJECTS = osu_oshm_get_nb_bw.$(OBJEXT) \
+	$(am__objects_1)
+osu_oshm_get_nb_bw_OBJECTS = $(am_osu_oshm_get_nb_bw_OBJECTS)
+osu_oshm_get_nb_bw_LDADD = $(LDADD)
+am_osu_oshm_get_overlap_OBJECTS = osu_oshm_get_overlap.$(OBJEXT) \
+	$(am__objects_1)
+osu_oshm_get_overlap_OBJECTS = $(am_osu_oshm_get_overlap_OBJECTS)
+osu_oshm_get_overlap_LDADD = $(LDADD)
 am_osu_oshm_put_OBJECTS = osu_oshm_put.$(OBJEXT) $(am__objects_1)
 osu_oshm_put_OBJECTS = $(am_osu_oshm_put_OBJECTS)
 osu_oshm_put_LDADD = $(LDADD)
+am_osu_oshm_put_bw_OBJECTS = osu_oshm_put_bw.$(OBJEXT) \
+	$(am__objects_1)
+osu_oshm_put_bw_OBJECTS = $(am_osu_oshm_put_bw_OBJECTS)
+osu_oshm_put_bw_LDADD = $(LDADD)
 am_osu_oshm_put_mr_OBJECTS = osu_oshm_put_mr.$(OBJEXT) \
 	$(am__objects_1)
 osu_oshm_put_mr_OBJECTS = $(am_osu_oshm_put_mr_OBJECTS)
@@ -159,6 +178,10 @@ am_osu_oshm_put_nb_OBJECTS = osu_oshm_put_nb.$(OBJEXT) \
 	$(am__objects_1)
 osu_oshm_put_nb_OBJECTS = $(am_osu_oshm_put_nb_OBJECTS)
 osu_oshm_put_nb_LDADD = $(LDADD)
+am_osu_oshm_put_nb_bw_OBJECTS = osu_oshm_put_nb_bw.$(OBJEXT) \
+	$(am__objects_1)
+osu_oshm_put_nb_bw_OBJECTS = $(am_osu_oshm_put_nb_bw_OBJECTS)
+osu_oshm_put_nb_bw_LDADD = $(LDADD)
 am_osu_oshm_put_overlap_OBJECTS = osu_oshm_put_overlap.$(OBJEXT) \
 	$(am__objects_1)
 osu_oshm_put_overlap_OBJECTS = $(am_osu_oshm_put_overlap_OBJECTS)
@@ -189,11 +212,16 @@ am__depfiles_remade = ../util/$(DEPDIR)/osu_util.Po \
 	./$(DEPDIR)/osu_oshm_broadcast.Po \
 	./$(DEPDIR)/osu_oshm_collect.Po \
 	./$(DEPDIR)/osu_oshm_fcollect.Po ./$(DEPDIR)/osu_oshm_get.Po \
+	./$(DEPDIR)/osu_oshm_get_bw.Po \
 	./$(DEPDIR)/osu_oshm_get_mr_nb.Po \
-	./$(DEPDIR)/osu_oshm_get_nb.Po ./$(DEPDIR)/osu_oshm_put.Po \
+	./$(DEPDIR)/osu_oshm_get_nb.Po \
+	./$(DEPDIR)/osu_oshm_get_nb_bw.Po \
+	./$(DEPDIR)/osu_oshm_get_overlap.Po \
+	./$(DEPDIR)/osu_oshm_put.Po ./$(DEPDIR)/osu_oshm_put_bw.Po \
 	./$(DEPDIR)/osu_oshm_put_mr.Po \
 	./$(DEPDIR)/osu_oshm_put_mr_nb.Po \
 	./$(DEPDIR)/osu_oshm_put_nb.Po \
+	./$(DEPDIR)/osu_oshm_put_nb_bw.Po \
 	./$(DEPDIR)/osu_oshm_put_overlap.Po \
 	./$(DEPDIR)/osu_oshm_reduce.Po
 am__mv = mv -f
@@ -218,17 +246,23 @@ am__v_CCLD_1 =
 SOURCES = $(osu_oshm_atomics_SOURCES) $(osu_oshm_barrier_SOURCES) \
 	$(osu_oshm_broadcast_SOURCES) $(osu_oshm_collect_SOURCES) \
 	$(osu_oshm_fcollect_SOURCES) $(osu_oshm_get_SOURCES) \
-	$(osu_oshm_get_mr_nb_SOURCES) $(osu_oshm_get_nb_SOURCES) \
-	$(osu_oshm_put_SOURCES) $(osu_oshm_put_mr_SOURCES) \
+	$(osu_oshm_get_bw_SOURCES) $(osu_oshm_get_mr_nb_SOURCES) \
+	$(osu_oshm_get_nb_SOURCES) $(osu_oshm_get_nb_bw_SOURCES) \
+	$(osu_oshm_get_overlap_SOURCES) $(osu_oshm_put_SOURCES) \
+	$(osu_oshm_put_bw_SOURCES) $(osu_oshm_put_mr_SOURCES) \
 	$(osu_oshm_put_mr_nb_SOURCES) $(osu_oshm_put_nb_SOURCES) \
-	$(osu_oshm_put_overlap_SOURCES) $(osu_oshm_reduce_SOURCES)
+	$(osu_oshm_put_nb_bw_SOURCES) $(osu_oshm_put_overlap_SOURCES) \
+	$(osu_oshm_reduce_SOURCES)
 DIST_SOURCES = $(osu_oshm_atomics_SOURCES) $(osu_oshm_barrier_SOURCES) \
 	$(osu_oshm_broadcast_SOURCES) $(osu_oshm_collect_SOURCES) \
 	$(osu_oshm_fcollect_SOURCES) $(osu_oshm_get_SOURCES) \
-	$(osu_oshm_get_mr_nb_SOURCES) $(osu_oshm_get_nb_SOURCES) \
-	$(osu_oshm_put_SOURCES) $(osu_oshm_put_mr_SOURCES) \
+	$(osu_oshm_get_bw_SOURCES) $(osu_oshm_get_mr_nb_SOURCES) \
+	$(osu_oshm_get_nb_SOURCES) $(osu_oshm_get_nb_bw_SOURCES) \
+	$(osu_oshm_get_overlap_SOURCES) $(osu_oshm_put_SOURCES) \
+	$(osu_oshm_put_bw_SOURCES) $(osu_oshm_put_mr_SOURCES) \
 	$(osu_oshm_put_mr_nb_SOURCES) $(osu_oshm_put_nb_SOURCES) \
-	$(osu_oshm_put_overlap_SOURCES) $(osu_oshm_reduce_SOURCES)
+	$(osu_oshm_put_nb_bw_SOURCES) $(osu_oshm_put_overlap_SOURCES) \
+	$(osu_oshm_reduce_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -307,6 +341,7 @@ MKDIR_P = @MKDIR_P@
 MPILIBNAME = @MPILIBNAME@
 NM = @NM@
 NMEDIT = @NMEDIT@
+NVCC = @NVCC@
 NVCCFLAGS = @NVCCFLAGS@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
@@ -404,6 +439,11 @@ osu_oshm_put_nb_SOURCES = osu_oshm_put_nb.c $(UTILITIES)
 osu_oshm_put_overlap_SOURCES = osu_oshm_put_overlap.c $(UTILITIES)
 osu_oshm_get_mr_nb_SOURCES = osu_oshm_get_mr_nb.c $(UTILITIES)
 osu_oshm_put_mr_nb_SOURCES = osu_oshm_put_mr_nb.c $(UTILITIES)
+osu_oshm_get_bw_SOURCES = osu_oshm_get_bw.c $(UTILITIES)
+osu_oshm_get_nb_bw_SOURCES = osu_oshm_get_nb_bw.c $(UTILITIES)
+osu_oshm_put_bw_SOURCES = osu_oshm_put_bw.c $(UTILITIES)
+osu_oshm_put_nb_bw_SOURCES = osu_oshm_put_nb_bw.c $(UTILITIES)
+osu_oshm_get_overlap_SOURCES = osu_oshm_get_overlap.c $(UTILITIES)
 all: all-am
 
 .SUFFIXES:
@@ -521,6 +561,10 @@ osu_oshm_get$(EXEEXT): $(osu_oshm_get_OBJECTS) $(osu_oshm_get_DEPENDENCIES) $(EX
 	@rm -f osu_oshm_get$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(osu_oshm_get_OBJECTS) $(osu_oshm_get_LDADD) $(LIBS)
 
+osu_oshm_get_bw$(EXEEXT): $(osu_oshm_get_bw_OBJECTS) $(osu_oshm_get_bw_DEPENDENCIES) $(EXTRA_osu_oshm_get_bw_DEPENDENCIES) 
+	@rm -f osu_oshm_get_bw$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(osu_oshm_get_bw_OBJECTS) $(osu_oshm_get_bw_LDADD) $(LIBS)
+
 osu_oshm_get_mr_nb$(EXEEXT): $(osu_oshm_get_mr_nb_OBJECTS) $(osu_oshm_get_mr_nb_DEPENDENCIES) $(EXTRA_osu_oshm_get_mr_nb_DEPENDENCIES) 
 	@rm -f osu_oshm_get_mr_nb$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(osu_oshm_get_mr_nb_OBJECTS) $(osu_oshm_get_mr_nb_LDADD) $(LIBS)
@@ -529,9 +573,21 @@ osu_oshm_get_nb$(EXEEXT): $(osu_oshm_get_nb_OBJECTS) $(osu_oshm_get_nb_DEPENDENC
 	@rm -f osu_oshm_get_nb$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(osu_oshm_get_nb_OBJECTS) $(osu_oshm_get_nb_LDADD) $(LIBS)
 
+osu_oshm_get_nb_bw$(EXEEXT): $(osu_oshm_get_nb_bw_OBJECTS) $(osu_oshm_get_nb_bw_DEPENDENCIES) $(EXTRA_osu_oshm_get_nb_bw_DEPENDENCIES) 
+	@rm -f osu_oshm_get_nb_bw$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(osu_oshm_get_nb_bw_OBJECTS) $(osu_oshm_get_nb_bw_LDADD) $(LIBS)
+
+osu_oshm_get_overlap$(EXEEXT): $(osu_oshm_get_overlap_OBJECTS) $(osu_oshm_get_overlap_DEPENDENCIES) $(EXTRA_osu_oshm_get_overlap_DEPENDENCIES) 
+	@rm -f osu_oshm_get_overlap$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(osu_oshm_get_overlap_OBJECTS) $(osu_oshm_get_overlap_LDADD) $(LIBS)
+
 osu_oshm_put$(EXEEXT): $(osu_oshm_put_OBJECTS) $(osu_oshm_put_DEPENDENCIES) $(EXTRA_osu_oshm_put_DEPENDENCIES) 
 	@rm -f osu_oshm_put$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(osu_oshm_put_OBJECTS) $(osu_oshm_put_LDADD) $(LIBS)
+
+osu_oshm_put_bw$(EXEEXT): $(osu_oshm_put_bw_OBJECTS) $(osu_oshm_put_bw_DEPENDENCIES) $(EXTRA_osu_oshm_put_bw_DEPENDENCIES) 
+	@rm -f osu_oshm_put_bw$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(osu_oshm_put_bw_OBJECTS) $(osu_oshm_put_bw_LDADD) $(LIBS)
 
 osu_oshm_put_mr$(EXEEXT): $(osu_oshm_put_mr_OBJECTS) $(osu_oshm_put_mr_DEPENDENCIES) $(EXTRA_osu_oshm_put_mr_DEPENDENCIES) 
 	@rm -f osu_oshm_put_mr$(EXEEXT)
@@ -544,6 +600,10 @@ osu_oshm_put_mr_nb$(EXEEXT): $(osu_oshm_put_mr_nb_OBJECTS) $(osu_oshm_put_mr_nb_
 osu_oshm_put_nb$(EXEEXT): $(osu_oshm_put_nb_OBJECTS) $(osu_oshm_put_nb_DEPENDENCIES) $(EXTRA_osu_oshm_put_nb_DEPENDENCIES) 
 	@rm -f osu_oshm_put_nb$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(osu_oshm_put_nb_OBJECTS) $(osu_oshm_put_nb_LDADD) $(LIBS)
+
+osu_oshm_put_nb_bw$(EXEEXT): $(osu_oshm_put_nb_bw_OBJECTS) $(osu_oshm_put_nb_bw_DEPENDENCIES) $(EXTRA_osu_oshm_put_nb_bw_DEPENDENCIES) 
+	@rm -f osu_oshm_put_nb_bw$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(osu_oshm_put_nb_bw_OBJECTS) $(osu_oshm_put_nb_bw_LDADD) $(LIBS)
 
 osu_oshm_put_overlap$(EXEEXT): $(osu_oshm_put_overlap_OBJECTS) $(osu_oshm_put_overlap_DEPENDENCIES) $(EXTRA_osu_oshm_put_overlap_DEPENDENCIES) 
 	@rm -f osu_oshm_put_overlap$(EXEEXT)
@@ -568,12 +628,17 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_collect.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_fcollect.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_get.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_get_bw.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_get_mr_nb.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_get_nb.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_get_nb_bw.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_get_overlap.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_put.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_put_bw.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_put_mr.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_put_mr_nb.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_put_nb.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_put_nb_bw.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_put_overlap.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_oshm_reduce.Po@am__quote@ # am--include-marker
 
@@ -751,12 +816,17 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/osu_oshm_collect.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_fcollect.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_get.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_get_bw.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_get_mr_nb.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_get_nb.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_get_nb_bw.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_get_overlap.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_put_bw.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put_mr.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put_mr_nb.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put_nb.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_put_nb_bw.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put_overlap.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_reduce.Po
 	-rm -f Makefile
@@ -812,12 +882,17 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/osu_oshm_collect.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_fcollect.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_get.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_get_bw.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_get_mr_nb.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_get_nb.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_get_nb_bw.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_get_overlap.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_put_bw.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put_mr.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put_mr_nb.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put_nb.Po
+	-rm -f ./$(DEPDIR)/osu_oshm_put_nb_bw.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_put_overlap.Po
 	-rm -f ./$(DEPDIR)/osu_oshm_reduce.Po
 	-rm -f Makefile

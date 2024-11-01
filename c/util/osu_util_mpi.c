@@ -96,6 +96,11 @@ void set_device_memory(void *ptr, int data, size_t size)
             ROCM_CHECK(hipMemset(ptr, data, size));
             break;
 #endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            syclMemset(ptr, data, size);
+            break;
+#endif
         default:
             break;
     }
@@ -119,6 +124,11 @@ int free_device_buffer(void *buf)
 #ifdef _ENABLE_ROCM_
         case ROCM:
             ROCM_CHECK(hipFree(buf));
+            break;
+#endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            syclFree(buf);
             break;
 #endif
         default:
@@ -353,6 +363,9 @@ void print_header_one_sided(int rank, enum WINDOW win, enum SYNC sync,
             case ROCM:
                 printf(benchmark_header, "-ROCM");
                 break;
+            case SYCL:
+                printf(benchmark_header, "-SYCL");
+                break;
             default:
                 printf(benchmark_header, "");
                 break;
@@ -366,6 +379,7 @@ void print_header_one_sided(int rank, enum WINDOW win, enum SYNC sync,
             case CUDA:
             case OPENACC:
             case ROCM:
+            case SYCL:
                 fprintf(stdout,
                         "# Rank 0 Memory on %s and Rank 1 Memory on %s\n",
                         'M' == options.src ?
@@ -428,6 +442,9 @@ void print_version_message(int rank)
         case ROCM:
             printf(benchmark_header, "-ROCM");
             break;
+        case SYCL:
+            printf(benchmark_header, "-SYCL");
+            break;
         default:
             printf(benchmark_header, "");
             break;
@@ -456,6 +473,9 @@ void print_preamble_nbc(int rank)
             break;
         case ROCM:
             printf(benchmark_header, "-ROCM");
+            break;
+        case SYCL:
+            printf(benchmark_header, "-SYCL");
             break;
         default:
             printf(benchmark_header, "");
@@ -555,6 +575,9 @@ void print_preamble(int rank)
             break;
         case ROCM:
             printf(benchmark_header, "-ROCM");
+            break;
+        case SYCL:
+            printf(benchmark_header, "-SYCL");
             break;
         default:
             printf(benchmark_header, "");
@@ -672,52 +695,6 @@ void omb_mpi_finalize(omb_mpi_init_data mpi_init)
 #endif
     } else {
         MPI_CHECK(MPI_Finalize());
-    }
-}
-
-void check_mem_limit(int numprocs)
-{
-    int rank = 0;
-
-    MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
-    if (options.subtype == GATHER || options.subtype == ALLTOALL ||
-        options.subtype == SCATTER || options.subtype == NHBR_GATHER ||
-        options.subtype == NHBR_ALLTOALL || options.subtype == NBC_GATHER ||
-        options.subtype == NBC_ALLTOALL || options.subtype == NBC_NHBR_GATHER ||
-        options.subtype == NBC_NHBR_ALLTOALL ||
-        options.subtype == NBC_SCATTER || options.subtype == ALL_GATHER ||
-        options.subtype == NBC_ALL_GATHER || options.subtype == SCATTER_P ||
-        options.subtype == GATHER_P || options.subtype == ALLTOALL_P ||
-        options.subtype == ALL_GATHER_P) {
-        if ((options.max_message_size * numprocs) > options.max_mem_limit) {
-            options.max_message_size = options.max_mem_limit / numprocs;
-            if (0 == rank) {
-                fprintf(stderr,
-                        "Warning! Limiting max message size to: %zu. "
-                        "Increase -M, --mem-limit for higher message sizes.",
-                        options.max_message_size);
-            }
-        }
-    } else if (options.subtype == REDUCE || options.subtype == BCAST ||
-               options.subtype == NBC_REDUCE || options.subtype == NBC_BCAST ||
-               options.subtype == REDUCE_SCATTER ||
-               options.subtype == NBC_REDUCE_SCATTER ||
-               options.subtype == ALL_REDUCE ||
-               options.subtype == NBC_ALL_REDUCE ||
-               options.subtype == ALL_REDUCE_P ||
-               options.subtype == REDUCE_SCATTER_P ||
-               options.subtype == REDUCE_P || options.subtype == BCAST_P) {
-        if (options.max_message_size > options.max_mem_limit) {
-            if (0 == rank) {
-                fprintf(stderr,
-                        "Warning! Limiting max message size to: %zu"
-                        "Increase -M, --mem-limit for higher message sizes.",
-                        options.max_message_size);
-            }
-            options.max_message_size = options.max_mem_limit;
-        }
-    } else {
-        OMB_ERROR_EXIT("Unknown subtype");
     }
 }
 
@@ -1071,6 +1048,11 @@ void set_buffer_pt2pt(void *buffer, int rank, enum accel_type type, int data,
                 ROCM_CHECK(hipMemset(buffer, data, size));
             }
 #endif
+#ifdef _ENABLE_SYCL_
+            {
+                syclMemset(buffer, data, size);
+            }
+#endif
             break;
     }
 }
@@ -1102,6 +1084,10 @@ void set_buffer(void *buffer, enum accel_type type, int data, size_t size)
         case ROCM:
 #ifdef _ENABLE_ROCM_
             ROCM_CHECK(hipMemset(buffer, data, size));
+#endif
+        case SYCL:
+#ifdef _ENABLE_SYCL_
+            syclMemset(buffer, data, size);
 #endif
             break;
         default:
@@ -1181,6 +1167,13 @@ void set_buffer_validation(void *s_buf, void *r_buf, size_t size,
                                              (void *)temp_r_buffer, size,
                                              hipMemcpyHostToDevice));
                         ROCM_CHECK(hipDeviceSynchronize());
+                    }
+#endif
+#ifdef _ENABLE_SYCL_
+                    {
+                        syclMemcpy((void *)s_buf, (void *)temp_s_buffer, size);
+                        syclMemcpy((void *)r_buf, (void *)temp_r_buffer, size);
+                        syclDeviceSynchronize();
                     }
 #endif
                     break;
@@ -1364,6 +1357,18 @@ void set_buffer_dtype_reduce(void *buffer, int is_send_buf, size_t size,
             CUDA_CHECK(cudaDeviceSynchronize());
 #endif
             break;
+        case SYCL:
+#ifdef _ENABLE_SYCL_
+            syclMemcpy((void *)buffer, (void *)temp_buffer, size);
+            syclDeviceSynchronize();
+#endif
+        case ROCM:
+#ifdef _ENABLE_ROCM_
+            ROCM_CHECK(hipMemcpy((void *)buffer, (void *)temp_buffer, size,
+                                 hipMemcpyHostToDevice));
+            ROCM_CHECK(hipDeviceSynchronize());
+#endif
+            break;
         default:
             break;
     }
@@ -1462,6 +1467,11 @@ void set_buffer_dtype(void *buffer, int is_send_buf, size_t size, int rank,
             ROCM_CHECK(hipMemcpy((void *)buffer, (void *)temp_buffer,
                                  buffer_size, hipMemcpyHostToDevice));
             ROCM_CHECK(hipDeviceSynchronize());
+#endif
+        case SYCL:
+#ifdef _ENABLE_SYCL_
+            syclMemcpy((void *)buffer, (void *)temp_buffer, buffer_size);
+            syclDeviceSynchronize();
 #endif
             break;
         default:
@@ -1733,6 +1743,12 @@ uint8_t validate_data(void *r_buf, size_t size, int num_procs,
                         ROCM_CHECK(hipDeviceSynchronize());
                     }
 #endif
+#ifdef _ENABLE_SYCL_
+                    {
+                        syclMemcpy((void *)temp_r_buf, (void *)r_buf, size);
+                        syclDeviceSynchronize();
+                    }
+#endif
                     break;
             }
             for (i = 0; i < num_elements; i++) {
@@ -1891,10 +1907,36 @@ void set_buffer_nhbr_validation(void *s_buf, void *r_buf, int indegree,
             break;
         case CUDA:
         case MANAGED:
-        case OPENACC:
+#ifdef _ENABLE_CUDA_
+            CUDA_CHECK(cudaMemcpy((void *)s_buf, (void *)temp_s_buf,
+                                  size * send_numprocs,
+                                  cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy((void *)r_buf, (void *)temp_r_buf,
+                                  size * recv_numprocs,
+                                  cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaDeviceSynchronize());
+#endif
+            break;
         case ROCM:
-            OMB_ERROR_EXIT(
-                "Accelerators not yet supported for neighborhood benchmarks.");
+#ifdef _ENABLE_ROCM_
+            ROCM_CHECK(hipMemcpy((void *)s_buf, (void *)temp_s_buf,
+                                 size * send_numprocs, hipMemcpyHostToDevice));
+            ROCM_CHECK(hipMemcpy((void *)r_buf, (void *)temp_r_buf,
+                                 size * recv_numprocs, hipMemcpyHostToDevice));
+            ROCM_CHECK(hipDeviceSynchronize());
+#endif
+            break;
+        case SYCL:
+#ifdef _ENABLE_SYCL_
+        {
+            syclMemcpy((void *)s_buf, (void *)temp_s_buf, size * send_numprocs);
+            syclMemcpy((void *)r_buf, (void *)temp_r_buf, size * recv_numprocs);
+            syclDeviceSynchronize();
+        }
+#endif
+        break;
+        default:
+            OMB_ERROR_EXIT("Unknown accelerator type");
             break;
     }
     free(temp_r_buf);
@@ -1950,12 +1992,31 @@ int omb_validate_neighborhood_col(MPI_Comm comm, char *buffer, int indegree,
         case NONE:
             memcpy((void *)temp_r_buf, (void *)buffer, size * recv_numprocs);
             break;
+#ifdef _ENABLE_CUDA_
         case CUDA:
         case MANAGED:
-        case OPENACC:
+            CUDA_CHECK(cudaMemcpy((void *)temp_r_buf, (void *)buffer,
+                                  size * recv_numprocs,
+                                  cudaMemcpyDeviceToHost));
+            CUDA_CHECK(cudaDeviceSynchronize());
+            break;
+#endif
+#ifdef _ENABLE_ROCM_
         case ROCM:
-            OMB_ERROR_EXIT(
-                "Accelerators not yet supported for neighborhood benchmarks.");
+            ROCM_CHECK(hipMemcpy((void *)temp_r_buf, (void *)buffer,
+                                 size * recv_numprocs, hipMemcpyDeviceToHost));
+            ROCM_CHECK(hipDeviceSynchronize());
+            break;
+#endif
+#ifdef _ENABLE_SYCL_
+        case SYCL: {
+            syclMemcpy((void *)temp_r_buf, (void *)buffer,
+                       size * recv_numprocs);
+            syclDeviceSynchronize();
+        } break;
+#endif
+        default:
+            OMB_ERROR_EXIT("Unknown device type");
             break;
     }
     num_elements = omb_get_num_elements(size, dtype);
@@ -2042,6 +2103,19 @@ int validate_reduce_scatter(void *buffer, size_t size, int *recvcounts,
             CUDA_CHECK(cudaDeviceSynchronize());
             break;
 #endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            syclMemcpy((void *)temp_buffer, (void *)buffer, size);
+            syclDeviceSynchronize();
+            break;
+#endif
+#ifdef _ENABLE_ROCM_
+        case ROCM:
+            ROCM_CHECK(hipMemcpy((void *)temp_buffer, (void *)buffer, size,
+                                 hipMemcpyDeviceToHost));
+            ROCM_CHECK(hipDeviceSynchronize());
+            break;
+#endif
         default:
             break;
     }
@@ -2108,6 +2182,19 @@ int validate_reduction(void *buffer, size_t size, int iter, int num_procs,
             CUDA_CHECK(cudaDeviceSynchronize());
             break;
 #endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            syclMemcpy((void *)temp_buffer, (void *)buffer, size);
+            syclDeviceSynchronize();
+            break;
+#endif
+#ifdef _ENABLE_ROCM_
+        case ROCM:
+            ROCM_CHECK(hipMemcpy((void *)temp_buffer, (void *)buffer, size,
+                                 hipMemcpyDeviceToHost));
+            ROCM_CHECK(hipDeviceSynchronize());
+            break;
+#endif
         default:
             break;
     }
@@ -2164,6 +2251,12 @@ int validate_collective(void *buffer, size_t size, int value1, int value2,
             ROCM_CHECK(hipMemcpy((void *)temp_buffer, (void *)buffer,
                                  size * value2, hipMemcpyDeviceToHost));
             ROCM_CHECK(hipDeviceSynchronize());
+            break;
+#endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            syclMemcpy((void *)temp_buffer, (void *)buffer, size * value2);
+            syclDeviceSynchronize();
             break;
 #endif
         default:
@@ -2296,6 +2389,11 @@ int allocate_memory_coll(void **buffer, size_t size, enum accel_type type)
             ROCM_CHECK(hipMalloc(buffer, size));
             return 0;
 #endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            syclMalloc(buffer, size);
+            return 0;
+#endif
         default:
             return 1;
     }
@@ -2321,6 +2419,11 @@ int allocate_device_buffer(char **buffer)
 #ifdef _ENABLE_ROCM_
         case ROCM:
             ROCM_CHECK(hipMalloc((void **)buffer, options.max_message_size));
+            break;
+#endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            syclMalloc(buffer, options.max_message_size);
             break;
 #endif
         default:
@@ -2368,6 +2471,11 @@ int allocate_device_buffer_size(char **buffer, size_t size)
 #ifdef _ENABLE_ROCM_
         case ROCM:
             ROCM_CHECK(hipMalloc((void **)buffer, size));
+            break;
+#endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            syclMalloc(buffer, size);
             break;
 #endif
         default:
@@ -2936,6 +3044,10 @@ void free_buffer(void *buffer, enum accel_type type)
 #ifdef _ENABLE_ROCM_
             ROCM_CHECK(hipFree(buffer));
 #endif
+        case SYCL:
+#ifdef _ENABLE_SYCL_
+            syclFree(buffer);
+#endif
             break;
     }
 
@@ -2947,7 +3059,7 @@ void free_buffer(void *buffer, enum accel_type type)
 }
 
 #if defined(_ENABLE_OPENACC_) || defined(_ENABLE_CUDA_) ||                     \
-    defined(_ENABLE_ROCM_)
+    defined(_ENABLE_ROCM_) || defined(_ENABLE_SYCL_)
 int omb_get_local_rank()
 {
     char *str = NULL;
@@ -2978,7 +3090,7 @@ int omb_get_local_rank()
     return local_rank;
 }
 #endif /* defined(_ENABLE_OPENACC_) || defined(_ENABLE_CUDA_) ||               \
-          defined(_ENABLE_ROCM_) */
+          defined(_ENABLE_ROCM_) || defined(_ENABLE_SYCL_) */
 
 int init_accel(void)
 {
@@ -2987,7 +3099,7 @@ int init_accel(void)
     CUdevice cuDevice;
 #endif
 #if defined(_ENABLE_OPENACC_) || defined(_ENABLE_CUDA_) ||                     \
-    defined(_ENABLE_ROCM_)
+    defined(_ENABLE_ROCM_) || defined(_ENABLE_SYCL_)
     int local_rank = -1, dev_count = 0;
     int dev_id = 0;
 
@@ -3046,6 +3158,15 @@ int init_accel(void)
             ROCM_CHECK(hipSetDevice(dev_id));
             break;
 #endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            if (local_rank >= 0) {
+                syclGetDeviceCount(&dev_count);
+                dev_id = local_rank % dev_count;
+            }
+            syclSetDevice(dev_id);
+            break;
+#endif
         default:
             fprintf(stderr,
                     "Invalid device type, should be cuda, openacc, or rocm. "
@@ -3085,6 +3206,11 @@ int cleanup_accel(void)
 #ifdef _ENABLE_ROCM_
         case ROCM:
             ROCM_CHECK(hipDeviceReset());
+            break;
+#endif
+#ifdef _ENABLE_SYCL_
+        case SYCL:
+            syclDeviceReset();
             break;
 #endif
         default:
@@ -3210,7 +3336,15 @@ void omb_scatter_offset_copy(void *buf, int root_rank, size_t size)
             ROCM_CHECK(hipDeviceSynchronize());
         }
 #endif
+        case SYCL:
+#ifdef _ENABLE_SYCL_
+        {
+            syclMemcpy((void *)buf, (void *)buf + root_rank * size, size);
+            syclDeviceSynchronize();
+        }
+#endif
         break;
+            break;
         default:
             break;
     }

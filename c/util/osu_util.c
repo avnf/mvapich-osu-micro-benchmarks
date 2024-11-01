@@ -35,6 +35,7 @@ void print_header(int rank, int full)
                     case CUDA:
                     case OPENACC:
                     case ROCM:
+                    case SYCL:
                         fprintf(
                             stdout,
                             "# Send Buffer on %s and Receive Buffer on %s\n",
@@ -54,7 +55,8 @@ void print_header(int rank, int full)
                             MBW_MR != options.bench) {
                             fprintf(stdout, "%-*s%*s", 10, "# Size",
                                     FIELD_WIDTH, "Bandwidth (MB/s)");
-                        } else if (options.subtype == LAT) {
+                        } else if (options.subtype == LAT ||
+                                   options.subtype == PART_LAT) {
                             fprintf(stdout, "%-*s%*s", 10, "# Size",
                                     FIELD_WIDTH, "Latency (us)");
                         } else if (options.subtype == LAT_MP) {
@@ -333,6 +335,17 @@ static int set_num_warmup(int value)
     return 0;
 }
 
+static int set_num_partitions(int value)
+{
+    if (0 > value) {
+        return -1;
+    }
+
+    options.num_partitions = value;
+
+    return 0;
+}
+
 static int set_num_warmup_validation(int value)
 {
     if (0 > value) {
@@ -389,27 +402,15 @@ static int set_num_probes(int value)
     return 0;
 }
 
-static int set_max_memlimit(long long value)
-{
-    options.max_mem_limit = value;
-
-    if (value < MAX_MEM_LOWER_LIMIT) {
-        options.max_mem_limit = MAX_MEM_LOWER_LIMIT;
-        fprintf(stderr, "Requested memory limit too low, using [%d] instead.",
-                MAX_MEM_LOWER_LIMIT);
-    }
-
-    return 0;
-}
-
 void set_header(const char *header) { benchmark_header = header; }
 
 void set_benchmark_name(const char *name) { benchmark_name = name; }
 
 void enable_accel_support(void)
 {
-    accel_enabled = ((CUDA_ENABLED || OPENACC_ENABLED || ROCM_ENABLED) &&
-                     !(options.subtype == LAT_MT || options.subtype == LAT_MP));
+    accel_enabled =
+        ((CUDA_ENABLED || OPENACC_ENABLED || ROCM_ENABLED || SYCL_ENABLED) &&
+         !(options.subtype == LAT_MT || options.subtype == LAT_MP));
 }
 
 void omb_process_long_options(struct option *long_options,
@@ -454,6 +455,9 @@ int process_options(int argc, char *argv[])
                 break;
             case LAT:
                 OMBOP_OPTSTR_BLK(PT2PT, LAT);
+                break;
+            case PART_LAT:
+                OMBOP_OPTSTR_BLK(PT2PT, PART_LAT);
                 break;
             case LAT_MP:
                 OMBOP_OPTSTR_BLK(PT2PT, LAT_MP);
@@ -617,7 +621,6 @@ int process_options(int argc, char *argv[])
     } else {
         options.max_message_size = MAX_MESSAGE_SIZE;
     }
-    options.max_mem_limit = MAX_MEM_LIMIT;
     options.window_size_large = WINDOW_SIZE_LARGE;
     options.window_size = WINDOW_SIZE_LARGE;
     options.window_varied = 0;
@@ -646,6 +649,7 @@ int process_options(int argc, char *argv[])
     options.omb_enable_mpi_in_place = 0;
     options.omb_root_rank = 0;
     options.omb_tail_lat = 0;
+    options.num_partitions = DEFAULT_NUM_PARTITIONS;
     for (itr = 0; itr < OMB_STAT_MAX_NUM; itr++) {
         options.omb_stat_percentiles[itr] = -1;
     }
@@ -667,6 +671,7 @@ int process_options(int argc, char *argv[])
             options.num_processes = DEF_NUM_PROCESSES;
             options.min_message_size = 0;
             options.sender_processes = DEF_NUM_PROCESSES;
+        case PART_LAT:
         case LAT:
         case BARRIER:
         case GATHER:
@@ -850,13 +855,6 @@ int process_options(int argc, char *argv[])
                     itr++;
                 }
                 break;
-            case 'M':
-                /*
-                 * This function does not error but prints a warning message if
-                 * the value is too low.
-                 */
-                set_max_memlimit(atoll(optarg));
-                break;
             case 'd':
                 if (!accel_enabled) {
                     bad_usage.message = "Benchmark Does Not Support "
@@ -900,6 +898,16 @@ int process_options(int argc, char *argv[])
                         bad_usage.message =
                             "ROCm Support Not Enabled\n"
                             "Please recompile benchmark with ROCm support";
+                        bad_usage.optarg = optarg;
+                        return PO_BAD_USAGE;
+                    }
+                } else if (0 == strncasecmp(optarg, "sycl", 10)) {
+                    if (SYCL_ENABLED) {
+                        options.accel = SYCL;
+                    } else {
+                        bad_usage.message =
+                            "SYCL Support Not Enabled\n"
+                            "Please recompile benchmark with SYCL support";
                         bad_usage.optarg = optarg;
                         return PO_BAD_USAGE;
                     }
@@ -1112,6 +1120,13 @@ int process_options(int argc, char *argv[])
             }
 #endif
             break;
+            case 'q':
+                if (set_num_partitions(atoi(optarg))) {
+                    bad_usage.message = "Invalid Number of partitions";
+                    bad_usage.optarg = optarg;
+                    return PO_BAD_USAGE;
+                }
+                break;
             case 'l':
                 options.omb_enable_mpi_in_place = 1;
                 break;
@@ -1159,22 +1174,22 @@ int process_options(int argc, char *argv[])
     }
 
     if (0 == options.omb_dtype_itr) {
-        options.omb_dtype_list[options.omb_dtype_itr] = OMB_CHAR;
+        if (REDUCE == options.subtype || REDUCE_SCATTER == options.subtype ||
+            ALL_REDUCE == options.subtype ||
+            NBC_ALL_REDUCE == options.subtype ||
+            NBC_REDUCE == options.subtype ||
+            NBC_REDUCE_SCATTER == options.subtype ||
+            ALL_REDUCE_P == options.subtype || REDUCE_P == options.subtype ||
+            REDUCE_SCATTER_P == options.subtype) {
+            options.omb_dtype_list[options.omb_dtype_itr] = OMB_INT;
+        } else {
+            options.omb_dtype_list[options.omb_dtype_itr] = OMB_CHAR;
+        }
         options.omb_dtype_itr++;
     }
 
     if (accel_enabled) {
         if ((optind + 2) == argc) {
-            if (options.subtype == NHBR_ALLTOALL ||
-                options.subtype == NHBR_GATHER ||
-                options.subtype == NBC_NHBR_ALLTOALL ||
-                options.subtype == NBC_NHBR_GATHER) {
-                fprintf(stderr,
-                        "Accelerators not yet supported for neighborhood "
-                        "collective benchmarks.\n");
-                accel_enabled = 0;
-                return PO_BAD_USAGE;
-            }
             options.src = argv[optind][0];
             if (options.src == 'M') {
 #ifdef _ENABLE_CUDA_KERNEL_
@@ -1367,6 +1382,8 @@ int setAccel(char buf_type)
                 options.accel = CUDA;
 #elif defined(_ENABLE_ROCM_)
                 options.accel = ROCM;
+#elif defined(_ENABLE_SYCL_)
+                options.accel = SYCL;
 #endif
             }
             break;

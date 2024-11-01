@@ -22,9 +22,9 @@ The Java directory contains Java versions of the benchmarks. These are compiled
 separately via the javac compiler. See the README file located in the java
 directory for more details.
 
-OMB also contains ROCm, CUDA and OpenACC extensions to the benchmarks. CUDA
-extensions can be enabled by configuring OMB with --enable-cuda option as shown
-below.
+OMB also contains ROCm, CUDA, SYCL and OpenACC extensions to the benchmarks.
+CUDA extensions can be enabled by configuring OMB with --enable-cuda option as
+shown below.
 
     ./configure CC=/path/to/mpicc
                 CXX=/path/to/mpicxx
@@ -45,6 +45,17 @@ communication from buffers in GPU Device memory.
                 --with-rocm=/path/to/rocm/install
     make
     make install
+
+SYCL extensions can be enabled by configuring OMB with --enable-sycl
+option as shown below.
+
+    ./configure CC=/path/to/mpicc
+                CXX=/path/to/mpicxx
+                --enable-sycl
+                --with-sycl=/path/to/sycl/install
+    make
+    make install
+
 
 More information about the ROCm and CUDA extensions are given towards the end of
 the README.
@@ -264,8 +275,6 @@ Collective Latency Tests
            message length.
     * "-i" can be used to set the number of iterations to run for each message
            length.
-    * "-M" can be used to set per process maximum memory consumption.  By
-           default the benchmarks are limited to 512MB allocations.
 
 Collective XCCL(NCCL/RCCL) Benchmarks
 --------------------------
@@ -298,8 +307,6 @@ Collective Latency Tests
            message length.
     * "-i" can be used to set the number of iterations to run for each message
            length.
-    * "-M" can be used to set per process maximum memory consumption.  By
-           default the benchmarks are limited to 512MB allocations.
 
 Support for Data Validation
 ---------------------------
@@ -697,6 +704,10 @@ osu_oshm_put.c - Latency Test for OpenSHMEM Put Routine
     * without timing to ignore any start-up overheads.  Both PEs call shmem
     * barrier all after the test for each message size.
 
+osu_oshm_put_bw.c - Bandwidth Test for OpenSHMEM Put Routine
+    * This benchmark is similar to osu_oshm_put.c except it measures
+    * the total bandwidth (MB/s) instead of latency.
+
 osu_oshm_put_nb.c - Latency Test for OpenSHMEM Non-blocking Put Routine
     * This benchmark measures the non-blocking latency of a shmem putmem_nbi
     * operation for different data sizes. The user is required to select
@@ -708,15 +719,27 @@ osu_oshm_put_nb.c - Latency Test for OpenSHMEM Non-blocking Put Routine
     * A few warm-up iterations are run without timing to ignore any start-up
     * overheads. Both PEs call shmem barrier all after the test for each message size.
 
+osu_oshm_put_nb_bw.c - Bandwidth Test for OpenSHMEM Non-blocking Put Routine
+    * This benchmark is similar to osu_oshm_put_nb.c except it measures
+    * the total bandwidth (MB/s) instead of latency.
+
 osu_oshm_get.c - Latency Test for OpenSHMEM Get Routine
     * This benchmark is similar to the one above except that PE 0 does a shmem
     * getmem operation to read data from PE 1 in each iteration. The average
     * latency per iteration is reported.
 
+osu_oshm_get_bw.c - Bandwidth Test for OpenSHMEM Get Routine
+    * This benchmark is similar to osu_oshm_get.c except it measures
+    * the total bandwidth (MB/s) instead of latency.
+
 osu_oshm_get_nb.c - Latency Test for OpenSHMEM Non-blocking Get Routine
     * This benchmark is similar to the one above except that PE 0 does a shmem
     * getmem_nbi operation to read data from PE 1 in each iteration. The average
     * latency per iteration is reported.
+
+osu_oshm_get_nb_bw.c - Bandwidth Test for OpenSHMEM Non-blocking Get Routine
+    * This benchmark is similar to osu_oshm_get_nb.c except it measures
+    * the total bandwidth (MB/s) instead of latency.
 
 osu_oshm_put_mr.c - Message Rate Test for OpenSHMEM Put Routine
     * This benchmark measures the aggregate uni-directional operation rate of
@@ -928,9 +951,9 @@ communication from buffers in GPU Device memory.
     make
     make install
 
-Similarly, OpenACC Extensions can be enabled by specifying the --enable-openacc
-option.  The MPI library used should be able to support MPI communication from
-buffers in GPU Device memory.
+Similarly, OpenACC and SYCL Extensions can be enabled by specifying the
+--enable-openacc and --enable-sycl options respectively.  The MPI library used
+should be able to support MPI communication from buffers in GPU Device memory.
 
 The following benchmarks have been extended to evaluate performance of
 MPI communication using buffers on AMD and NVIDIA GPU devices.
@@ -976,8 +999,10 @@ MPI communication using buffers on AMD and NVIDIA GPU devices.
 If both CUDA and OpenACC support is enabled you can switch between the modes
 using the -d [cuda|openacc] option to the benchmarks. If ROCm support is
 enabled, you need to use -d rocm option to make the benchmarks use this feature.
-Whether a process allocates its communication buffers on the GPU device or on
-the host can be controlled at run-time.  Use the -h option for more help.
+If SYCL support is enabled, you need to use -d sycl option to make the
+benchmarks use this feature. Whether a process allocates its communication
+buffers on the GPU device or on the host can be controlled at run-time.
+Use the -h option for more help.
 
     ./osu_latency -h
     Usage: osu_latency [options] [RANK0 RANK1]
@@ -1459,3 +1484,9 @@ osu_bw_fan_in.c - benchmark to measure receive bandwidth.
     * This process is repeated for several iterations. The objective of this
     * benchmark is to determine the achieved bandwidth with configurable
     * number of processes running on each node.
+
+Point-to-Point Partitioned Benchmarks
+------------------------------
+osu_partitioned_latency - Partitioned Latency Test
+    * Similar to osu_latency test using partitioned point-to-point communication
+    * requests.

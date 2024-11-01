@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-NVCC = nvcc
+NVCC = @NVCC@
 NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX) $(NVCCFLAGS)
 SUFFIXES = .cu .cpp
 .cu.cpp:
@@ -19,6 +19,9 @@ UTILITIES = ../../../util/osu_util.c ../../../util/osu_util.h \
 ../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 ../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
 ../../../util/osu_util_validation.c
+if SYCL
+UTILITIES += ../../../util/osu_util_sycl.cpp ../../../util/osu_util_sycl.hpp
+endif
 if CUDA_KERNELS
 UTILITIES += ../../../util/kernel.cu
 if BUILD_USE_PGI

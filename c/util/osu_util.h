@@ -78,6 +78,13 @@
 #define ROCM_ENABLED 0
 #endif
 
+#ifdef _ENABLE_SYCL_
+#define SYCL_ENABLED 1
+#include "osu_util_sycl.hpp"
+#else
+#define SYCL_ENABLED 0
+#endif
+
 #ifndef BENCHMARK
 #define BENCHMARK "MPI%s BENCHMARK NAME UNSET"
 #endif
@@ -165,7 +172,7 @@ void allocate_host_arrays();
 
 enum mpi_req { MAX_REQ_NUM = 1000 };
 
-#define OMB_LONG_OPTIONS_ARRAY_SIZE     29
+#define OMB_LONG_OPTIONS_ARRAY_SIZE     30
 #define BW_LOOP_SMALL                   100
 #define BW_SKIP_SMALL                   10
 #define BW_LOOP_LARGE                   20
@@ -200,7 +207,6 @@ enum mpi_req { MAX_REQ_NUM = 1000 };
 #define LARGE_MESSAGE_SIZE              8192
 #define MAX_ALIGNMENT                   65536
 #define MAX_MEM_LIMIT                   (512 * 1024 * 1024)
-#define MAX_MEM_LOWER_LIMIT             (1 * 1024 * 1024)
 #define WINDOW_SIZE_LARGE               64
 #define MYBUFSIZE                       MAX_MESSAGE_SIZE
 #define ONESBUFSIZE                     ((MAX_MESSAGE_SIZE * WINDOW_SIZE_LARGE) + MAX_ALIGNMENT)
@@ -210,7 +216,7 @@ enum mpi_req { MAX_REQ_NUM = 1000 };
 #define OMB_DATATYPE_STR_MAX_LEN        128
 #define OMB_ROOT_ROTATE_VAL             -1
 #define OMB_STAT_MAX_NUM                5
-
+#define DEFAULT_NUM_PARTITIONS          8
 enum po_ret_type {
     PO_CUDA_NOT_AVAIL,
     PO_OPENACC_NOT_AVAIL,
@@ -220,7 +226,7 @@ enum po_ret_type {
     PO_OKAY,
 };
 
-enum accel_type { NONE, CUDA, OPENACC, MANAGED, ROCM };
+enum accel_type { NONE, CUDA, OPENACC, MANAGED, ROCM, SYCL };
 
 enum target_type { CPU, GPU, BOTH };
 
@@ -239,6 +245,7 @@ enum test_subtype {
     INIT,
     BW,
     LAT,
+    PART_LAT,
     LAT_MT,
     LAT_MP,
     BARRIER,
@@ -335,7 +342,6 @@ struct options_t {
     size_t max_message_size;
     size_t iterations;
     size_t iterations_large;
-    size_t max_mem_limit;
     size_t skip;
     size_t skip_large;
     size_t warmup_validation;
@@ -387,6 +393,7 @@ struct options_t {
     int log_validation;
     char log_validation_dir_path[OMB_FILE_PATH_MAX_LENGTH];
     int omb_stat_percentiles[OMB_STAT_MAX_NUM];
+    int num_partitions;
 };
 
 struct help_msg_t {

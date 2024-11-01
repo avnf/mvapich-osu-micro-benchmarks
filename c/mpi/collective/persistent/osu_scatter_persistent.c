@@ -88,7 +88,6 @@ int main(int argc, char *argv[])
         omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
-    check_mem_limit(numprocs);
     bufsize = options.max_message_size * numprocs;
     if (allocate_memory_coll((void **)&sendbuf, bufsize, options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);

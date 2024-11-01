@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
         omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
-    check_mem_limit(numprocs);
     if (0 == options.omb_enable_mpi_in_place) {
         if (allocate_memory_coll((void **)&sendbuf, options.max_message_size,
                                  options.accel)) {
@@ -207,7 +206,7 @@ int main(int argc, char *argv[])
 
             if (options.validate) {
                 print_stats_validate(rank, size, avg_time, min_time, max_time,
-                                     local_errors, omb_stat);
+                                     errors, omb_stat);
             } else {
                 print_stats(rank, size, avg_time, min_time, max_time, omb_stat);
             }

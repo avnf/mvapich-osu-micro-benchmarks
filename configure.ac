@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.59])
-AC_INIT([OSU-Micro-Benchmarks], [7.4], [mvapich-discuss@cse.ohio-state.edu])
+AC_INIT([OSU-Micro-Benchmarks], [7.5], [mvapich-discuss@cse.ohio-state.edu])
 AC_CONFIG_SRCDIR([c/mpi/pt2pt/standard/osu_latency.c])
 
 AM_INIT_AUTOMAKE([foreign])
@@ -36,7 +36,7 @@ AC_ARG_ENABLE([cuda],
 			       without using cuda kernel support for
 			       non-blocking collectives])
               ],
-              [],
+              [NVCC="nvcc"],
               [enable_cuda=no])
 
 AC_ARG_WITH([cuda],
@@ -46,7 +46,8 @@ AC_ARG_WITH([cuda],
             [AS_CASE([$with_cuda],
                      [yes|no], [],
                      [CPPFLAGS="-I$with_cuda/include $CPPFLAGS"
-                      LDFLAGS="-L$with_cuda/lib64 -Wl,-rpath=$with_cuda/lib64 -L$with_cuda/lib -Wl,-rpath=$with_cuda/lib $LDFLAGS"])
+                      LDFLAGS="-L$with_cuda/lib64 -Wl,-rpath=$with_cuda/lib64 -L$with_cuda/lib -Wl,-rpath=$with_cuda/lib $LDFLAGS"
+                      NVCC="$with_cuda/bin/nvcc"])
             ])
 
 AC_ARG_WITH([cuda-include],
@@ -65,6 +66,15 @@ AC_ARG_WITH([cuda-libpath],
             [AS_CASE([$with_cuda_libpath],
                      [yes|no], [],
                      [LDFLAGS="-L$with_cuda_libpath -Wl,-rpath=$with_cuda_libpath $LDFLAGS"])
+            ])
+
+AC_ARG_WITH([cuda-binpath],
+            [AS_HELP_STRING([--with-cuda-binpath=@<:@CUDA binary path@:>@],
+                            [Provide path to CUDA binary path containing nvcc])
+            ],
+            [AS_CASE([$with_cuda_binpath],
+                     [yes|no], [],
+                     [NVCC="$with_cuda_binpath/nvcc"])
             ])
 
 AC_ARG_ENABLE([papi],
@@ -125,6 +135,16 @@ AC_ARG_ENABLE([rocm],
               [],
               [enable_rocm=no])
 
+AC_ARG_WITH([hip],
+            [AS_HELP_STRING([--with-hip],
+			                [Enable ROCm benchmarks - inherited from MPI])
+              ],
+              [enable_rocm=yes
+               CPPFLAGS="-I$with_hip/include $CPPFLAGS"
+               LDFLAGS="-L$with_hip/lib64 -Wl,-rpath=$with_hip/lib64 -L$with_hip/lib -Wl,-rpath=$with_hip/lib -lamdhip64 $LDFLAGS"
+               ],
+              [])
+
 AC_ARG_WITH([rocm],
             [AS_HELP_STRING([--with-rocm=@<:@ROCm installation path@:>@],
                             [Provide path to ROCm installation])
@@ -133,6 +153,23 @@ AC_ARG_WITH([rocm],
                      [yes|no], [],
                      [CPPFLAGS="-I$with_rocm/include $CPPFLAGS"
                       LDFLAGS="-L$with_rocm/lib64 -Wl,-rpath=$with_rocm/lib64 -L$with_rocm/lib -Wl,-rpath=$with_rocm/lib -lamdhip64 $LDFLAGS"])
+            ])
+
+AC_ARG_ENABLE([sycl],
+              [AS_HELP_STRING([--enable-sycl],
+                              [Enable SYCL benchmarks])
+              ],
+              [],
+              [enable_sycl=no])
+
+AC_ARG_WITH([sycl],
+            [AS_HELP_STRING([--with-sycl=@<:@SYCL installation path@:>@],
+                            [Provide path to SYCL installation])
+            ],
+            [AS_CASE([$with_sycl],
+                     [yes|no], [],
+                     [CPPFLAGS="-I$with_sycl/compiler/latest/include -I$with_sycl/compiler/latest/include/sycl -I$with_sycl/dpcpp-ct/latest/include/dpct $CPPFLAGS"
+                      LDFLAGS="-L$with_sycl/compiler/latest/lib $LDFLAGS"])
             ])
 
 AC_ARG_ENABLE([rcclomb],
@@ -150,8 +187,15 @@ if test "x$enable_rcclomb" = "xyes"; then
              ],
              [AS_CASE([$with_rccl],
                       [yes|no], [],
-                      [CPPFLAGS="-I$with_rccl/include $CPPFLAGS"
-                       LDFLAGS="-L$with_rccl/lib -Wl,-rpath=$with_rccl/lib -lrccl $LDFLAGS"])
+                      [AS_IF([test -d "$with_rccl/rccl"],
+                          [CPPFLAGS="-I$with_rccl/rccl/include $CPPFLAGS"
+                           LDFLAGS="-L$with_rccl/rccl/lib -Wl,-rpath=$with_rccl/rccl/lib -lrccl $LDFLAGS"],
+                      [AS_IF([test -d "$with_rccl/include/rccl"],
+                        [CPPFLAGS="-I$with_rccl/include/rccl $CPPFLAGS"
+                         LDFLAGS="-L$with_rccl/lib -Wl,-rpath=$with_rccl/lib -lrccl $LDFLAGS"],
+                         [CPPFLAGS="-I$with_rccl/include $CPPFLAGS"
+                       LDFLAGS="-L$with_rccl/lib -Wl,-rpath=$with_rccl/lib -lrccl $LDFLAGS"])])
+                      ])
              ])
 fi
 
@@ -221,10 +265,16 @@ AM_CONDITIONAL([EMBEDDED_BUILD], [test x"$enable_embedded" = xyes])
 AM_CONDITIONAL([BUILD_PROFILING_LIB], [test x"$with_plib" = xyes])
 AC_SUBST([PMPILIBNAME], [$PMILIBNAME])
 AC_SUBST([MPILIBNAME], [$MPILIBNAME])
+AC_SUBST([NVCC], [$NVCC])
 
 
 AS_IF([test "x$enable_rcclomb" = xyes && test "x$enable_ncclomb" = xyes],
       [AC_MSG_ERROR([Can not enable NCCL and RCCL benchmarks together])])
+
+AS_IF([test "x$enable_sycl" = xyes && ( test "x$enable_ncclomb" = xyes ||      \
+       test "x$enable_cuda" = xyes || test "x$enable_rcclomb" = xyes || test   \
+       "x$enable_rocm" = xyes || test "x$enable_openacc" = xyes )],
+      [AC_MSG_ERROR([Can not enable SYCL with other accelerators])])
 
 AS_IF([test "x$enable_ncclomb" = xyes], [
         AS_IF([test "x$enable_embedded" != xyes], [
@@ -246,7 +296,7 @@ AS_IF([test "x$enable_rcclomb" = xyes], [
        AC_DEFINE([__HIP_PLATFORM_AMD__])
        AC_CHECK_HEADERS([rccl.h], [],
                       [AC_MSG_ERROR([cannot include rccl.h])])
-       AC_SEARCH_LIBS([ncclGetUniqueId], [nccl], [],
+       AC_SEARCH_LIBS([ncclGetUniqueId], [rccl], [],
                       [AC_MSG_ERROR([cannot link with -lrccl])])
        AC_CHECK_FUNC([ncclSend], [rccl_pt2pt=true],
                      [AC_MSG_WARN([RCCL version >= 3.7.0 required for point-to-point support. Disabling building RCCL point-to-point benchmarks.])])
@@ -266,6 +316,15 @@ AS_IF([test "x$enable_rocm" = xyes], [
        AC_SEARCH_LIBS([hipFree], [amdhip64], [],
                       [AC_MSG_ERROR([cannot link with -lamdhip64])])
        AC_DEFINE([_ENABLE_ROCM_], [1], [Enable ROCm])
+       ])
+
+AS_IF([test "x$enable_sycl" = xyes], [
+       AC_LANG([C++])
+       AC_CHECK_HEADERS([sycl.hpp], [],
+                        [AC_MSG_ERROR([cannot include sycl.hpp])])
+       AC_CHECK_HEADERS([dpct.hpp], [],
+                        [AC_MSG_ERROR([cannot include dpct.hpp])])
+       AC_DEFINE([_ENABLE_SYCL_], [1], [Enable SYCL])
        ])
 
 AS_IF([test "x$mpi4_library" = xtrue], [
@@ -320,6 +379,7 @@ AM_CONDITIONAL([OPENACC], [test x$enable_openacc = xyes])
 AM_CONDITIONAL([ROCM], [test x$enable_rocm = xyes])
 AM_CONDITIONAL([RCCL], [test x$enable_rcclomb = xyes])
 AM_CONDITIONAL([RCCL_PT2PT], [test x$rccl_pt2pt = xtrue])
+AM_CONDITIONAL([SYCL], [test x$enable_sycl = xyes])
 AM_CONDITIONAL([OSHM], [test x$oshm_library = xtrue])
 AM_CONDITIONAL([MPI], [test x$mpi_library = xtrue])
 AM_CONDITIONAL([UPC], [test x$upc_compiler = xtrue])

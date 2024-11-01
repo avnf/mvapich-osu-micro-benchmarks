@@ -1,4 +1,4 @@
-#define BENCHMARK "OSU OpenSHMEM Get Test"
+#define BENCHMARK "OSU OpenSHMEM Get Bandwidth Test"
 /*
  * Copyright (c) 2002-2024 the Network-Based Computing Laboratory
  * (NBCL), The Ohio State University.
@@ -23,13 +23,14 @@ int large_message_size = 8192;
 
 int main(int argc, char *argv[])
 {
-    int myid, numprocs, i;
-    int size;
+    int myid = 0, numprocs = 0, i = 0;
+    int size = 0;
     char *s_buf, *r_buf;
     char *s_buf_heap, *r_buf_heap;
-    int align_size;
-    double t_start = 0, t_end = 0;
-    int use_heap = 0; // default uses global
+    int align_size = MESSAGE_ALIGNMENT;
+    double t_start = 0.0, t_end = 0.0;
+    double mb_total = 0.0, t_total = 0.0;
+    int use_heap = 0;
 
 #ifdef OSHM_1_3
     shmem_init();
@@ -42,7 +43,7 @@ int main(int argc, char *argv[])
 #endif
 
     if (numprocs != 2) {
-        if (myid == 0) {
+        if (0 == myid) {
             fprintf(stderr, "This test requires exactly two processes\n");
         }
 
@@ -64,8 +65,6 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    align_size = MESSAGE_ALIGNMENT;
-
     /**************Allocating Memory*********************/
 
     if (use_heap) {
@@ -76,7 +75,6 @@ int main(int argc, char *argv[])
         s_buf_heap = (char *)shmalloc(MYBUFSIZE);
         r_buf_heap = (char *)shmalloc(MYBUFSIZE);
 #endif
-
         s_buf = (char *)(((unsigned long)s_buf_heap + (align_size - 1)) /
                          align_size * align_size);
 
@@ -92,9 +90,10 @@ int main(int argc, char *argv[])
 
     /**************Memory Allocation Done*********************/
 
-    if (myid == 0) {
+    if (0 == myid) {
         fprintf(stdout, HEADER);
-        fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
+        fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH,
+                "Bandwidth (MB/s)");
         fflush(stdout);
     }
 
@@ -110,31 +109,26 @@ int main(int argc, char *argv[])
             skip = skip_large = 0;
         }
 
-        loop = 15;
-        skip = 10;
-
         shmem_barrier_all();
 
-        if (myid == 0) {
-            shmem_fence();
-
+        if (0 == myid) {
             for (i = 0; i < loop + skip; i++) {
-                if (i == skip)
+                if (i == skip) {
                     t_start = TIME();
+                }
 
-                shmem_getmem_nbi(r_buf, s_buf, size, 1);
-                shmem_quiet();
+                shmem_getmem(r_buf, s_buf, size, 1);
             }
-
             t_end = TIME();
         }
         shmem_barrier_all();
 
-        if (myid == 0) {
-            double latency = (1.0 * (t_end - t_start)) / loop;
-
+        if (0 == myid) {
+            mb_total = size * loop / (1.0 * 1e6);
+            t_total = (t_end - t_start) / 1e6;
+            double bw = mb_total / t_total;
             fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
-                    FLOAT_PRECISION, latency);
+                    FLOAT_PRECISION, bw);
             fflush(stdout);
         }
     }

@@ -75,10 +75,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    if ((options.max_message_size * numprocs) > options.max_mem_limit) {
-        options.max_message_size = options.max_mem_limit / numprocs;
-    }
-
     omb_xccl_interface->allocate_xccl_stream();
     omb_xccl_interface->create_xccl_comm(numprocs, rank);
 

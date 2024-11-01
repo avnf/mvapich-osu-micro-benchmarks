@@ -97,9 +97,10 @@ nhbr_coll_PROGRAMS = osu_neighbor_allgather$(EXEEXT) \
 	osu_ineighbor_alltoall$(EXEEXT) \
 	osu_ineighbor_alltoallv$(EXEEXT) \
 	osu_ineighbor_alltoallw$(EXEEXT)
-@CUDA_KERNELS_TRUE@am__append_1 = ../../../util/kernel.cu
-@BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_2 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
-@OPENACC_TRUE@am__append_3 = -acc -ta=tesla:nordc
+@SYCL_TRUE@am__append_1 = ../../../util/osu_util_sycl.cpp ../../../util/osu_util_sycl.hpp
+@CUDA_KERNELS_TRUE@am__append_2 = ../../../util/kernel.cu
+@BUILD_PROFILING_LIB_TRUE@@EMBEDDED_BUILD_TRUE@am__append_3 = $(top_builddir)/../lib/lib@PMPILIBNAME@.la
+@OPENACC_TRUE@am__append_4 = -acc -ta=tesla:nordc
 subdir = c/mpi/collective/neighborhood
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -116,15 +117,18 @@ am__osu_ineighbor_allgather_SOURCES_DIST = osu_ineighbor_allgather.c \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am__dirstamp = $(am__leading_dot)dirstamp
-@CUDA_KERNELS_TRUE@am__objects_1 = ../../../util/kernel.$(OBJEXT)
-am__objects_2 = ../../../util/osu_util.$(OBJEXT) \
+@SYCL_TRUE@am__objects_1 = ../../../util/osu_util_sycl.$(OBJEXT)
+@CUDA_KERNELS_TRUE@am__objects_2 = ../../../util/kernel.$(OBJEXT)
+am__objects_3 = ../../../util/osu_util.$(OBJEXT) \
 	../../../util/osu_util_mpi.$(OBJEXT) \
 	../../../util/osu_util_graph.$(OBJEXT) \
-	../../../util/osu_util_papi.$(OBJEXT) $(am__objects_1)
+	../../../util/osu_util_papi.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2)
 am_osu_ineighbor_allgather_OBJECTS =  \
-	osu_ineighbor_allgather.$(OBJEXT) $(am__objects_2)
+	osu_ineighbor_allgather.$(OBJEXT) $(am__objects_3)
 osu_ineighbor_allgather_OBJECTS =  \
 	$(am_osu_ineighbor_allgather_OBJECTS)
 osu_ineighbor_allgather_LDADD = $(LDADD)
@@ -137,9 +141,10 @@ am__osu_ineighbor_allgatherv_SOURCES_DIST =  \
 	../../../util/osu_util.h ../../../util/osu_util_mpi.c \
 	../../../util/osu_util_mpi.h ../../../util/osu_util_graph.c \
 	../../../util/osu_util_graph.h ../../../util/osu_util_papi.c \
-	../../../util/osu_util_papi.h ../../../util/kernel.cu
+	../../../util/osu_util_papi.h ../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am_osu_ineighbor_allgatherv_OBJECTS =  \
-	osu_ineighbor_allgatherv.$(OBJEXT) $(am__objects_2)
+	osu_ineighbor_allgatherv.$(OBJEXT) $(am__objects_3)
 osu_ineighbor_allgatherv_OBJECTS =  \
 	$(am_osu_ineighbor_allgatherv_OBJECTS)
 osu_ineighbor_allgatherv_LDADD = $(LDADD)
@@ -148,9 +153,10 @@ am__osu_ineighbor_alltoall_SOURCES_DIST = osu_ineighbor_alltoall.c \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am_osu_ineighbor_alltoall_OBJECTS = osu_ineighbor_alltoall.$(OBJEXT) \
-	$(am__objects_2)
+	$(am__objects_3)
 osu_ineighbor_alltoall_OBJECTS = $(am_osu_ineighbor_alltoall_OBJECTS)
 osu_ineighbor_alltoall_LDADD = $(LDADD)
 am__osu_ineighbor_alltoallv_SOURCES_DIST = osu_ineighbor_alltoallv.c \
@@ -158,9 +164,10 @@ am__osu_ineighbor_alltoallv_SOURCES_DIST = osu_ineighbor_alltoallv.c \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am_osu_ineighbor_alltoallv_OBJECTS =  \
-	osu_ineighbor_alltoallv.$(OBJEXT) $(am__objects_2)
+	osu_ineighbor_alltoallv.$(OBJEXT) $(am__objects_3)
 osu_ineighbor_alltoallv_OBJECTS =  \
 	$(am_osu_ineighbor_alltoallv_OBJECTS)
 osu_ineighbor_alltoallv_LDADD = $(LDADD)
@@ -169,9 +176,10 @@ am__osu_ineighbor_alltoallw_SOURCES_DIST = osu_ineighbor_alltoallw.c \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am_osu_ineighbor_alltoallw_OBJECTS =  \
-	osu_ineighbor_alltoallw.$(OBJEXT) $(am__objects_2)
+	osu_ineighbor_alltoallw.$(OBJEXT) $(am__objects_3)
 osu_ineighbor_alltoallw_OBJECTS =  \
 	$(am_osu_ineighbor_alltoallw_OBJECTS)
 osu_ineighbor_alltoallw_LDADD = $(LDADD)
@@ -180,9 +188,10 @@ am__osu_neighbor_allgather_SOURCES_DIST = osu_neighbor_allgather.c \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am_osu_neighbor_allgather_OBJECTS = osu_neighbor_allgather.$(OBJEXT) \
-	$(am__objects_2)
+	$(am__objects_3)
 osu_neighbor_allgather_OBJECTS = $(am_osu_neighbor_allgather_OBJECTS)
 osu_neighbor_allgather_LDADD = $(LDADD)
 am__osu_neighbor_allgatherv_SOURCES_DIST = osu_neighbor_allgatherv.c \
@@ -190,9 +199,10 @@ am__osu_neighbor_allgatherv_SOURCES_DIST = osu_neighbor_allgatherv.c \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am_osu_neighbor_allgatherv_OBJECTS =  \
-	osu_neighbor_allgatherv.$(OBJEXT) $(am__objects_2)
+	osu_neighbor_allgatherv.$(OBJEXT) $(am__objects_3)
 osu_neighbor_allgatherv_OBJECTS =  \
 	$(am_osu_neighbor_allgatherv_OBJECTS)
 osu_neighbor_allgatherv_LDADD = $(LDADD)
@@ -201,9 +211,10 @@ am__osu_neighbor_alltoall_SOURCES_DIST = osu_neighbor_alltoall.c \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am_osu_neighbor_alltoall_OBJECTS = osu_neighbor_alltoall.$(OBJEXT) \
-	$(am__objects_2)
+	$(am__objects_3)
 osu_neighbor_alltoall_OBJECTS = $(am_osu_neighbor_alltoall_OBJECTS)
 osu_neighbor_alltoall_LDADD = $(LDADD)
 am__osu_neighbor_alltoallv_SOURCES_DIST = osu_neighbor_alltoallv.c \
@@ -211,9 +222,10 @@ am__osu_neighbor_alltoallv_SOURCES_DIST = osu_neighbor_alltoallv.c \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am_osu_neighbor_alltoallv_OBJECTS = osu_neighbor_alltoallv.$(OBJEXT) \
-	$(am__objects_2)
+	$(am__objects_3)
 osu_neighbor_alltoallv_OBJECTS = $(am_osu_neighbor_alltoallv_OBJECTS)
 osu_neighbor_alltoallv_LDADD = $(LDADD)
 am__osu_neighbor_alltoallw_SOURCES_DIST = osu_neighbor_alltoallw.c \
@@ -221,9 +233,10 @@ am__osu_neighbor_alltoallw_SOURCES_DIST = osu_neighbor_alltoallw.c \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	../../../util/kernel.cu
+	../../../util/osu_util_sycl.cpp \
+	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
 am_osu_neighbor_alltoallw_OBJECTS = osu_neighbor_alltoallw.$(OBJEXT) \
-	$(am__objects_2)
+	$(am__objects_3)
 osu_neighbor_alltoallw_OBJECTS = $(am_osu_neighbor_alltoallw_OBJECTS)
 osu_neighbor_alltoallw_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -246,6 +259,7 @@ am__depfiles_remade = ../../../util/$(DEPDIR)/kernel.Po \
 	../../../util/$(DEPDIR)/osu_util_graph.Po \
 	../../../util/$(DEPDIR)/osu_util_mpi.Po \
 	../../../util/$(DEPDIR)/osu_util_papi.Po \
+	../../../util/$(DEPDIR)/osu_util_sycl.Po \
 	./$(DEPDIR)/osu_ineighbor_allgather.Po \
 	./$(DEPDIR)/osu_ineighbor_allgatherv.Po \
 	./$(DEPDIR)/osu_ineighbor_alltoall.Po \
@@ -391,6 +405,7 @@ MKDIR_P = @MKDIR_P@
 MPILIBNAME = @MPILIBNAME@
 NM = @NM@
 NMEDIT = @NMEDIT@
+NVCC = @NVCC@
 NVCCFLAGS = @NVCCFLAGS@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
@@ -465,16 +480,15 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-NVCC = nvcc
 NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX) $(NVCCFLAGS)
 SUFFIXES = .cu .cpp
 nhbr_colldir = $(pkglibexecdir)/mpi/collective
-AM_CFLAGS = -I${top_srcdir}/c/util $(am__append_3)
+AM_CFLAGS = -I${top_srcdir}/c/util $(am__append_4)
 UTILITIES = ../../../util/osu_util.c ../../../util/osu_util.h \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
-	$(am__append_1)
+	$(am__append_1) $(am__append_2)
 @BUILD_USE_PGI_TRUE@@CUDA_KERNELS_TRUE@AM_CXXFLAGS = --nvcchost --no_preincludes
 @OPENACC_TRUE@AM_CXXFLAGS = -acc -ta=tesla:nordc
 osu_neighbor_allgather_SOURCES = osu_neighbor_allgather.c $(UTILITIES)
@@ -487,7 +501,7 @@ osu_ineighbor_allgatherv_SOURCES = osu_ineighbor_allgatherv.c $(UTILITIES)
 osu_ineighbor_alltoall_SOURCES = osu_ineighbor_alltoall.c $(UTILITIES)
 osu_ineighbor_alltoallv_SOURCES = osu_ineighbor_alltoallv.c $(UTILITIES)
 osu_ineighbor_alltoallw_SOURCES = osu_ineighbor_alltoallw.c $(UTILITIES)
-@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_2) \
+@EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_3) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \
 @EMBEDDED_BUILD_TRUE@          -I${top_srcdir}/util \
@@ -589,6 +603,8 @@ clean-nhbr_collPROGRAMS:
 	../../../util/$(DEPDIR)/$(am__dirstamp)
 ../../../util/osu_util_papi.$(OBJEXT): ../../../util/$(am__dirstamp) \
 	../../../util/$(DEPDIR)/$(am__dirstamp)
+../../../util/osu_util_sycl.$(OBJEXT): ../../../util/$(am__dirstamp) \
+	../../../util/$(DEPDIR)/$(am__dirstamp)
 ../../../util/kernel.$(OBJEXT): ../../../util/$(am__dirstamp) \
 	../../../util/$(DEPDIR)/$(am__dirstamp)
 
@@ -644,6 +660,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@../../../util/$(DEPDIR)/osu_util_graph.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@../../../util/$(DEPDIR)/osu_util_mpi.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@../../../util/$(DEPDIR)/osu_util_papi.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@../../../util/$(DEPDIR)/osu_util_sycl.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_ineighbor_allgather.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_ineighbor_allgatherv.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osu_ineighbor_alltoall.Po@am__quote@ # am--include-marker
@@ -850,6 +867,7 @@ distclean: distclean-am
 	-rm -f ../../../util/$(DEPDIR)/osu_util_graph.Po
 	-rm -f ../../../util/$(DEPDIR)/osu_util_mpi.Po
 	-rm -f ../../../util/$(DEPDIR)/osu_util_papi.Po
+	-rm -f ../../../util/$(DEPDIR)/osu_util_sycl.Po
 	-rm -f ./$(DEPDIR)/osu_ineighbor_allgather.Po
 	-rm -f ./$(DEPDIR)/osu_ineighbor_allgatherv.Po
 	-rm -f ./$(DEPDIR)/osu_ineighbor_alltoall.Po
@@ -910,6 +928,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ../../../util/$(DEPDIR)/osu_util_graph.Po
 	-rm -f ../../../util/$(DEPDIR)/osu_util_mpi.Po
 	-rm -f ../../../util/$(DEPDIR)/osu_util_papi.Po
+	-rm -f ../../../util/$(DEPDIR)/osu_util_sycl.Po
 	-rm -f ./$(DEPDIR)/osu_ineighbor_allgather.Po
 	-rm -f ./$(DEPDIR)/osu_ineighbor_allgatherv.Po
 	-rm -f ./$(DEPDIR)/osu_ineighbor_alltoall.Po

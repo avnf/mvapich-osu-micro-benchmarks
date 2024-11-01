@@ -6,7 +6,10 @@ openshmem_PROGRAMS = osu_oshm_get osu_oshm_put osu_oshm_put_mr \
 					 osu_oshm_atomics osu_oshm_barrier osu_oshm_broadcast \
 					 osu_oshm_collect osu_oshm_fcollect osu_oshm_reduce \
 					 osu_oshm_get_nb osu_oshm_put_nb osu_oshm_put_overlap \
-					 osu_oshm_get_mr_nb osu_oshm_put_mr_nb
+					 osu_oshm_get_mr_nb osu_oshm_put_mr_nb \
+					 osu_oshm_get_bw osu_oshm_get_nb_bw \
+					 osu_oshm_put_bw osu_oshm_put_nb_bw \
+					 osu_oshm_get_overlap
 
 AM_CFLAGS = -I${top_srcdir}/c/util
 
@@ -34,3 +37,8 @@ osu_oshm_put_nb_SOURCES = osu_oshm_put_nb.c $(UTILITIES)
 osu_oshm_put_overlap_SOURCES = osu_oshm_put_overlap.c $(UTILITIES)
 osu_oshm_get_mr_nb_SOURCES = osu_oshm_get_mr_nb.c $(UTILITIES)
 osu_oshm_put_mr_nb_SOURCES = osu_oshm_put_mr_nb.c $(UTILITIES)
+osu_oshm_get_bw_SOURCES = osu_oshm_get_bw.c $(UTILITIES)
+osu_oshm_get_nb_bw_SOURCES = osu_oshm_get_nb_bw.c $(UTILITIES)
+osu_oshm_put_bw_SOURCES = osu_oshm_put_bw.c $(UTILITIES)
+osu_oshm_put_nb_bw_SOURCES = osu_oshm_put_nb_bw.c $(UTILITIES)
+osu_oshm_get_overlap_SOURCES = osu_oshm_get_overlap.c $(UTILITIES)

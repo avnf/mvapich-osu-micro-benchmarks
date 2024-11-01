@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-NVCC = nvcc
+NVCC = @NVCC@
 NVCFLAGS = -cuda -maxrregcount 32 -ccbin $(CXX) $(NVCCFLAGS)
 SUFFIXES = .cu .cpp
 .cu.cpp:
@@ -10,12 +10,19 @@ SUFFIXES = .cu .cpp
 standard_pt2ptdir = $(pkglibexecdir)/mpi/pt2pt
 standard_pt2pt_PROGRAMS = osu_bibw osu_bw osu_latency osu_mbw_mr osu_multi_lat
 
+if MPI4_LIBRARY
+standard_pt2pt_PROGRAMS += osu_partitioned_latency
+endif
 AM_CFLAGS = -I${top_srcdir}/c/util
 
 UTILITIES = ../../../util/osu_util.c ../../../util/osu_util.h \
 	../../../util/osu_util_mpi.c ../../../util/osu_util_mpi.h \
 	../../../util/osu_util_graph.c ../../../util/osu_util_graph.h \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h
+if SYCL
+UTILITIES += ../../../util/osu_util_sycl.cpp ../../../util/osu_util_sycl.hpp
+endif
+
 if CUDA_KERNELS
 UTILITIES += ../../../util/kernel.cu
 CLEANFILES = ../../../util/kernel.cpp
@@ -31,6 +38,9 @@ osu_mbw_mr_SOURCES = osu_mbw_mr.c $(UTILITIES)
 osu_multi_lat_SOURCES = osu_multi_lat.c $(UTILITIES)
 osu_latency_mt_SOURCES = osu_latency_mt.c $(UTILITIES)
 osu_latency_mp_SOURCES = osu_latency_mp.c $(UTILITIES)
+if MPI4_LIBRARY
+osu_partitioned_latency_SOURCES = osu_partitioned_latency.c $(UTILITIES)
+endif
 
 if MPI2_LIBRARY
     standard_pt2pt_PROGRAMS += osu_latency_mt osu_latency_mp

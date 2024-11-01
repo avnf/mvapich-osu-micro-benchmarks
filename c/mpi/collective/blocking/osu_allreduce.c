@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     options.bench = COLLECTIVE;
     options.subtype = ALL_REDUCE;
     size_t num_elements = 0;
-    MPI_Datatype omb_curr_datatype = MPI_CHAR;
+    MPI_Datatype omb_curr_datatype = MPI_SIGNED_CHAR;
     int mpi_type_itr = 0, mpi_type_size = 0, mpi_type_name_length = 0;
     char mpi_type_name_str[OMB_DATATYPE_STR_MAX_LEN];
     MPI_Datatype mpi_type_list[OMB_NUM_DATATYPES];
@@ -83,7 +83,6 @@ int main(int argc, char *argv[])
         omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
-    check_mem_limit(numprocs);
     bufsize = (options.max_message_size);
     if (allocate_memory_coll((void **)&sendbuf, bufsize, options.accel)) {
         fprintf(stderr, "Could Not Allocate Memory [rank %d]\n", rank);
@@ -117,9 +116,10 @@ int main(int argc, char *argv[])
     for (mpi_type_itr = 0; mpi_type_itr < options.omb_dtype_itr;
          mpi_type_itr++) {
         MPI_CHECK(MPI_Type_size(mpi_type_list[mpi_type_itr], &mpi_type_size));
-        MPI_CHECK(MPI_Type_get_name(mpi_type_list[mpi_type_itr],
-                                    mpi_type_name_str, &mpi_type_name_length));
         omb_curr_datatype = mpi_type_list[mpi_type_itr];
+        OMB_MPI_REDUCE_CHAR_CHECK(omb_curr_datatype);
+        MPI_CHECK(MPI_Type_get_name(omb_curr_datatype, mpi_type_name_str,
+                                    &mpi_type_name_length));
         OMB_MPI_RUN_AT_RANK_ZERO(
             fprintf(stdout, "# Datatype: %s.\n", mpi_type_name_str));
         fflush(stdout);

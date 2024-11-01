@@ -59,7 +59,6 @@ int main(int argc, char *argv[])
     static double avg_time = 0.0, max_time = 0.0, min_time = 0.0;
     char *recvbuff, *sendbuff;
     int max_msg_size = 1048576, full = 0, t;
-    uint64_t requested_mem_limit = 0;
     int po_ret;
 
     options.bench = OSHM;
@@ -109,10 +108,6 @@ int main(int argc, char *argv[])
     }
     max_msg_size = options.max_message_size;
     full = options.show_full;
-    requested_mem_limit = (uint64_t)(max_msg_size)*numprocs;
-    if (requested_mem_limit > options.max_mem_limit) {
-        max_msg_size = options.max_mem_limit / numprocs;
-    }
 
     print_header_pgas(HEADER, rank, full);
 

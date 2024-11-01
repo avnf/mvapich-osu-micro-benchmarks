@@ -71,17 +71,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    if (options.max_message_size > options.max_mem_limit) {
-        if (0 == rank) {
-            fprintf(stderr,
-                    "Warning! Increase the Max Memory Limit to be able to run "
-                    "up to %ld bytes.\n"
-                    "Continuing with max message size of %ld bytes\n",
-                    options.max_message_size, options.max_mem_limit);
-        }
-        options.max_message_size = options.max_mem_limit;
-    }
-
     options.min_message_size /= sizeof(float);
     if (options.min_message_size < MIN_MESSAGE_SIZE) {
         options.min_message_size = MIN_MESSAGE_SIZE;
