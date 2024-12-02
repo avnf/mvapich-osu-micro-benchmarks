@@ -1241,6 +1241,25 @@ osu_bibw_p - Persistent Bidirectional Bandwidth Test
     * Similar to osu_bibw test using persistent point-to-point communication
     * requests.
 
+
+Persistent Collective Benchmarks
+------------------------------
+osu_bcast_persistent          - Persistent collective communication test for MPI_Bcast
+osu_allgather_persistent      - Persistent collective communication test for MPI_Allgather
+osu_allgatherv_persistent     - Persistent collective communication test for MPI_Allgatherv
+osu_allreduce_persistent      - Persistent collective communication test for MPI_Allreduce
+osu_alltoall_persistent       - Persistent collective communication test for MPI_Alltoall
+osu_alltoallv_persistent      - Persistent collective communication test for MPI_Alltoallv
+osu_alltoallw_persistent      - Persistent collective communication test for MPI_Alltoallw
+osu_gather_persistent         - Persistent collective communication test for MPI_Gather
+osu_gatherv_persistent        - Persistent collective communication test for MPI_Gatherv
+osu_reduce_persistent         - Persistent collective communication test for MPI_Reduce
+osu_reduce_scatter_persistent - Persistent collective communication test for MPI_Reduce_scatter
+osu_scatter_persistent        - Persistent collective communication test for MPI_Scatter
+osu_scatterv_persistent       - Persistent collective communication test for MPI_Scatterv
+osu_barrier_persistent        - Persistent collective communication test for MPI_Barrier
+
+
 Neighborhood Collective MPI Benchmarks
 --------------------------------------
 osu_neighbor_allgather  - MPI_Neighbor_allgather Latency Test
@@ -1490,3 +1509,4 @@ Point-to-Point Partitioned Benchmarks
 osu_partitioned_latency - Partitioned Latency Test
     * Similar to osu_latency test using partitioned point-to-point communication
     * requests.
+

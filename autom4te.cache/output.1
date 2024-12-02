@@ -668,6 +668,8 @@ CUDA_FALSE
 CUDA_TRUE
 C_FALSE
 C_TRUE
+MPI4_PARTITION_PT2PT_FALSE
+MPI4_PARTITION_PT2PT_TRUE
 MPI4_LIBRARY_FALSE
 MPI4_LIBRARY_TRUE
 MPI3_LIBRARY_FALSE
@@ -1538,7 +1540,8 @@ Optional Packages:
   --with-nccl=@<:@NCCL installation path@:>@ 
                           Provide path to NCCL installation
                 
-  --with-hip              Enable ROCm benchmarks - inherited from MPI
+  --with-hip=@<:@ROCm installation path@:>@ 
+                          Enable ROCm benchmarks - inherited from MPI
               
   --with-rocm=@<:@ROCm installation path@:>@ 
                           Provide path to ROCm installation
@@ -12555,9 +12558,16 @@ fi
 
 @%:@ Check whether --with-hip was given.
 if test "${with_hip+set}" = set; then :
-  withval=$with_hip; enable_rocm=yes
-               CPPFLAGS="-I$with_hip/include $CPPFLAGS"
-               LDFLAGS="-L$with_hip/lib64 -Wl,-rpath=$with_hip/lib64 -L$with_hip/lib -Wl,-rpath=$with_hip/lib -lamdhip64 $LDFLAGS"
+  withval=$with_hip; case $with_hip in @%:@(
+  no) :
+     ;; @%:@(
+  yes) :
+    enable_rocm=yes ;; @%:@(
+  *) :
+    enable_rocm=yes
+                      CPPFLAGS="-I$with_hip/include $CPPFLAGS"
+                      LDFLAGS="-L$with_hip/lib64 -Wl,-rpath=$with_hip/lib64 -L$with_hip/lib -Wl,-rpath=$with_hip/lib $LDFLAGS" ;;
+esac
                
 fi
 
@@ -12570,7 +12580,7 @@ if test "${with_rocm+set}" = set; then :
      ;; @%:@(
   *) :
     CPPFLAGS="-I$with_rocm/include $CPPFLAGS"
-                      LDFLAGS="-L$with_rocm/lib64 -Wl,-rpath=$with_rocm/lib64 -L$with_rocm/lib -Wl,-rpath=$with_rocm/lib -lamdhip64 $LDFLAGS" ;;
+                      LDFLAGS="-L$with_rocm/lib64 -Wl,-rpath=$with_rocm/lib64 -L$with_rocm/lib -Wl,-rpath=$with_rocm/lib $LDFLAGS" ;;
 esac
             
 fi
@@ -17538,6 +17548,7 @@ if test "x$enable_rocm" = xyes; then :
   
        $as_echo "@%:@define __HIP_PLATFORM_AMD__ 1" >>confdefs.h
 
+       LDFLAGS="$LDFLAGS -lamdhip64"
        for ac_header in hip/hip_runtime_api.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "hip/hip_runtime_api.h" "ac_cv_header_hip_hip_runtime_api_h" "$ac_includes_default"
@@ -17610,6 +17621,122 @@ else
   as_fn_error $? "cannot link with -lamdhip64" "$LINENO" 5
 fi
 
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing hipFree" >&5
+$as_echo_n "checking for library containing hipFree... " >&6; }
+if ${ac_cv_search_hipFree+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char hipFree ();
+int
+main ()
+{
+return hipFree ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' amdhip64; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_hipFree=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_hipFree+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_hipFree+:} false; then :
+  
+else
+  ac_cv_search_hipFree=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_hipFree" >&5
+$as_echo "$ac_cv_search_hipFree" >&6; }
+ac_res=$ac_cv_search_hipFree
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  
+else
+  as_fn_error $? "cannot link with -lamdhip64" "$LINENO" 5
+fi
+
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing hipStreamSynchronize" >&5
+$as_echo_n "checking for library containing hipStreamSynchronize... " >&6; }
+if ${ac_cv_search_hipStreamSynchronize+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char hipStreamSynchronize ();
+int
+main ()
+{
+return hipStreamSynchronize ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' amdhip64; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_hipStreamSynchronize=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_hipStreamSynchronize+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_hipStreamSynchronize+:} false; then :
+  
+else
+  ac_cv_search_hipStreamSynchronize=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_hipStreamSynchronize" >&5
+$as_echo "$ac_cv_search_hipStreamSynchronize" >&6; }
+ac_res=$ac_cv_search_hipStreamSynchronize
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  
+else
+  as_fn_error $? "cannot link with -lamdhip64" "$LINENO" 5
+fi
+
        
 $as_echo "@%:@define _ENABLE_ROCM_ 1" >>confdefs.h
 
@@ -17673,6 +17800,20 @@ $as_echo "@%:@define _ENABLE_MPI4_ 1" >>confdefs.h
 
        
 fi
+
+if test "x$mpi4_library" = xtrue; then :
+  
+       ac_fn_cxx_check_func "$LINENO" "MPI_Psend_init" "ac_cv_func_MPI_Psend_init"
+if test "x$ac_cv_func_MPI_Psend_init" = xyes; then :
+  mpi4_partition_send=true
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: MPI does npt support Partitioned Point-to-Point Communication. Disabling build of osu_partitioned_latency." >&5
+$as_echo "$as_me: WARNING: MPI does npt support Partitioned Point-to-Point Communication. Disabling build of osu_partitioned_latency." >&2;}
+fi
+
+
+fi
+
 
 case $enable_cuda in @%:@(
   yes) :
@@ -17948,6 +18089,14 @@ fi
 else
   MPI4_LIBRARY_TRUE='#'
   MPI4_LIBRARY_FALSE=
+fi
+
+ if test x$mpi4_partition_pt2pt = xtrue; then
+  MPI4_PARTITION_PT2PT_TRUE=
+  MPI4_PARTITION_PT2PT_FALSE='#'
+else
+  MPI4_PARTITION_PT2PT_TRUE='#'
+  MPI4_PARTITION_PT2PT_FALSE=
 fi
 
  if test x$enable_c != xno; then
@@ -18284,6 +18433,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${MPI4_LIBRARY_TRUE}" && test -z "${MPI4_LIBRARY_FALSE}"; then
   as_fn_error $? "conditional \"MPI4_LIBRARY\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${MPI4_PARTITION_PT2PT_TRUE}" && test -z "${MPI4_PARTITION_PT2PT_FALSE}"; then
+  as_fn_error $? "conditional \"MPI4_PARTITION_PT2PT\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${C_TRUE}" && test -z "${C_FALSE}"; then

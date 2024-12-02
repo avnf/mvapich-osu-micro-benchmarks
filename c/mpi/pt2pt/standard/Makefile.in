@@ -91,7 +91,7 @@ host_triplet = @host@
 standard_pt2pt_PROGRAMS = osu_bibw$(EXEEXT) osu_bw$(EXEEXT) \
 	osu_latency$(EXEEXT) osu_mbw_mr$(EXEEXT) \
 	osu_multi_lat$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_2)
-@MPI4_LIBRARY_TRUE@am__append_1 = osu_partitioned_latency
+@MPI4_PARTITION_PT2PT_TRUE@am__append_1 = osu_partitioned_latency
 @SYCL_TRUE@am__append_2 = ../../../util/osu_util_sycl.cpp ../../../util/osu_util_sycl.hpp
 @CUDA_KERNELS_TRUE@am__append_3 = ../../../util/kernel.cu
 @MPI2_LIBRARY_TRUE@am__append_4 = osu_latency_mt osu_latency_mp
@@ -106,7 +106,8 @@ DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-@MPI4_LIBRARY_TRUE@am__EXEEXT_1 = osu_partitioned_latency$(EXEEXT)
+@MPI4_PARTITION_PT2PT_TRUE@am__EXEEXT_1 =  \
+@MPI4_PARTITION_PT2PT_TRUE@	osu_partitioned_latency$(EXEEXT)
 @MPI2_LIBRARY_TRUE@am__EXEEXT_2 = osu_latency_mt$(EXEEXT) \
 @MPI2_LIBRARY_TRUE@	osu_latency_mp$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(standard_pt2ptdir)"
@@ -196,9 +197,9 @@ am__osu_partitioned_latency_SOURCES_DIST = osu_partitioned_latency.c \
 	../../../util/osu_util_papi.c ../../../util/osu_util_papi.h \
 	../../../util/osu_util_sycl.cpp \
 	../../../util/osu_util_sycl.hpp ../../../util/kernel.cu
-@MPI4_LIBRARY_TRUE@am_osu_partitioned_latency_OBJECTS =  \
-@MPI4_LIBRARY_TRUE@	osu_partitioned_latency.$(OBJEXT) \
-@MPI4_LIBRARY_TRUE@	$(am__objects_3)
+@MPI4_PARTITION_PT2PT_TRUE@am_osu_partitioned_latency_OBJECTS =  \
+@MPI4_PARTITION_PT2PT_TRUE@	osu_partitioned_latency.$(OBJEXT) \
+@MPI4_PARTITION_PT2PT_TRUE@	$(am__objects_3)
 osu_partitioned_latency_OBJECTS =  \
 	$(am_osu_partitioned_latency_OBJECTS)
 osu_partitioned_latency_LDADD = $(LDADD)
@@ -448,7 +449,7 @@ osu_mbw_mr_SOURCES = osu_mbw_mr.c $(UTILITIES)
 osu_multi_lat_SOURCES = osu_multi_lat.c $(UTILITIES)
 osu_latency_mt_SOURCES = osu_latency_mt.c $(UTILITIES)
 osu_latency_mp_SOURCES = osu_latency_mp.c $(UTILITIES)
-@MPI4_LIBRARY_TRUE@osu_partitioned_latency_SOURCES = osu_partitioned_latency.c $(UTILITIES)
+@MPI4_PARTITION_PT2PT_TRUE@osu_partitioned_latency_SOURCES = osu_partitioned_latency.c $(UTILITIES)
 @EMBEDDED_BUILD_TRUE@AM_LDFLAGS = $(am__append_5) \
 @EMBEDDED_BUILD_TRUE@	$(top_builddir)/../lib/lib@MPILIBNAME@.la
 @EMBEDDED_BUILD_TRUE@AM_CPPFLAGS = -I$(top_builddir)/../src/include \

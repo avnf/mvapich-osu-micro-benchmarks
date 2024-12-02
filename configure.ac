@@ -136,14 +136,15 @@ AC_ARG_ENABLE([rocm],
               [enable_rocm=no])
 
 AC_ARG_WITH([hip],
-            [AS_HELP_STRING([--with-hip],
+            [AS_HELP_STRING([--with-hip=@<:@ROCm installation path@:>@],
 			                [Enable ROCm benchmarks - inherited from MPI])
               ],
-              [enable_rocm=yes
-               CPPFLAGS="-I$with_hip/include $CPPFLAGS"
-               LDFLAGS="-L$with_hip/lib64 -Wl,-rpath=$with_hip/lib64 -L$with_hip/lib -Wl,-rpath=$with_hip/lib -lamdhip64 $LDFLAGS"
-               ],
-              [])
+            [AS_CASE([$with_hip],
+                     [no], [], [yes], [enable_rocm=yes],
+                     [enable_rocm=yes
+                      CPPFLAGS="-I$with_hip/include $CPPFLAGS"
+                      LDFLAGS="-L$with_hip/lib64 -Wl,-rpath=$with_hip/lib64 -L$with_hip/lib -Wl,-rpath=$with_hip/lib $LDFLAGS"])
+               ])
 
 AC_ARG_WITH([rocm],
             [AS_HELP_STRING([--with-rocm=@<:@ROCm installation path@:>@],
@@ -152,7 +153,7 @@ AC_ARG_WITH([rocm],
             [AS_CASE([$with_rocm],
                      [yes|no], [],
                      [CPPFLAGS="-I$with_rocm/include $CPPFLAGS"
-                      LDFLAGS="-L$with_rocm/lib64 -Wl,-rpath=$with_rocm/lib64 -L$with_rocm/lib -Wl,-rpath=$with_rocm/lib -lamdhip64 $LDFLAGS"])
+                      LDFLAGS="-L$with_rocm/lib64 -Wl,-rpath=$with_rocm/lib64 -L$with_rocm/lib -Wl,-rpath=$with_rocm/lib $LDFLAGS"])
             ])
 
 AC_ARG_ENABLE([sycl],
@@ -311,9 +312,14 @@ AS_IF([test "x$enable_openacc" = xyes], [
 
 AS_IF([test "x$enable_rocm" = xyes], [
        AC_DEFINE([__HIP_PLATFORM_AMD__])
+       LDFLAGS="$LDFLAGS -lamdhip64"
        AC_CHECK_HEADERS([hip/hip_runtime_api.h], [],
-                        [AC_MSG_ERROR([cannot include hip/hip_runtime_api.h])])
+                      [AC_MSG_ERROR([cannot include hip/hip_runtime_api.h])])
        AC_SEARCH_LIBS([hipFree], [amdhip64], [],
+                      [AC_MSG_ERROR([cannot link with -lamdhip64])])
+       AC_SEARCH_LIBS([hipFree], [amdhip64], [],
+                      [AC_MSG_ERROR([cannot link with -lamdhip64])])
+       AC_SEARCH_LIBS([hipStreamSynchronize], [amdhip64], [],
                       [AC_MSG_ERROR([cannot link with -lamdhip64])])
        AC_DEFINE([_ENABLE_ROCM_], [1], [Enable ROCm])
        ])
@@ -331,6 +337,11 @@ AS_IF([test "x$mpi4_library" = xtrue], [
        AC_CHECK_FUNC([MPI_Session_init], [], AC_MSG_ERROR([MPI does not support MPI-4.]))
        AC_DEFINE([_ENABLE_MPI4_], [1], [Enable MPI4 support])
        ])
+
+AS_IF([test "x$mpi4_library" = xtrue], [
+       AC_CHECK_FUNC([MPI_Psend_init], [mpi4_partition_send=true], AC_MSG_WARN([MPI does npt support Partitioned Point-to-Point Communication. Disabling build of osu_partitioned_latency.]))
+])
+
 
 AS_CASE([$enable_cuda],
         [yes], [build_cuda_kernels=yes; build_cuda=yes],
@@ -370,6 +381,7 @@ AS_IF([test "x$oshm_13_library" = xtrue], [
 AM_CONDITIONAL([MPI2_LIBRARY], [test x$mpi2_library = xtrue])
 AM_CONDITIONAL([MPI3_LIBRARY], [test x$mpi3_library = xtrue])
 AM_CONDITIONAL([MPI4_LIBRARY], [test x$mpi4_library = xtrue])
+AM_CONDITIONAL([MPI4_PARTITION_PT2PT], [test x$mpi4_partition_pt2pt = xtrue])
 AM_CONDITIONAL([C], [test x$enable_c != xno])
 AM_CONDITIONAL([CUDA], [test x$build_cuda = xyes])
 AM_CONDITIONAL([NCCL], [test x$enable_ncclomb = xyes])

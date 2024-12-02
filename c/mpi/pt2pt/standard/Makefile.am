@@ -10,7 +10,7 @@ SUFFIXES = .cu .cpp
 standard_pt2ptdir = $(pkglibexecdir)/mpi/pt2pt
 standard_pt2pt_PROGRAMS = osu_bibw osu_bw osu_latency osu_mbw_mr osu_multi_lat
 
-if MPI4_LIBRARY
+if MPI4_PARTITION_PT2PT
 standard_pt2pt_PROGRAMS += osu_partitioned_latency
 endif
 AM_CFLAGS = -I${top_srcdir}/c/util
@@ -38,7 +38,7 @@ osu_mbw_mr_SOURCES = osu_mbw_mr.c $(UTILITIES)
 osu_multi_lat_SOURCES = osu_multi_lat.c $(UTILITIES)
 osu_latency_mt_SOURCES = osu_latency_mt.c $(UTILITIES)
 osu_latency_mp_SOURCES = osu_latency_mp.c $(UTILITIES)
-if MPI4_LIBRARY
+if MPI4_PARTITION_PT2PT
 osu_partitioned_latency_SOURCES = osu_partitioned_latency.c $(UTILITIES)
 endif
 
